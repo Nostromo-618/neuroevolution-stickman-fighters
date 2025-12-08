@@ -297,23 +297,37 @@ class WorkerFighter {
         this.hitbox.y + this.hitbox.h > opponent.y;
 
       if (hit) {
-        let damage = this.state === PUNCH ? 5 : 10;
+        // BACKSTAB CHECK: Instant death if defender is facing away from attacker
+        // Critical martial arts rule: NEVER turn your back on your opponent
+        const attackerToRight = this.x > opponent.x;
+        const defenderFacingAway = (attackerToRight && opponent.direction === -1) || 
+                                   (!attackerToRight && opponent.direction === 1);
         
-        if (opponent.state === BLOCK) {
-          damage *= 0.1;
-          opponent.energy -= 5;
-        }
+        if (defenderFacingAway) {
+          // Instant death - backstab is fatal
+          // No explicit fitness bonus needed - winning the match is reward enough
+          opponent.health = 0;
+        } else {
+          // Normal damage calculation
+          let damage = this.state === PUNCH ? 5 : 10;
+          
+          if (opponent.state === BLOCK) {
+            damage *= 0.1;
+            opponent.energy -= 5;
+          }
 
-        opponent.health = Math.max(0, opponent.health - damage);
+          opponent.health = Math.max(0, opponent.health - damage);
+          
+          // Fitness for hits
+          this.matchFitness += 50;
+          opponent.matchFitness -= 20;
+        }
         
+        // Knockback physics (applies to both normal hits and backstabs)
         opponent.vx = this.direction * (this.state === KICK ? 15 : 8);
         opponent.vy = -5;
         
         this.hitbox = null;
-        
-        // Fitness for hits
-        this.matchFitness += 50;
-        opponent.matchFitness -= 20;
       }
     }
   }

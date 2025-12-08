@@ -255,25 +255,38 @@ export class Fighter {
         this.hitbox.y + this.hitbox.h > opponent.y;
 
       if (hit) {
-        let damage = this.state === FighterAction.PUNCH ? 5 : 10;
+        // BACKSTAB CHECK: Instant death if defender is facing away from attacker
+        // Critical martial arts rule: NEVER turn your back on your opponent
+        const attackerToRight = this.x > opponent.x;
+        const defenderFacingAway = (attackerToRight && opponent.direction === -1) || 
+                                   (!attackerToRight && opponent.direction === 1);
         
-        // Block mitigation
-        if (opponent.state === FighterAction.BLOCK) {
-          damage *= 0.1;
-          opponent.energy -= 5;
-        }
+        if (defenderFacingAway) {
+          // Instant death - backstab is fatal
+          // No explicit fitness bonus needed - winning the match is reward enough
+          opponent.health = 0;
+        } else {
+          // Normal damage calculation
+          let damage = this.state === FighterAction.PUNCH ? 5 : 10;
+          
+          // Block mitigation
+          if (opponent.state === FighterAction.BLOCK) {
+            damage *= 0.1;
+            opponent.energy -= 5;
+          }
 
-        opponent.health = Math.max(0, opponent.health - damage);
+          opponent.health = Math.max(0, opponent.health - damage);
+          
+          // Update Fitness if training
+          if (this.genome) this.genome.fitness += 50; // Big bonus for hitting
+          if (opponent.genome) opponent.genome.fitness -= 20; // Penalty for getting hit
+        }
         
-        // Knockback physics
+        // Knockback physics (applies to both normal hits and backstabs)
         opponent.vx = this.direction * (this.state === FighterAction.KICK ? 15 : 8); 
         opponent.vy = -5;
         
         this.hitbox = null; // Consume hit to prevent multiple hits per frame
-        
-        // Update Fitness if training
-        if (this.genome) this.genome.fitness += 50; // Big bonus for hitting
-        if (opponent.genome) opponent.genome.fitness -= 20; // Penalty for getting hit
       }
     }
   }
