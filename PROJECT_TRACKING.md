@@ -452,3 +452,85 @@ Energy bars help players understand:
 - The energy cost of different actions
 - Why idle regeneration matters (strategic pauses)
 
+---
+
+## Session Update: Backstab Instant Death Rule
+
+### Overview
+Added critical martial arts rule: any punch or kick received while facing away from the opponent results in instant death. This teaches AI to never turn its back on an enemy.
+
+### Detection Logic
+A fighter is "facing away" when:
+- Attacker is to their RIGHT but defender faces LEFT
+- Attacker is to their LEFT but defender faces RIGHT
+
+```typescript
+const attackerToRight = this.x > opponent.x;
+const defenderFacingAway = (attackerToRight && opponent.direction === -1) || 
+                           (!attackerToRight && opponent.direction === 1);
+```
+
+### Files Modified
+
+**`services/GameEngine.ts`** - `checkHit()` method
+**`services/TrainingWorker.ts`** - `checkHit()` method
+
+### Design Decision
+No explicit fitness bonus/penalty added for backstabs. Pure neuroevolution approach - the instant death consequence naturally selects against turning away from opponents through win/lose outcomes.
+
+---
+
+## Session Update: Evolution Distortions Catalog
+
+### Overview
+Created `DISTORTIONS.md` documenting all hand-crafted fitness rewards/penalties that guide AI behavior beyond natural win/lose selection pressure.
+
+### Distortions Cataloged
+
+| Category | Count | Examples |
+|----------|-------|----------|
+| Per-Frame Shaping | 7 | Proximity, Facing, Aggression, Time, Edge, Center, Movement |
+| Per-Hit Shaping | 2 | Hit bonus (+50), Hit penalty (-20) |
+| End-of-Match | 3 | Health remaining, Win bonus, Stalemate penalty |
+
+### Pure Rules (NOT Distortions)
+- Backstab instant death
+- Energy system
+- Block mitigation
+- Knockback physics
+
+### Purpose
+Document provides transparency about what's "guiding" vs "pure" evolution, with candidates for removal if pursuing purer neuroevolution.
+
+---
+
+## Session Update: Fighter Collision & Hitbox Adjustments
+
+### Overview
+Added body-to-body collision detection and increased attack hitbox sizes for more realistic combat.
+
+### 1. Body Collision Detection
+Fighters can no longer walk through each other. When overlapping, they get pushed apart equally.
+
+**Files Modified:** `App.tsx`, `services/TrainingWorker.ts`
+
+```typescript
+// Body collision - prevent fighters from overlapping
+if (f1.x < f2.x) {
+    const overlap = (f1.x + f1.width) - f2.x;
+    if (overlap > 0) {
+        f1.x -= overlap / 2;
+        f2.x += overlap / 2;
+    }
+}
+```
+
+### 2. Hitbox Size Increases
+
+| Attack | Old Width | New Width | Change |
+|--------|-----------|-----------|--------|
+| Punch | 40px | 46px | +15% |
+| Kick | 60px | 66px | +10% |
+
+**Files Modified:** `services/GameEngine.ts`, `services/TrainingWorker.ts`
+

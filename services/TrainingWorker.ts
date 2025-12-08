@@ -207,17 +207,20 @@ class WorkerFighter {
         this.energy -= 0.2;
         this.vx *= 0.5;
       }
+      
+      // Block - sustained defensive stance while held (like crouch)
+      if (activeInput.action3 && this.energy >= 0.5) {
+        this.state = BLOCK;
+        this.energy -= 0.5;  // Block costs energy per frame
+        this.vx *= 0.3; // Slow down significantly while blocking
+      }
     }
 
     // Actions
     this.hitbox = null;
     
     if (this.cooldown === 0) {
-      if (activeInput.action3 && this.energy > 5) {
-        this.state = BLOCK;
-        this.energy -= 0.5;
-        this.cooldown = 20;
-      } else if (activeInput.action1 && this.energy > 10) {
+      if (activeInput.action1 && this.energy > 10) {
         this.state = PUNCH;
         this.vx *= 0.2;
         this.cooldown = 30;
@@ -230,19 +233,19 @@ class WorkerFighter {
       }
     }
 
-    // Hitboxes
+    // Hitboxes - Punch 46px (+15%), Kick 66px (+10%)
     if (this.state === PUNCH && this.cooldown < 25 && this.cooldown > 15) {
       this.hitbox = {
-        x: this.direction === 1 ? this.x + this.width : this.x - 40,
+        x: this.direction === 1 ? this.x + this.width : this.x - 46,
         y: this.y + 20,
-        w: 40,
+        w: 46,
         h: 20
       };
     } else if (this.state === KICK && this.cooldown < 30 && this.cooldown > 15) {
       this.hitbox = {
-        x: this.direction === 1 ? this.x + this.width : this.x - 60,
+        x: this.direction === 1 ? this.x + this.width : this.x - 66,
         y: this.y + 40,
-        w: 60,
+        w: 66,
         h: 30
       };
     }
@@ -363,6 +366,21 @@ function runMatch(job: MatchJob): MatchResult {
     // Update fighters
     f1.update(f2);
     f2.update(f1);
+    
+    // Body collision - prevent fighters from overlapping
+    if (f1.x < f2.x) {
+      const overlap = (f1.x + f1.width) - f2.x;
+      if (overlap > 0) {
+        f1.x -= overlap / 2;
+        f2.x += overlap / 2;
+      }
+    } else {
+      const overlap = (f2.x + f2.width) - f1.x;
+      if (overlap > 0) {
+        f2.x -= overlap / 2;
+        f1.x += overlap / 2;
+      }
+    }
     
     // Check hits
     f1.checkHit(f2);

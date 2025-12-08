@@ -352,6 +352,21 @@ const App = () => {
             p1.update(p1Input, p2); 
             p2.update(dummyInput, p1);
 
+            // Body collision - prevent fighters from overlapping
+            if (p1.x < p2.x) {
+                const overlap = (p1.x + p1.width) - p2.x;
+                if (overlap > 0) {
+                    p1.x -= overlap / 2;
+                    p2.x += overlap / 2;
+                }
+            } else {
+                const overlap = (p2.x + p2.width) - p1.x;
+                if (overlap > 0) {
+                    p2.x -= overlap / 2;
+                    p1.x += overlap / 2;
+                }
+            }
+
             p1.checkHit(p2);
             p2.checkHit(p1);
             

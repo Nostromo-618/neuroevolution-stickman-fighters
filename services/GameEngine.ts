@@ -154,6 +154,13 @@ export class Fighter {
             this.energy -= 0.2;  // Crouching costs energy
             this.vx *= 0.5; // Slow down
         }
+        
+        // Block - sustained defensive stance while held (like crouch)
+        if (activeInput.action3 && this.energy >= 0.5) {
+            this.state = FighterAction.BLOCK;
+            this.energy -= 0.5;  // Block costs energy per frame
+            this.vx *= 0.3; // Slow down significantly while blocking
+        }
     }
 
     // --- Actions ---
@@ -161,12 +168,7 @@ export class Fighter {
     
     // Trigger Actions (Can only trigger if cooldown is 0)
     if (this.cooldown === 0) {
-      if (activeInput.action3 && this.energy > 5) {
-        this.state = FighterAction.BLOCK;
-        this.energy -= 0.5;
-        // Block cooldown now locks animation so AI can maintain block state
-        this.cooldown = 20; 
-      } else if (activeInput.action1 && this.energy > 10) {
+      if (activeInput.action1 && this.energy > 10) {
         this.state = FighterAction.PUNCH;
         this.vx *= 0.2; // Stop moving significantly
         this.cooldown = 30; // Animation duration
@@ -182,18 +184,19 @@ export class Fighter {
 
     // Activate Hitboxes based on current state and cooldown timing
     // Punch: lasts 30 frames. Hit frames: 25-15 (early in the cooldown count down)
+    // Hitbox sizes: Punch 46px (+15%), Kick 66px (+10%)
     if (this.state === FighterAction.PUNCH && this.cooldown < 25 && this.cooldown > 15) {
         this.hitbox = {
-          x: this.direction === 1 ? this.x + this.width : this.x - 40,
+          x: this.direction === 1 ? this.x + this.width : this.x - 46,
           y: this.y + 20,
-          w: 40,
+          w: 46,
           h: 20
         };
     } else if (this.state === FighterAction.KICK && this.cooldown < 30 && this.cooldown > 15) {
          this.hitbox = {
-          x: this.direction === 1 ? this.x + this.width : this.x - 60,
+          x: this.direction === 1 ? this.x + this.width : this.x - 66,
           y: this.y + 40, // Lower
-          w: 60,
+          w: 66,
           h: 30
         };
     }
