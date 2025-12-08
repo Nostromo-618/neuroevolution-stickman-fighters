@@ -550,6 +550,9 @@ const App = () => {
                     <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
                         <div className="h-full bg-red-500 transition-all duration-75" style={{width: `${gameState.player1Health}%`}}></div>
                     </div>
+                    <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                        <div className="h-full bg-amber-400 transition-all duration-75" style={{width: `${gameState.player1Energy}%`}}></div>
+                    </div>
                 </div>
                 
                 <div className="flex flex-col items-center">
@@ -561,6 +564,9 @@ const App = () => {
                     <span className="text-blue-500 font-bold">P2</span>
                      <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
                         <div className="h-full bg-blue-500 transition-all duration-75" style={{width: `${gameState.player2Health}%`}}></div>
+                    </div>
+                    <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                        <div className="h-full bg-amber-400 transition-all duration-75" style={{width: `${gameState.player2Energy}%`}}></div>
                     </div>
                 </div>
              </div>

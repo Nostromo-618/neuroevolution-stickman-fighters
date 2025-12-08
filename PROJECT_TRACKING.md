@@ -422,3 +422,33 @@ Added comprehensive energy costs to ALL fighter actions to create strategic reso
 3. **Engagement encouraged** - Standing still regens energy, but stalemate = punishment
 4. **Resource management** - AI must balance offense/defense with energy conservation
 
+---
+
+## Session Update: Energy Bars HUD
+
+### Overview
+Added visible energy bars to the game HUD so players can monitor both their own and the AI's energy levels in real-time.
+
+### Files Modified
+
+**`App.tsx`**
+- Added energy bar beneath P1 health bar (left side)
+- Added energy bar beneath P2 health bar (right side)
+- Uses existing `gameState.player1Energy` and `gameState.player2Energy` values
+
+### Visual Design
+
+| Element | Style |
+|---------|-------|
+| Height | h-2 (thinner than health bars h-4) |
+| Color | Amber/yellow (`bg-amber-400`) |
+| Position | Below health bar with `mt-1` margin |
+| Animation | `transition-all duration-75` for smooth updates |
+
+### Purpose
+Energy bars help players understand:
+- When they're running low on energy
+- When the AI is vulnerable (low energy)
+- The energy cost of different actions
+- Why idle regeneration matters (strategic pauses)
+
