@@ -600,7 +600,7 @@ const App = () => {
           <header className="flex justify-between items-center mb-4">
             <div>
               <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
-                NEURO FIGHT
+                NeuroEvolution: Stickman Fighters
               </h1>
               <p className="text-slate-400 text-sm">
                 {settings.gameMode === 'TRAINING' ? 'Training Neural Networks...' : 'Arcade Mode: You vs AI'}
