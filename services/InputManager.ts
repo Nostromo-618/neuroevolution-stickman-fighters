@@ -61,6 +61,12 @@ export class InputManager {
   /** Index of connected gamepad (null if none) */
   gamepadIndex: number | null = null;
 
+  /** Touch input state for mobile controls */
+  touchState: InputState = {
+    left: false, right: false, up: false, down: false,
+    action1: false, action2: false, action3: false
+  };
+
   // === EVENT HANDLERS ===
   // Arrow functions to preserve 'this' context when used as callbacks
 
@@ -135,6 +141,18 @@ export class InputManager {
       action3: this.keys.has('KeyL') || this.keys.has('ShiftLeft'), // Block
     };
 
+    // === TOUCH INPUT ===
+    // Used for on-screen mobile controls
+    if (this.touchState) {
+      kbState.left = kbState.left || this.touchState.left;
+      kbState.right = kbState.right || this.touchState.right;
+      kbState.up = kbState.up || this.touchState.up;
+      kbState.down = kbState.down || this.touchState.down;
+      kbState.action1 = kbState.action1 || this.touchState.action1;
+      kbState.action2 = kbState.action2 || this.touchState.action2;
+      kbState.action3 = kbState.action3 || this.touchState.action3;
+    }
+
     // === GAMEPAD INPUT ===
     // Only check if a gamepad is connected
     if (this.gamepadIndex !== null) {
@@ -164,7 +182,15 @@ export class InputManager {
       }
     }
 
-    // Return keyboard-only state if no gamepad
+    // Return keyboard/touch state if no gamepad
     return kbState;
+  }
+
+  /**
+   * Updates only specific fields of the touch state.
+   * Useful for handling individual button presses/releases.
+   */
+  setTouchState(updates: Partial<InputState>) {
+    this.touchState = { ...this.touchState, ...updates };
   }
 }

@@ -51,6 +51,8 @@ import GameCanvas from './components/GameCanvas';
 import Dashboard from './components/Dashboard';
 import Toast, { useToast } from './components/Toast';
 import { WorkerPool } from './services/WorkerPool';
+import TouchControls from './components/TouchControls';
+import pkg from './package.json';
 
 // =============================================================================
 // MAIN APPLICATION COMPONENT
@@ -72,7 +74,8 @@ const App = () => {
     player1Energy: 100, player2Energy: 100,
     timeRemaining: 90, generation: 1, bestFitness: 0,
     matchActive: false,
-    winner: null
+    winner: null,
+    roundStatus: 'WAITING'
   });
 
   const [fitnessHistory, setFitnessHistory] = useState<{ gen: number, fitness: number }[]>([]);
@@ -194,7 +197,29 @@ const App = () => {
       }
     }
 
-    setGameState(prev => ({ ...prev, matchActive: true, timeRemaining: 90, winner: null }));
+    const isArcade = settingsRef.current.gameMode === 'ARCADE';
+
+    setGameState(prev => ({
+      ...prev,
+      matchActive: true,
+      timeRemaining: 90,
+      winner: null,
+      roundStatus: isArcade ? 'WAITING' : 'FIGHTING'
+    }));
+
+    // Sync ref immediately to prevent "twitch" on first frame
+    gameStateRef.current.roundStatus = isArcade ? 'WAITING' : 'FIGHTING';
+
+    // Schedule fight start ONLY for Arcade mode
+    if (isArcade) {
+      setTimeout(() => {
+        if (activeMatchRef.current) {
+          // Sync ref immediately
+          if (gameStateRef.current) gameStateRef.current.roundStatus = 'FIGHTING';
+          setGameState(prev => ({ ...prev, roundStatus: 'FIGHTING' }));
+        }
+      }, 1500);
+    }
   }, [getBestGenome]);
 
   const evolve = () => {
@@ -390,13 +415,26 @@ const App = () => {
 
         const dummyInput = { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
 
-        // Player 1 Input: Human if Arcade, Dummy (AI self-drive) if Training
-        const p1Input = (currentSettings.gameMode === 'ARCADE' && inputManager.current)
+        // Player 1 Input
+        let p1Input = (currentSettings.gameMode === 'ARCADE' && inputManager.current)
           ? inputManager.current.getState()
           : dummyInput;
 
+        // If WAITING (Round start), neutralize all inputs to let physics settle
+        if (currentGameState.roundStatus === 'WAITING') {
+          p1Input = dummyInput;
+          // Force AI to be idle too (handled below by not processing p2 updates or overriding it)
+        }
+
         p1.update(p1Input, p2);
-        p2.update(dummyInput, p1);
+
+        // Player 2 Update (AI)
+        // If WAITING, pass dummy input to force idle
+        if (currentGameState.roundStatus === 'WAITING') {
+          p2.update(dummyInput, p1);
+        } else {
+          p2.update(dummyInput, p1); // Normal AI update (it ignores input arg and uses internal brain)
+        }
 
         // Body collision - prevent fighters from overlapping (only when vertically overlapping)
         // This allows fighters to jump over each other
@@ -422,7 +460,10 @@ const App = () => {
         p2.checkHit(p1);
 
         // Update Timer (1/60th of a second per loop iteration)
-        matchTimerRef.current -= 1 / 60;
+        // Only count down if actively fighting
+        if (currentGameState.roundStatus === 'FIGHTING') {
+          matchTimerRef.current -= 1 / 60;
+        }
 
         // End Conditions
         const isTimeout = matchTimerRef.current <= 0;
@@ -665,8 +706,29 @@ const App = () => {
                 </div>
               )}
 
+              {/* Round Start Overlays - ARCADE Only */}
+              {settings.isRunning && settings.gameMode === 'ARCADE' && gameState.roundStatus === 'WAITING' && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                  <div className="text-7xl font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] animate-pulse tracking-widest">
+                    READY...
+                  </div>
+                </div>
+              )}
+              {settings.isRunning && settings.gameMode === 'ARCADE' && gameState.roundStatus === 'FIGHTING' && gameState.timeRemaining > 88 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                  <div className="text-8xl font-black text-red-600 drop-shadow-[0_0_25px_rgba(220,38,38,0.8)] animate-bounce tracking-widest">
+                    FIGHT!
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
+
+          {/* Mobile Touch Controls */}
+          {settings.gameMode === 'ARCADE' && (
+            <TouchControls inputManager={inputManager} />
+          )}
 
         </div>
 
@@ -685,50 +747,52 @@ const App = () => {
           />
         </div>
 
-      </div>
+      </div >
 
       {/* Import Choice Modal */}
-      {pendingImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-slate-800 rounded-xl p-6 max-w-md mx-4 border border-slate-600 shadow-2xl">
-            <h3 className="text-xl font-bold text-teal-400 mb-4">Import Successful!</h3>
-            <div className="text-slate-300 text-sm space-y-2 mb-6">
-              <p>Fitness: <span className="text-white font-mono">{pendingImport.fitness.toFixed(0)}</span></p>
-              <p>Matches Won: <span className="text-white font-mono">{pendingImport.matchesWon}</span></p>
-            </div>
-            <p className="text-slate-400 text-sm mb-4">How would you like to use these weights?</p>
-            <div className="flex gap-3">
+      {
+        pendingImport && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="bg-slate-800 rounded-xl p-6 max-w-md mx-4 border border-slate-600 shadow-2xl">
+              <h3 className="text-xl font-bold text-teal-400 mb-4">Import Successful!</h3>
+              <div className="text-slate-300 text-sm space-y-2 mb-6">
+                <p>Fitness: <span className="text-white font-mono">{pendingImport.fitness.toFixed(0)}</span></p>
+                <p>Matches Won: <span className="text-white font-mono">{pendingImport.matchesWon}</span></p>
+              </div>
+              <p className="text-slate-400 text-sm mb-4">How would you like to use these weights?</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleImportChoice(true)}
+                  className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold text-white transition"
+                >
+                  Training + Arcade
+                </button>
+                <button
+                  onClick={() => handleImportChoice(false)}
+                  className="flex-1 py-2 px-4 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold text-white transition"
+                >
+                  Arcade Only
+                </button>
+              </div>
               <button
-                onClick={() => handleImportChoice(true)}
-                className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold text-white transition"
+                onClick={() => setPendingImport(null)}
+                className="w-full mt-3 py-2 text-slate-500 hover:text-slate-300 text-sm transition"
               >
-                Training + Arcade
-              </button>
-              <button
-                onClick={() => handleImportChoice(false)}
-                className="flex-1 py-2 px-4 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold text-white transition"
-              >
-                Arcade Only
+                Cancel
               </button>
             </div>
-            <button
-              onClick={() => setPendingImport(null)}
-              className="w-full mt-3 py-2 text-slate-500 hover:text-slate-300 text-sm transition"
-            >
-              Cancel
-            </button>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Version Display */}
-      <div className="fixed bottom-2 left-2 text-[10px] text-slate-600 font-mono pointer-events-none z-0">
-        v1.0.0
+      <div className="fixed top-2 right-2 text-xs text-slate-500 font-mono pointer-events-none z-50 opacity-60">
+        v{pkg.version}
       </div>
 
       {/* Toast Notifications */}
       <Toast toasts={toasts} removeToast={removeToast} />
-    </div>
+    </div >
   );
 };
 
