@@ -1,13 +1,60 @@
-// Self-contained Training Worker
-// Runs match simulations in parallel without access to main thread modules
+/**
+ * =============================================================================
+ * TRAINING WORKER - Parallel Match Simulation
+ * =============================================================================
+ * 
+ * This module is a Web Worker that runs match simulations in parallel.
+ * It's a self-contained copy of the game logic that runs in a separate thread.
+ * 
+ * WHY WEB WORKERS?
+ * ----------------
+ * JavaScript is single-threaded. Without workers, training would:
+ * - Block the UI (freezing everything)
+ * - Limit us to one CPU core
+ * - Make Arcade mode unplayable during training
+ * 
+ * With Web Workers:
+ * - Each worker runs on a separate CPU core
+ * - UI thread stays responsive
+ * - Training can run in background while playing
+ * - Scales with number of CPU cores
+ * 
+ * WORKER ISOLATION
+ * ----------------
+ * Workers can't access DOM or import modules from main thread.
+ * That's why we duplicate types and game logic here - it needs to be
+ * completely self-contained.
+ * 
+ * MESSAGE PROTOCOL
+ * ----------------
+ * Main Thread → Worker:
+ *   { type: 'runMatches', jobs: MatchJob[] }
+ * 
+ * Worker → Main Thread:
+ *   { type: 'ready' }              // Worker initialized
+ *   { type: 'matchResults', results: MatchResult[] }  // Matches complete
+ * 
+ * =============================================================================
+ */
 
-// --- Types (duplicated for worker isolation) ---
+// =============================================================================
+// DUPLICATED TYPES (Required for worker isolation)
+// =============================================================================
+
+/**
+ * Neural network structure (same as types.ts)
+ * Must be duplicated because workers can't import from main thread
+ */
 interface NeuralNetwork {
   inputWeights: number[][];
   outputWeights: number[][];
   biases: number[];
 }
 
+/**
+ * Genome structure for workers
+ * Simplified version focused on what's needed for simulation
+ */
 interface WorkerGenome {
   id: string;
   network: NeuralNetwork;
@@ -15,25 +62,34 @@ interface WorkerGenome {
   matchesWon: number;
 }
 
+/**
+ * Match job - describes a single match to simulate
+ */
 interface MatchJob {
-  jobId: number;
+  jobId: number;       // Unique identifier for result matching
   genome1: WorkerGenome;
   genome2: WorkerGenome;
-  spawn1X: number;
-  spawn2X: number;
+  spawn1X: number;     // Starting X position for fighter 1
+  spawn2X: number;     // Starting X position for fighter 2
 }
 
+/**
+ * Match result - outcome of a simulated match
+ */
 interface MatchResult {
   jobId: number;
-  genome1Fitness: number;
-  genome2Fitness: number;
+  genome1Fitness: number;  // Fitness earned by genome 1
+  genome2Fitness: number;  // Fitness earned by genome 2
   genome1Won: boolean;
   genome2Won: boolean;
-  genome1Health: number;
+  genome1Health: number;   // Final health (for debugging)
   genome2Health: number;
 }
 
-// --- Constants ---
+// =============================================================================
+// DUPLICATED CONSTANTS (Same as GameEngine.ts)
+// =============================================================================
+
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 450;
 const GRAVITY = 0.8;
@@ -43,7 +99,7 @@ const INPUT_NODES = 9;
 const HIDDEN_NODES = 10;
 const OUTPUT_NODES = 8;
 
-// Fighter Actions
+// Fighter Actions (numeric constants instead of enum for simplicity in worker)
 const IDLE = 0;
 const MOVE_LEFT = 1;
 const MOVE_RIGHT = 2;
@@ -53,11 +109,26 @@ const PUNCH = 5;
 const KICK = 6;
 const BLOCK = 7;
 
-// --- Neural Network (self-contained) ---
+// =============================================================================
+// DUPLICATED NEURAL NETWORK (Same as NeuralNetwork.ts)
+// =============================================================================
+
+/**
+ * Sigmoid activation - squashes values to (0, 1)
+ */
 const sigmoid = (t: number) => 1 / (1 + Math.exp(-t));
+
+/**
+ * ReLU activation - max(0, x)
+ */
 const relu = (t: number) => Math.max(0, t);
 
+/**
+ * Forward pass through neural network
+ * Identical to NeuralNetwork.predict() but local to worker
+ */
 function predict(network: NeuralNetwork, inputs: number[]): number[] {
+  // Hidden layer
   const hiddenOutputs: number[] = [];
   for (let h = 0; h < HIDDEN_NODES; h++) {
     let sum = 0;
@@ -68,6 +139,7 @@ function predict(network: NeuralNetwork, inputs: number[]): number[] {
     hiddenOutputs.push(relu(sum));
   }
 
+  // Output layer
   const finalOutputs: number[] = [];
   for (let o = 0; o < OUTPUT_NODES; o++) {
     let sum = 0;
@@ -81,7 +153,18 @@ function predict(network: NeuralNetwork, inputs: number[]): number[] {
   return finalOutputs;
 }
 
-// --- Fighter Class (self-contained) ---
+// =============================================================================
+// DUPLICATED FIGHTER CLASS (Simplified for workers)
+// =============================================================================
+
+/**
+ * WorkerFighter - Simplified fighter for background simulation
+ * 
+ * Key differences from main thread Fighter:
+ * - No color/rendering properties
+ * - No human input support (AI only)
+ * - matchFitness accumulates locally, then applied to result
+ */
 class WorkerFighter {
   x: number;
   y: number;
@@ -90,16 +173,19 @@ class WorkerFighter {
   width: number = 50;
   height: number = 100;
   genome: WorkerGenome;
-  
+
   health: number = 100;
   energy: number = 100;
   state: number = IDLE;
   direction: -1 | 1 = 1;
-  
+
   hitbox: { x: number, y: number, w: number, h: number } | null = null;
   cooldown: number = 0;
-  
-  // Accumulated fitness during match
+
+  /**
+   * Accumulated fitness during this match
+   * Stored separately so we can track per-match contributions
+   */
   matchFitness: number = 0;
 
   constructor(x: number, genome: WorkerGenome, direction: -1 | 1 = 1) {
@@ -109,7 +195,12 @@ class WorkerFighter {
     this.direction = direction;
   }
 
+  /**
+   * Update fighter state for one frame
+   * Same logic as GameEngine.Fighter.update() but simplified
+   */
   update(opponent: WorkerFighter) {
+    // === DEATH PHYSICS ===
     if (this.health <= 0) {
       this.y += this.vy;
       this.vy += GRAVITY;
@@ -123,13 +214,14 @@ class WorkerFighter {
       return;
     }
 
-    // AI Logic
+    // === AI DECISION ===
     const activeInput = this.processAi(opponent);
 
-    // Fitness shaping (only when opponent alive)
+    // === FITNESS SHAPING ===
+    // Same rewards/penalties as main thread
     if (opponent.health > 0) {
       const dist = Math.abs(this.x - opponent.x);
-      
+
       // Proximity reward
       if (dist < 400) this.matchFitness += 0.005;
       if (dist < 200) this.matchFitness += 0.02;
@@ -139,7 +231,7 @@ class WorkerFighter {
       const dx = opponent.x - this.x;
       const correctFacing = (dx > 0 && this.direction === 1) || (dx < 0 && this.direction === -1);
       if (correctFacing) this.matchFitness += 0.02;
-      
+
       // Aggression reward
       if (dist < 100 && (this.state === PUNCH || this.state === KICK)) {
         this.matchFitness += 0.1;
@@ -147,7 +239,7 @@ class WorkerFighter {
 
       // Time penalty
       this.matchFitness -= 0.005;
-      
+
       // Edge penalty
       const edgeThreshold = 60;
       if (this.x < edgeThreshold || this.x > CANVAS_WIDTH - this.width - edgeThreshold) {
@@ -167,19 +259,17 @@ class WorkerFighter {
       }
     }
 
-    // Cooldown management
+    // === COOLDOWN & ENERGY ===
     if (this.cooldown > 0) this.cooldown--;
-    
-    // Energy regen - faster when idle (rewards strategic pauses)
+
     const isIdle = Math.abs(this.vx) < 0.5 && this.state === IDLE;
     const regenRate = isIdle ? 0.5 : 0.2;
     if (this.energy < 100) this.energy += regenRate;
 
-    // State management
+    // === STATE MANAGEMENT ===
     const isAnimationLocked = this.cooldown > 15;
 
     if (!isAnimationLocked) {
-      // Movement costs energy (prevents erratic movement)
       if (activeInput.left && this.energy >= 0.5) {
         this.vx -= 1.5;
         this.energy -= 0.5;
@@ -194,31 +284,28 @@ class WorkerFighter {
         this.state = IDLE;
       }
 
-      // Jump costs significant energy (tactical use only)
       if (activeInput.up && this.y >= GROUND_Y - this.height - 1 && this.energy >= 12) {
         this.vy = -18;
         this.energy -= 12;
         this.state = JUMP;
       }
-      
-      // Crouch costs small energy
+
       if (activeInput.down && this.y >= GROUND_Y - this.height - 1 && this.energy >= 0.2) {
         this.state = CROUCH;
         this.energy -= 0.2;
         this.vx *= 0.5;
       }
-      
-      // Block - sustained defensive stance while held (like crouch)
+
       if (activeInput.action3 && this.energy >= 0.5) {
         this.state = BLOCK;
-        this.energy -= 0.5;  // Block costs energy per frame
-        this.vx *= 0.3; // Slow down significantly while blocking
+        this.energy -= 0.5;
+        this.vx *= 0.3;
       }
     }
 
-    // Actions
+    // === ATTACKS ===
     this.hitbox = null;
-    
+
     if (this.cooldown === 0) {
       if (activeInput.action1 && this.energy > 10) {
         this.state = PUNCH;
@@ -233,7 +320,7 @@ class WorkerFighter {
       }
     }
 
-    // Hitboxes - Punch 46px (+15%), Kick 66px (+10%)
+    // === HITBOXES ===
     if (this.state === PUNCH && this.cooldown < 25 && this.cooldown > 15) {
       this.hitbox = {
         x: this.direction === 1 ? this.x + this.width : this.x - 46,
@@ -250,13 +337,13 @@ class WorkerFighter {
       };
     }
 
-    // Physics
+    // === PHYSICS ===
     this.x += this.vx;
     this.y += this.vy;
     this.vy += GRAVITY;
     this.vx *= FRICTION;
 
-    // Boundaries
+    // === BOUNDARIES ===
     if (this.y > GROUND_Y - this.height) {
       this.y = GROUND_Y - this.height;
       this.vy = 0;
@@ -266,6 +353,9 @@ class WorkerFighter {
     if (this.x > CANVAS_WIDTH - this.width) this.x = CANVAS_WIDTH - this.width;
   }
 
+  /**
+   * AI decision making via neural network
+   */
   processAi(opponent: WorkerFighter) {
     const dist = (opponent.x - this.x) / CANVAS_WIDTH;
     const distY = (opponent.y - this.y) / CANVAS_HEIGHT;
@@ -291,82 +381,107 @@ class WorkerFighter {
     };
   }
 
+  /**
+   * Check and apply hit detection
+   */
   checkHit(opponent: WorkerFighter) {
     if (this.hitbox && opponent.health > 0) {
-      const hit = 
+      const hit =
         this.hitbox.x < opponent.x + opponent.width &&
         this.hitbox.x + this.hitbox.w > opponent.x &&
         this.hitbox.y < opponent.y + opponent.height &&
         this.hitbox.y + this.hitbox.h > opponent.y;
 
       if (hit) {
-        // Check if defender is facing away from attacker (backstab)
+        // Backstab detection
         const attackerToRight = this.x > opponent.x;
-        const defenderFacingAway = (attackerToRight && opponent.direction === -1) || 
-                                   (!attackerToRight && opponent.direction === 1);
-        
+        const defenderFacingAway = (attackerToRight && opponent.direction === -1) ||
+          (!attackerToRight && opponent.direction === 1);
+
         // Damage calculation with multipliers
-        // Blocked: 0.5x, Unblocked: 1x, Backstab: 3x
         let damage = this.state === PUNCH ? 5 : 10;
-        
+
         if (defenderFacingAway) {
           damage *= 3;  // Backstab: 3x damage
         } else if (opponent.state === BLOCK) {
-          damage *= 0.5;  // Blocked: 0.5x damage
+          damage *= 0.5;  // Blocked: 50% damage reduction
           opponent.energy -= 5;
         }
 
         opponent.health = Math.max(0, opponent.health - damage);
-        
-        // Fitness for hits
+
+        // Fitness updates
         this.matchFitness += 50;
         opponent.matchFitness -= 20;
-        
-        // Knockback physics
+
+        // Knockback
         opponent.vx = this.direction * (this.state === KICK ? 15 : 8);
         opponent.vy = -5;
-        
+
         this.hitbox = null;
       }
     }
   }
 }
 
-// --- Match Simulation ---
+// =============================================================================
+// MATCH SIMULATION
+// =============================================================================
+
+/**
+ * Runs a complete match simulation and returns the result
+ * 
+ * MATCH FLOW:
+ * 1. Create two fighters with given genomes
+ * 2. Randomly swap sides (50% chance) for fairness
+ * 3. Run physics loop for 90 seconds (5400 frames at 60 FPS)
+ * 4. End early if KO (health <= 0)
+ * 5. Calculate final fitness including win bonus
+ * 
+ * SIDE SWAPPING:
+ * Critical for fair training! Without this, AI might only learn
+ * to fight from one side of the arena.
+ * 
+ * @param job - Match configuration
+ * @returns Match results with fitness changes
+ */
 function runMatch(job: MatchJob): MatchResult {
-  // CRITICAL: Randomly swap which genome plays which side (50% chance)
-  // This ensures AI learns to fight from BOTH sides of the arena
+  // === RANDOM SIDE ASSIGNMENT ===
+  // 50% chance to swap which genome plays left vs right
+  // This ensures AI learns to fight from both sides
   const swapSides = Math.random() > 0.5;
-  
+
   const leftGenome = swapSides ? job.genome2 : job.genome1;
   const rightGenome = swapSides ? job.genome1 : job.genome2;
   const leftSpawn = swapSides ? job.spawn2X : job.spawn1X;
   const rightSpawn = swapSides ? job.spawn1X : job.spawn2X;
-  
+
   // Clamp spawn positions to valid arena range
   const clampedLeftSpawn = Math.max(50, Math.min(350, leftSpawn));
   const clampedRightSpawn = Math.max(400, Math.min(700, rightSpawn));
-  
-  const f1 = new WorkerFighter(clampedLeftSpawn, leftGenome, 1);
-  const f2 = new WorkerFighter(clampedRightSpawn, rightGenome, -1);
 
-  // Track engagement (total damage dealt)
+  // Create fighters
+  const f1 = new WorkerFighter(clampedLeftSpawn, leftGenome, 1);   // Faces right
+  const f2 = new WorkerFighter(clampedRightSpawn, rightGenome, -1); // Faces left
+
+  // Track engagement for stalemate detection
   const startHealth1 = f1.health;
   const startHealth2 = f2.health;
 
-  // 90 seconds at 60 fps = 5400 frames
+  // === MAIN SIMULATION LOOP ===
+  // 90 seconds at 60 FPS = 5400 frames
   const maxFrames = 90 * 60;
   let matchEndedByKO = false;
-  
+
   for (let frame = 0; frame < maxFrames; frame++) {
-    // Update fighters
+    // Update both fighters
     f1.update(f2);
     f2.update(f1);
-    
-    // Body collision - prevent fighters from overlapping (only when vertically overlapping)
-    // This allows fighters to jump over each other
+
+    // === BODY COLLISION (prevents overlap) ===
+    // Only apply when fighters are at similar Y levels
     const verticalOverlap = (f1.y + f1.height > f2.y) && (f2.y + f2.height > f1.y);
-    
+
     if (verticalOverlap) {
       if (f1.x < f2.x) {
         const overlap = (f1.x + f1.width) - f2.x;
@@ -382,46 +497,50 @@ function runMatch(job: MatchJob): MatchResult {
         }
       }
     }
-    
+
     // Check hits
     f1.checkHit(f2);
     f2.checkHit(f1);
-    
-    // End if KO
+
+    // End on KO
     if (f1.health <= 0 || f2.health <= 0) {
       matchEndedByKO = true;
       break;
     }
   }
 
-  // Calculate engagement score (total damage dealt by both fighters)
+  // === CALCULATE FINAL FITNESS ===
+
+  // Engagement score (total damage dealt)
   const damageDealt1 = startHealth2 - f2.health;
   const damageDealt2 = startHealth1 - f1.health;
   const totalEngagement = damageDealt1 + damageDealt2;
 
-  // Calculate final fitness - map back to original genome order
+  // Base fitness from match + remaining health bonus
   let leftFitness = f1.matchFitness + f1.health * 2;
   let rightFitness = f2.matchFitness + f2.health * 2;
-  
-  // STALEMATE PENALTY: If match times out and both fighters barely engaged
-  // Punish passive play - both fighters should be actively fighting
+
+  // === STALEMATE PENALTY ===
+  // If match timed out with barely any fighting, punish both
+  // This prevents passive/camping strategies from being viable
   if (!matchEndedByKO && totalEngagement < 30) {
-    // Very low engagement = both fighters were passive
     const passivityPenalty = 100;
     leftFitness -= passivityPenalty;
     rightFitness -= passivityPenalty;
   }
-  
+
+  // Map fitness back to original genome order (undo swap)
   let fitness1 = swapSides ? rightFitness : leftFitness;
   let fitness2 = swapSides ? leftFitness : rightFitness;
-  
+
+  // === WINNER DETERMINATION ===
   let won1 = false;
   let won2 = false;
-  
+
   if (f1.health > f2.health) {
     // Left fighter won
     if (swapSides) {
-      fitness2 += 500;
+      fitness2 += 500;  // Win bonus
       won2 = true;
     } else {
       fitness1 += 500;
@@ -437,6 +556,7 @@ function runMatch(job: MatchJob): MatchResult {
       won2 = true;
     }
   }
+  // If tied health, neither gets win bonus
 
   return {
     jobId: job.jobId,
@@ -449,22 +569,33 @@ function runMatch(job: MatchJob): MatchResult {
   };
 }
 
-// --- Worker Message Handler ---
+// =============================================================================
+// WORKER MESSAGE HANDLER
+// =============================================================================
+
+/**
+ * Handle messages from main thread
+ * 
+ * Protocol:
+ * - Receive: { type: 'runMatches', jobs: MatchJob[] }
+ * - Respond: { type: 'matchResults', results: MatchResult[] }
+ */
 self.onmessage = (e: MessageEvent<{ type: string; jobs?: MatchJob[] }>) => {
   const { type, jobs } = e.data;
-  
+
   if (type === 'runMatches' && jobs) {
     const results: MatchResult[] = [];
-    
+
+    // Run each match sequentially within this worker
     for (const job of jobs) {
       const result = runMatch(job);
       results.push(result);
     }
-    
+
+    // Send all results back at once
     self.postMessage({ type: 'matchResults', results });
   }
 };
 
-// Signal ready
+// Signal that worker is ready to receive jobs
 self.postMessage({ type: 'ready' });
-

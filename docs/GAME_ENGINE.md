@@ -1,0 +1,422 @@
+# ⚔️ Game Engine & Physics
+
+This document explains the combat mechanics, physics simulation, and game rules that govern the arena.
+
+---
+
+## Table of Contents
+
+1. [Game Loop Architecture](#game-loop-architecture)
+2. [Physics System](#physics-system)
+3. [Fighter State Machine](#fighter-state-machine)
+4. [Combat Mechanics](#combat-mechanics)
+5. [Energy System](#energy-system)
+6. [Collision Detection](#collision-detection)
+7. [Fitness Shaping Philosophy](#fitness-shaping-philosophy)
+8. [World Rules & Boundaries](#world-rules--boundaries)
+
+---
+
+## Game Loop Architecture
+
+The game runs at **60 frames per second** using `requestAnimationFrame`.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     GAME LOOP (60 FPS)                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. CHECK MATCH                                              │
+│     └── If no active match, start a new one                 │
+│                                                              │
+│  2. CHECK PAUSE                                              │
+│     └── If paused, skip physics but continue loop           │
+│                                                              │
+│  3. PHYSICS LOOP (runs N times based on speed setting)      │
+│     ├── Process input (human or AI)                         │
+│     ├── Update Fighter 1 state and position                 │
+│     ├── Update Fighter 2 state and position                 │
+│     ├── Handle body collision (prevent overlap)             │
+│     ├── Check hit detection                                 │
+│     ├── Update match timer                                  │
+│     └── Check end conditions (KO, timeout)                  │
+│                                                              │
+│  4. SYNC TO REACT                                            │
+│     └── Update React state for UI rendering                 │
+│                                                              │
+│  5. SCHEDULE NEXT FRAME                                      │
+│     └── requestAnimationFrame(gameLoop)                     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Simulation Speed
+
+In Training mode, the physics loop runs multiple times per frame:
+- **1x**: Normal speed (real-time)
+- **100x**: 100 physics steps per frame
+- **5000x**: Maximum training speed
+
+In Arcade mode, it's always 1x for fair gameplay.
+
+---
+
+## Physics System
+
+### Constants
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `CANVAS_WIDTH` | 800px | Arena width |
+| `CANVAS_HEIGHT` | 450px | Arena height |
+| `GROUND_Y` | 380px | Y-coordinate of ground |
+| `GRAVITY` | 0.8 | Downward acceleration per frame |
+| `FRICTION` | 0.85 | Horizontal velocity multiplier per frame |
+
+### Physics Integration (Each Frame)
+
+```typescript
+// Apply velocity
+fighter.x += fighter.vx;
+fighter.y += fighter.vy;
+
+// Apply gravity (pulls down)
+fighter.vy += GRAVITY;
+
+// Apply friction (slows horizontal movement)
+fighter.vx *= FRICTION;
+```
+
+### Movement Feel
+
+With FRICTION = 0.85:
+- Initial velocity: 10 px/frame
+- After 1 frame: 8.5 px/frame
+- After 5 frames: 4.4 px/frame
+- After 10 frames: 2.0 px/frame
+
+This creates a smooth deceleration when the player stops inputting.
+
+---
+
+## Fighter State Machine
+
+Each fighter has a **state** that determines their animation and available actions.
+
+```
+                         ┌─────────┐
+                         │  IDLE   │◄───────────────────┐
+                         └────┬────┘                    │
+                              │                         │
+          ┌───────────────────┼───────────────────┐     │
+          │                   │                   │     │
+          ▼                   ▼                   ▼     │
+    ┌───────────┐      ┌───────────┐      ┌───────────┐ │
+    │ MOVE_LEFT │      │ MOVE_RIGHT│      │   JUMP    │─┘
+    └───────────┘      └───────────┘      └───────────┘
+                                                 │
+                                                 │ (on landing)
+                                                 └──────────────►
+          
+    From IDLE, can also:
+    ┌──────────┐    ┌──────────┐    ┌──────────┐
+    │  CROUCH  │    │  BLOCK   │    │  PUNCH   │
+    └──────────┘    └──────────┘    └────┬─────┘
+                                         │ (cooldown)
+                                         ▼
+                                    ┌──────────┐
+                                    │   KICK   │
+                                    └──────────┘
+```
+
+### State Transitions
+
+| From State | Trigger | To State | Notes |
+|------------|---------|----------|-------|
+| Any | Death | DEAD | Special physics |
+| IDLE | Left pressed | MOVE_LEFT | |
+| IDLE | Right pressed | MOVE_RIGHT | |
+| IDLE | Up pressed (grounded) | JUMP | Costs 12 energy |
+| IDLE | Down pressed | CROUCH | Slows movement |
+| IDLE | Block pressed | BLOCK | Drains energy |
+| IDLE | Punch pressed | PUNCH | 30 frame cooldown |
+| IDLE | Kick pressed | KICK | 40 frame cooldown |
+| JUMP | Landing | IDLE | |
+| PUNCH/KICK | Cooldown ends | IDLE | |
+
+---
+
+## Combat Mechanics
+
+### Attack Properties
+
+| Attack | Damage | Energy Cost | Cooldown | Hitbox Size | Knockback |
+|--------|--------|-------------|----------|-------------|-----------|
+| Punch | 5 | 10 | 30 frames | 46 × 20 px | 8 px/frame |
+| Kick | 10 | 15 | 40 frames | 66 × 30 px | 15 px/frame |
+
+### Attack Timing Windows
+
+Attacks have "active frames" where the hitbox actually exists:
+
+```
+PUNCH (30 frame cooldown):
+Frame:  30  29  28  27  26  25  24  23  22  21  20  19  18  17  16  15  14  ...  0
+        │                    │───────────────────│                              │
+        └── Startup          └── ACTIVE FRAMES   └── Recovery ─────────────────►
+```
+
+**Active window**: Cooldown 25-15 (10 frames of hitbox)
+
+### Damage Modifiers
+
+| Situation | Multiplier |
+|-----------|------------|
+| Normal hit | 1.0× |
+| Blocked | 0.5× |
+| Backstab | 3.0× |
+
+### Backstab Detection
+
+A hit is a backstab if the defender is facing away from the attacker:
+
+```
+Attacker on RIGHT, Defender facing LEFT → BACKSTAB (3× damage!)
+
+    Attacker         Defender
+      (→)              (←)
+       ▲                ▲
+       │                │
+    Facing          Facing away
+    defender        from attacker
+```
+
+### Block Mechanics
+
+- Holding block costs **0.5 energy per frame**
+- Blocked hits deal **50% damage**
+- Getting hit while blocking costs **5 extra energy**
+- Movement is reduced to **30%** while blocking
+
+---
+
+## Energy System
+
+Energy is a resource that limits rapid action spam.
+
+### Energy Costs
+
+| Action | Energy Cost |
+|--------|-------------|
+| Moving (per frame) | 0.5 |
+| Jumping | 12 |
+| Crouching (per frame) | 0.2 |
+| Blocking (per frame) | 0.5 |
+| Punch | 10 |
+| Kick | 15 |
+
+### Energy Regeneration
+
+| State | Regen Rate |
+|-------|------------|
+| Idle (standing still) | 0.5 per frame |
+| Active (moving, fighting) | 0.2 per frame |
+
+This creates a tactical tradeoff: staying still regens energy faster but makes you vulnerable.
+
+---
+
+## Collision Detection
+
+### Body Collision (Push-back)
+
+Fighters can't overlap when at similar heights:
+
+```typescript
+// Only apply when vertically overlapping (not jumping over)
+const verticalOverlap = (f1.y + f1.height > f2.y) && (f2.y + f2.height > f1.y);
+
+if (verticalOverlap) {
+  // Calculate horizontal overlap
+  const overlap = (fighter1.x + fighter1.width) - fighter2.x;
+  
+  // Push both fighters apart equally
+  fighter1.x -= overlap / 2;
+  fighter2.x += overlap / 2;
+}
+```
+
+### Hit Detection (AABB)
+
+We use **Axis-Aligned Bounding Box** collision:
+
+```typescript
+// Two rectangles overlap if they overlap on BOTH axes
+const hit = 
+  hitbox.x < opponent.x + opponent.width &&   // hitbox left < opponent right
+  hitbox.x + hitbox.w > opponent.x &&          // hitbox right > opponent left
+  hitbox.y < opponent.y + opponent.height &&   // hitbox top < opponent bottom
+  hitbox.y + hitbox.h > opponent.y;            // hitbox bottom > opponent top
+```
+
+```
+┌─────────────────────────────────────────────┐
+│                  ARENA                       │
+│                                              │
+│    ┌────────┐      ┌────────────┐           │
+│    │Fighter │      │   Hitbox   │           │
+│    │   1    ├──────┤            │           │
+│    │        │      └────────────┘           │
+│    └────────┘             ┌────────┐        │
+│                           │Fighter │        │
+│                           │   2    │        │
+│                           └────────┘        │
+│──────────────────────────────────────────────│
+│                 GROUND                       │
+└─────────────────────────────────────────────┘
+
+If hitbox rectangle overlaps Fighter 2's rectangle → HIT!
+```
+
+---
+
+## Fitness Shaping Philosophy
+
+There are two approaches to training AI through evolution:
+
+### Pure Evolution
+Only reward winning:
+- Winner: +500 fitness
+- Loser: +0 fitness
+
+**Pros**: No human bias, may discover unexpected strategies
+**Cons**: Very slow to learn, may develop passive strategies (both stand still)
+
+### Guided Evolution (What We Use)
+Add rewards for behaviors that lead to winning:
+- Approaching opponent
+- Facing opponent  
+- Attacking when close
+- Controlling center
+- etc.
+
+**Pros**: Much faster learning, prevents degenerate strategies
+**Cons**: May bias AI toward human-expected behaviors
+
+### Our Fitness Shaping Rules
+
+#### Per-Frame Rewards
+
+| Behavior | Fitness/Frame | Purpose |
+|----------|---------------|---------|
+| Distance < 400px | +0.005 | Approach |
+| Distance < 200px | +0.02 | Get closer |
+| Distance < 80px | +0.05 | Engage! |
+| Facing opponent | +0.02 | Proper stance |
+| Attacking in range (<100px) | +0.1 | Encourage offense |
+| Moving (vx > 0.5) | +0.008 | Prevent standing |
+| Center of arena (<150px from center) | +0.015 | Arena control |
+
+#### Per-Frame Penalties
+
+| Behavior | Fitness/Frame | Purpose |
+|----------|---------------|---------|
+| Every frame | -0.005 | Time pressure |
+| Near edge (<60px from wall) | -0.04 | Discourage corners |
+
+#### Per-Hit Rewards
+
+| Event | Fitness Change |
+|-------|----------------|
+| Landing a hit | +50 |
+| Taking a hit | -20 |
+
+#### Match End Rewards
+
+| Outcome | Fitness Change |
+|---------|----------------|
+| Winning | +500 |
+| Remaining health | +health × 2 |
+| Stalemate (timeout + <30 damage dealt) | -100 |
+
+### Match Impact Analysis
+
+A 90-second match at 60 FPS = 5,400 frames.
+
+Maximum per-frame rewards:
+- Proximity (always <80px): 5,400 × 0.05 = **270 fitness**
+- Always facing: 5,400 × 0.02 = **108 fitness**
+- Always moving: 5,400 × 0.008 = **43 fitness**
+
+Compare to win bonus: **500 fitness**
+
+So per-frame shaping is significant but winning still matters most!
+
+---
+
+## World Rules & Boundaries
+
+### Arena Boundaries
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ x=0                                            x=800     │
+│                                                          │
+│  ═══════════════════════════════════════════════════════│ y=0
+│                                                          │
+│                                                          │
+│                        ARENA                             │
+│                                                          │
+│                    (800 × 450 px)                        │
+│                                                          │
+│──────────────────────────────────────────────────────────│ y=380 (GROUND)
+│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
+└──────────────────────────────────────────────────────────┘ y=450
+```
+
+### Boundary Enforcement
+
+```typescript
+// Ground
+if (fighter.y > GROUND_Y - fighter.height) {
+  fighter.y = GROUND_Y - fighter.height;
+  fighter.vy = 0;
+}
+
+// Left wall
+if (fighter.x < 0) fighter.x = 0;
+
+// Right wall  
+if (fighter.x > CANVAS_WIDTH - fighter.width) {
+  fighter.x = CANVAS_WIDTH - fighter.width;
+}
+```
+
+### Match Rules
+
+| Rule | Value |
+|------|-------|
+| Match duration | 90 seconds |
+| Starting health | 100 |
+| Starting energy | 100 |
+| Win condition | More health when time expires OR opponent KO'd |
+
+---
+
+## Code References
+
+### Main Game Loop
+[App.tsx - update() function](../App.tsx#L316)
+
+### Fighter Physics
+[GameEngine.ts - Fighter.update()](../services/GameEngine.ts#L120)
+
+### Hit Detection
+[GameEngine.ts - Fighter.checkHit()](../services/GameEngine.ts#L251)
+
+### Fitness Shaping
+[GameEngine.ts - Lines 57-112](../services/GameEngine.ts#L57)
+
+---
+
+← Back to [Neural Network](./NEURAL_NETWORK.md) | Next: [Rendering](./RENDERING.md) →
