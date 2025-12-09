@@ -300,33 +300,29 @@ class WorkerFighter {
         this.hitbox.y + this.hitbox.h > opponent.y;
 
       if (hit) {
-        // BACKSTAB CHECK: Instant death if defender is facing away from attacker
-        // Critical martial arts rule: NEVER turn your back on your opponent
+        // Check if defender is facing away from attacker (backstab)
         const attackerToRight = this.x > opponent.x;
         const defenderFacingAway = (attackerToRight && opponent.direction === -1) || 
                                    (!attackerToRight && opponent.direction === 1);
         
-        if (defenderFacingAway) {
-          // Instant death - backstab is fatal
-          // No explicit fitness bonus needed - winning the match is reward enough
-          opponent.health = 0;
-        } else {
-          // Normal damage calculation
-          let damage = this.state === PUNCH ? 5 : 10;
-          
-          if (opponent.state === BLOCK) {
-            damage *= 0.1;
-            opponent.energy -= 5;
-          }
-
-          opponent.health = Math.max(0, opponent.health - damage);
-          
-          // Fitness for hits
-          this.matchFitness += 50;
-          opponent.matchFitness -= 20;
-        }
+        // Damage calculation with multipliers
+        // Blocked: 0.5x, Unblocked: 1x, Backstab: 3x
+        let damage = this.state === PUNCH ? 5 : 10;
         
-        // Knockback physics (applies to both normal hits and backstabs)
+        if (defenderFacingAway) {
+          damage *= 3;  // Backstab: 3x damage
+        } else if (opponent.state === BLOCK) {
+          damage *= 0.5;  // Blocked: 0.5x damage
+          opponent.energy -= 5;
+        }
+
+        opponent.health = Math.max(0, opponent.health - damage);
+        
+        // Fitness for hits
+        this.matchFitness += 50;
+        opponent.matchFitness -= 20;
+        
+        // Knockback physics
         opponent.vx = this.direction * (this.state === KICK ? 15 : 8);
         opponent.vy = -5;
         
@@ -367,18 +363,23 @@ function runMatch(job: MatchJob): MatchResult {
     f1.update(f2);
     f2.update(f1);
     
-    // Body collision - prevent fighters from overlapping
-    if (f1.x < f2.x) {
-      const overlap = (f1.x + f1.width) - f2.x;
-      if (overlap > 0) {
-        f1.x -= overlap / 2;
-        f2.x += overlap / 2;
-      }
-    } else {
-      const overlap = (f2.x + f2.width) - f1.x;
-      if (overlap > 0) {
-        f2.x -= overlap / 2;
-        f1.x += overlap / 2;
+    // Body collision - prevent fighters from overlapping (only when vertically overlapping)
+    // This allows fighters to jump over each other
+    const verticalOverlap = (f1.y + f1.height > f2.y) && (f2.y + f2.height > f1.y);
+    
+    if (verticalOverlap) {
+      if (f1.x < f2.x) {
+        const overlap = (f1.x + f1.width) - f2.x;
+        if (overlap > 0) {
+          f1.x -= overlap / 2;
+          f2.x += overlap / 2;
+        }
+      } else {
+        const overlap = (f2.x + f2.width) - f1.x;
+        if (overlap > 0) {
+          f2.x -= overlap / 2;
+          f1.x += overlap / 2;
+        }
       }
     }
     

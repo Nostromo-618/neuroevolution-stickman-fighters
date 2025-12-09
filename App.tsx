@@ -352,18 +352,23 @@ const App = () => {
             p1.update(p1Input, p2); 
             p2.update(dummyInput, p1);
 
-            // Body collision - prevent fighters from overlapping
-            if (p1.x < p2.x) {
-                const overlap = (p1.x + p1.width) - p2.x;
-                if (overlap > 0) {
-                    p1.x -= overlap / 2;
-                    p2.x += overlap / 2;
-                }
-            } else {
-                const overlap = (p2.x + p2.width) - p1.x;
-                if (overlap > 0) {
-                    p2.x -= overlap / 2;
-                    p1.x += overlap / 2;
+            // Body collision - prevent fighters from overlapping (only when vertically overlapping)
+            // This allows fighters to jump over each other
+            const verticalOverlap = (p1.y + p1.height > p2.y) && (p2.y + p2.height > p1.y);
+            
+            if (verticalOverlap) {
+                if (p1.x < p2.x) {
+                    const overlap = (p1.x + p1.width) - p2.x;
+                    if (overlap > 0) {
+                        p1.x -= overlap / 2;
+                        p2.x += overlap / 2;
+                    }
+                } else {
+                    const overlap = (p2.x + p2.width) - p1.x;
+                    if (overlap > 0) {
+                        p2.x -= overlap / 2;
+                        p1.x += overlap / 2;
+                    }
                 }
             }
 

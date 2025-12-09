@@ -258,34 +258,29 @@ export class Fighter {
         this.hitbox.y + this.hitbox.h > opponent.y;
 
       if (hit) {
-        // BACKSTAB CHECK: Instant death if defender is facing away from attacker
-        // Critical martial arts rule: NEVER turn your back on your opponent
+        // Check if defender is facing away from attacker (backstab)
         const attackerToRight = this.x > opponent.x;
         const defenderFacingAway = (attackerToRight && opponent.direction === -1) || 
                                    (!attackerToRight && opponent.direction === 1);
         
-        if (defenderFacingAway) {
-          // Instant death - backstab is fatal
-          // No explicit fitness bonus needed - winning the match is reward enough
-          opponent.health = 0;
-        } else {
-          // Normal damage calculation
-          let damage = this.state === FighterAction.PUNCH ? 5 : 10;
-          
-          // Block mitigation
-          if (opponent.state === FighterAction.BLOCK) {
-            damage *= 0.1;
-            opponent.energy -= 5;
-          }
-
-          opponent.health = Math.max(0, opponent.health - damage);
-          
-          // Update Fitness if training
-          if (this.genome) this.genome.fitness += 50; // Big bonus for hitting
-          if (opponent.genome) opponent.genome.fitness -= 20; // Penalty for getting hit
-        }
+        // Damage calculation with multipliers
+        // Blocked: 0.5x, Unblocked: 1x, Backstab: 3x
+        let damage = this.state === FighterAction.PUNCH ? 5 : 10;
         
-        // Knockback physics (applies to both normal hits and backstabs)
+        if (defenderFacingAway) {
+          damage *= 3;  // Backstab: 3x damage
+        } else if (opponent.state === FighterAction.BLOCK) {
+          damage *= 0.5;  // Blocked: 0.5x damage
+          opponent.energy -= 5;
+        }
+
+        opponent.health = Math.max(0, opponent.health - damage);
+        
+        // Update Fitness if training
+        if (this.genome) this.genome.fitness += 50; // Big bonus for hitting
+        if (opponent.genome) opponent.genome.fitness -= 20; // Penalty for getting hit
+        
+        // Knockback physics
         opponent.vx = this.direction * (this.state === FighterAction.KICK ? 15 : 8); 
         opponent.vy = -5;
         
