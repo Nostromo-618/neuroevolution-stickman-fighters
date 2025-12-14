@@ -14,6 +14,7 @@ A real-time neuroevolution fighting game where AI fighters learn to combat throu
 
 - **Training Mode**: Watch AI fight AI. Each generation produces smarter fighters.
 - **Arcade Mode**: Fight against the best trained AI with keyboard or gamepad.
+- **Custom Script Editor**: Write your own fighter AI in JavaScript with Monaco Editor.
 - **Background Training**: AI continues learning while you play.
 - **Export/Import**: Save and share your trained AI weights.
 - **Real-time Visualization**: See fitness progress on live charts.
@@ -35,7 +36,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+Open `http://localhost:3003` in your browser.
 
 ---
 
@@ -68,6 +69,7 @@ For detailed explanations of how everything works:
 | [Neural Network & Genetic Algorithm](docs/NEURAL_NETWORK.md) | How the AI brain works and evolves |
 | [Game Engine & Physics](docs/GAME_ENGINE.md) | Combat mechanics, fitness shaping, rules |
 | [Visual Rendering](docs/RENDERING.md) | Canvas graphics and animation system |
+| [Scripted Fighter](SCRIPTED.md) | Default scripted opponent implementation |
 
 ---
 
@@ -84,12 +86,16 @@ neuroevolution-stickman-fighters/
 │   ├── NeuralNetwork.ts    # Neural network implementation
 │   ├── GameEngine.ts       # Fighter physics and combat
 │   ├── InputManager.ts     # Keyboard/gamepad input handling
+│   ├── ScriptedFighter.ts  # Default scripted opponent logic
+│   ├── CustomScriptRunner.ts # User script compilation & execution
+│   ├── CustomScriptWorker.js # Web Worker for secure script isolation
 │   ├── TrainingWorker.ts   # Web Worker for parallel training
 │   └── WorkerPool.ts       # Manages multiple training workers
 │
 ├── components/
 │   ├── GameCanvas.tsx      # Canvas rendering of arena/fighters
 │   ├── Dashboard.tsx       # Training controls and stats
+│   ├── ScriptEditor.tsx    # Monaco code editor modal
 │   └── Toast.tsx           # Notification system
 │
 └── docs/
@@ -143,7 +149,8 @@ Over generations, networks that produce winning behaviors are preserved and refi
 - **TypeScript** - Type-safe JavaScript
 - **Vite** - Fast development server and bundler
 - **Canvas 2D API** - Game rendering
-- **Web Workers** - Parallel training on multiple CPU cores
+- **Web Workers** - Parallel training and secure script execution
+- **Monaco Editor** - VS Code-based code editor for custom scripts
 - **Recharts** - Fitness visualization graphs
 - **Tailwind CSS** - Styling
 
@@ -168,6 +175,7 @@ Contributions are welcome! Some ideas:
 - Add sound effects and music
 - Create a multiplayer mode
 - Improve the stickman animations
+- Share custom fighter scripts
 
 ---
 
@@ -186,79 +194,15 @@ MIT License - feel free to use this code for learning and projects.
 
 ---
 
-## 📊 Security
+| Audit Result | Date |
+|--------------|------|
+| ✅ No vulnerabilities found | December 2024 |
+
 ```
- ________   ___  ___   ________   ___   _________       ___   ________      
-|\   __  \ |\  \|\  \ |\   ___ \ |\  \ |\___   ___\    |\  \ |\   ____\     
-\ \  \|\  \\ \  \\\  \\ \  \_|\ \\ \  \\|___ \  \_|    \ \  \\ \  \___|_    
- \ \   __  \\ \  \\\  \\ \  \ \\ \\ \  \    \ \  \   __ \ \  \\ \_____  \   
-  \ \  \ \  \\ \  \\\  \\ \  \_\\ \\ \  \    \ \  \ |\  \\_\  \\|____|\  \  
-   \ \__\ \__\\ \_______\\ \_______\\ \__\    \ \__\\ \________\ ____\_\  \ 
-    \|__|\|__| \|_______| \|_______| \|__|     \|__| \|________||\_________\
-                                                                \|_________|
-                                                                            
-                                                                            
-  _      _                       _   _              
- /_)    /_`_  _  _ _/_   _  _   (/  /_`_._  _   _/ _
-/_)/_/ ._//_// //_|/ /_//_//_' (_X /  ///_'/ //_/_\ 
-   _/                _//                            
-
-  AuditJS version: 4.0.47
-
-✔ Starting application
-✔ Getting coordinates for Sonatype OSS Index
-✔ Auditing your application with Sonatype OSS Index
-✔ Submitting coordinates to Sonatype OSS Index
-✔ Reticulating splines
-✔ Removing whitelisted vulnerabilities
-
-  Sonabot here, beep boop beep boop, here are your Sonatype OSS Index results:
-  Total dependencies audited: 43
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-[1/43] - pkg:npm/@reduxjs/toolkit@2.11.1 - No vulnerabilities found!
-[2/43] - pkg:npm/@standard-schema/spec@1.0.0 - No vulnerabilities found!
-[3/43] - pkg:npm/@standard-schema/utils@0.3.0 - No vulnerabilities found!
-[4/43] - pkg:npm/@types/d3-array@3.2.2 - No vulnerabilities found!
-[5/43] - pkg:npm/@types/d3-color@3.1.3 - No vulnerabilities found!
-[6/43] - pkg:npm/@types/d3-ease@3.0.2 - No vulnerabilities found!
-[7/43] - pkg:npm/@types/d3-interpolate@3.0.4 - No vulnerabilities found!
-[8/43] - pkg:npm/@types/d3-path@3.1.1 - No vulnerabilities found!
-[9/43] - pkg:npm/@types/d3-scale@4.0.9 - No vulnerabilities found!
-[10/43] - pkg:npm/@types/d3-shape@3.1.7 - No vulnerabilities found!
-[11/43] - pkg:npm/@types/d3-time@3.0.4 - No vulnerabilities found!
-[12/43] - pkg:npm/@types/d3-timer@3.0.2 - No vulnerabilities found!
-[13/43] - pkg:npm/@types/use-sync-external-store@0.0.6 - No vulnerabilities found!
-[14/43] - pkg:npm/clsx@2.1.1 - No vulnerabilities found!
-[15/43] - pkg:npm/d3-array@3.2.4 - No vulnerabilities found!
-[16/43] - pkg:npm/d3-color@3.1.0 - No vulnerabilities found!
-[17/43] - pkg:npm/d3-ease@3.0.1 - No vulnerabilities found!
-[18/43] - pkg:npm/d3-format@3.1.0 - No vulnerabilities found!
-[19/43] - pkg:npm/d3-interpolate@3.0.1 - No vulnerabilities found!
-[20/43] - pkg:npm/d3-path@3.1.0 - No vulnerabilities found!
-[21/43] - pkg:npm/d3-scale@4.0.2 - No vulnerabilities found!
-[22/43] - pkg:npm/d3-shape@3.2.0 - No vulnerabilities found!
-[23/43] - pkg:npm/d3-time-format@4.1.0 - No vulnerabilities found!
-[24/43] - pkg:npm/d3-time@3.1.0 - No vulnerabilities found!
-[25/43] - pkg:npm/d3-timer@3.0.1 - No vulnerabilities found!
-[26/43] - pkg:npm/decimal.js-light@2.5.1 - No vulnerabilities found!
-[27/43] - pkg:npm/es-toolkit@1.42.0 - No vulnerabilities found!
-[28/43] - pkg:npm/eventemitter3@5.0.1 - No vulnerabilities found!
-[29/43] - pkg:npm/immer@10.2.0 - No vulnerabilities found!
-[30/43] - pkg:npm/immer@11.0.1 - No vulnerabilities found!
-[31/43] - pkg:npm/internmap@2.0.3 - No vulnerabilities found!
-[32/43] - pkg:npm/react-dom@19.2.1 - No vulnerabilities found!
-[33/43] - pkg:npm/react-is@19.2.1 - No vulnerabilities found!
-[34/43] - pkg:npm/react-redux@9.2.0 - No vulnerabilities found!
-[35/43] - pkg:npm/react@19.2.1 - No vulnerabilities found!
-[36/43] - pkg:npm/recharts@3.5.1 - No vulnerabilities found!
-[37/43] - pkg:npm/redux-thunk@3.1.0 - No vulnerabilities found!
-[38/43] - pkg:npm/redux@5.0.1 - No vulnerabilities found!
-[39/43] - pkg:npm/reselect@5.1.1 - No vulnerabilities found!
-[40/43] - pkg:npm/scheduler@0.27.0 - No vulnerabilities found!
-[41/43] - pkg:npm/tiny-invariant@1.3.3 - No vulnerabilities found!
-[42/43] - pkg:npm/use-sync-external-store@1.6.0 - No vulnerabilities found!
-[43/43] - pkg:npm/victory-vendor@37.3.6 - No vulnerabilities found!
+Total dependencies audited: 50
+All packages: No vulnerabilities found!
 ```
+
+Run security audit: `npx -y auditjs ossi`
 
 ---

@@ -7,13 +7,14 @@ This document explains the combat mechanics, physics simulation, and game rules 
 ## Table of Contents
 
 1. [Game Loop Architecture](#game-loop-architecture)
-2. [Physics System](#physics-system)
-3. [Fighter State Machine](#fighter-state-machine)
-4. [Combat Mechanics](#combat-mechanics)
-5. [Energy System](#energy-system)
-6. [Collision Detection](#collision-detection)
-7. [Fitness Shaping Philosophy](#fitness-shaping-philosophy)
-8. [World Rules & Boundaries](#world-rules--boundaries)
+2. [Fighter Control Types](#fighter-control-types)
+3. [Physics System](#physics-system)
+4. [Fighter State Machine](#fighter-state-machine)
+5. [Combat Mechanics](#combat-mechanics)
+6. [Energy System](#energy-system)
+7. [Collision Detection](#collision-detection)
+8. [Fitness Shaping Philosophy](#fitness-shaping-philosophy)
+9. [World Rules & Boundaries](#world-rules--boundaries)
 
 ---
 
@@ -58,6 +59,46 @@ In Training mode, the physics loop runs multiple times per frame:
 - **5000x**: Maximum training speed
 
 In Arcade mode, it's always 1x for fair gameplay.
+
+---
+
+## Fighter Control Types
+
+Fighters can be controlled by different systems depending on the game mode and settings:
+
+| Type | Color | Description | File |
+|------|-------|-------------|------|
+| **Human** | Red (`#ef4444`) | Keyboard/gamepad input in Arcade mode | `InputManager.ts` |
+| **Neural AI** | Blue (`#3b82f6`) | Trained neural network decisions | `NeuralNetwork.ts` |
+| **Scripted** | Orange (`#f97316`) | Default rule-based logic | `ScriptedFighter.ts` |
+| **Custom** | Purple (`#a855f7`) | User-written JavaScript | `CustomScriptRunner.ts` |
+
+### Control Priority
+
+In `Fighter.update()`, the decision process is:
+
+```typescript
+if (isCustom && scriptWorker) {
+  // User's custom script (Web Worker)
+  activeInput = processCustom(opponent);
+} else if (isScripted) {
+  // Default scripted logic
+  activeInput = processScripted(opponent);
+} else if (isAi && genome) {
+  // Neural network
+  activeInput = processAi(opponent);
+} else {
+  // Human input
+  activeInput = input;
+}
+```
+
+### Custom Script Security
+
+Custom scripts run in an isolated **Web Worker**:
+- No access to DOM (`document`, `window`)
+- No access to page JavaScript context
+- Uses cached action pattern for 60 FPS performance (~1 frame latency)
 
 ---
 

@@ -17,6 +17,17 @@
 - Uses native `Math.random()` for randomness (no external libs)
 - Scripted fighter code in `services/ScriptedFighter.ts` - heavily commented for learning
 
-## Notes
-- Orange color: `#f97316`
-- Uses native `Math.random()` for randomness
+## Related: Custom Script Editor
+
+A more advanced **Custom Script Editor** has been implemented that allows users to write their own fighter AI in JavaScript:
+
+- **Location**: Select "Custom" in the Opponent Type selector, then click "Edit Script"
+- **Editor**: Monaco Editor (VS Code's core) with syntax highlighting
+- **Color**: Purple (`#a855f7`) for custom script fighters
+- **Security**: Runs in isolated Web Worker (no DOM/window access)
+- **Persistence**: Scripts saved to localStorage, exportable as JSON
+
+See:
+- `services/CustomScriptRunner.ts` - Script compilation and execution
+- `services/CustomScriptWorker.js` - Isolated worker environment
+- `components/ScriptEditor.tsx` - Monaco editor modal
