@@ -152,8 +152,8 @@ Each fighter has a **state** that determines their animation and available actio
 
 | Attack | Damage | Energy Cost | Cooldown | Hitbox Size | Knockback |
 |--------|--------|-------------|----------|-------------|-----------|
-| Punch | 5 | 10 | 30 frames | 46 × 20 px | 8 px/frame |
-| Kick | 10 | 15 | 40 frames | 66 × 30 px | 15 px/frame |
+| Punch | 5 | 30 (30%) | 30 frames | 46 × 20 px | 8 px/frame |
+| Kick | 10 | 60 (60%) | 40 frames | 66 × 30 px | 15 px/frame |
 
 ### Attack Timing Windows
 
@@ -174,29 +174,25 @@ Frame:  30  29  28  27  26  25  24  23  22  21  20  19  18  17  16  15  14  ... 
 |-----------|------------|
 | Normal hit | 1.0× |
 | Blocked | 0.5× |
-| Backstab | 3.0× |
 
 ### Backstab Detection
 
-A hit is a backstab if the defender is facing away from the attacker:
+**Note:** The backstab damage multiplier (3× damage) has been removed from the game. However, the facing detection logic remains for potential future use or AI positioning strategies.
 
-```
-Attacker on RIGHT, Defender facing LEFT → BACKSTAB (3× damage!)
-
-    Attacker         Defender
-      (→)              (←)
-       ▲                ▲
-       │                │
-    Facing          Facing away
-    defender        from attacker
-```
+The system can still detect when a defender is facing away from an attacker, but it no longer affects damage calculation.
 
 ### Block Mechanics
 
-- Holding block costs **0.5 energy per frame**
-- Blocked hits deal **50% damage**
+- Holding block costs **50% of total energy per second**
+- Blocked hits deal **50% damage** for punches, **75% damage reduction** for kicks
 - Getting hit while blocking costs **5 extra energy**
 - Movement is reduced to **30%** while blocking
+
+### Crouch Mechanics
+
+- Holding crouch costs **50% of total energy per second**
+- Crouching blocks **50% damage** for kicks, **75% damage reduction** for punches
+- Movement is reduced to **50%** while crouching
 
 ---
 
@@ -209,11 +205,11 @@ Energy is a resource that limits rapid action spam.
 | Action | Energy Cost |
 |--------|-------------|
 | Moving (per frame) | 0.5 |
-| Jumping | 12 |
-| Crouching (per frame) | 0.2 |
-| Blocking (per frame) | 0.5 |
-| Punch | 10 |
-| Kick | 15 |
+| Jumping | 25 (25% of total) |
+| Crouching (per second) | 50 (50% of total) |
+| Blocking (per second) | 50 (50% of total) |
+| Punch | 30 (30% of total) |
+| Kick | 60 (60% of total) |
 
 ### Energy Regeneration
 
@@ -400,6 +396,18 @@ if (fighter.x > CANVAS_WIDTH - fighter.width) {
 | Starting health | 100 |
 | Starting energy | 100 |
 | Win condition | More health when time expires OR opponent KO'd |
+
+### Training-Specific Rules
+
+The training system includes special rules to ensure fair and effective AI learning:
+
+#### Side Swapping
+- **Round-based alternation**: Each training round alternates fighter starting positions
+- **Deterministic assignment**: Uses `jobId % 2` to determine side assignment
+- **Purpose**: Prevents directional bias and ensures AI learns to fight from both sides
+- **Implementation**: [`TrainingWorker.ts - runMatch()`](../services/TrainingWorker.ts#L448)
+
+This systematic side swapping replaces the previous random assignment, guaranteeing equal exposure to both left and right starting positions across all training rounds.
 
 ---
 

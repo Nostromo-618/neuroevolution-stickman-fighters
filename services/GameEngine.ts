@@ -27,16 +27,18 @@
  * 
  * COMBAT SYSTEM
  * -------------
- * - Punch: Quick attack, 5 damage, 30 frame cooldown
- * - Kick: Strong attack, 10 damage, 40 frame cooldown
- * - Block: Reduces incoming damage by 50%
- * - Backstab: 3x damage multiplier if opponent faces away
- * 
+ * - Punch: Quick attack, 5 damage, 30 frame cooldown, 30% energy cost
+ * - Kick: Strong attack, 10 damage, 40 frame cooldown, 60% energy cost
+ * - Block: Reduces incoming damage by 50% for punches, 75% for kicks, 50% energy per second
+ * - Crouch: Reduces incoming damage by 50% for punches, 75% for kicks, 50% energy per second
+ * - Jump: 25% energy cost
+ *
  * =============================================================================
  */
 
 import { FighterAction, Genome, InputState } from '../types';
 import { predict } from './NeuralNetwork';
+import { getScriptedAction, FighterState } from './ScriptedFighter';
 
 // =============================================================================
 // WORLD CONSTANTS
@@ -94,6 +96,7 @@ export class Fighter {
   // --- Identity ---
   color: string;          // Display color (CSS color string)
   isAi: boolean;          // True if controlled by neural network
+  isScripted: boolean;    // True if controlled by ScriptedFighter module
   genome?: Genome;        // AI brain (only set for AI fighters)
 
   // --- Combat Stats ---
@@ -130,6 +133,7 @@ export class Fighter {
     this.y = GROUND_Y - this.height;  // Start on the ground
     this.color = color;
     this.isAi = isAi;
+    this.isScripted = false;  // Default to false; set to true externally for scripted fighters
     this.genome = genome;
   }
 
@@ -165,10 +169,17 @@ export class Fighter {
       return;  // Skip all other logic when dead
     }
 
-    // === AI DECISION MAKING ===
-    // If AI-controlled, use neural network to generate inputs
+    // === AI/SCRIPTED DECISION MAKING ===
+    // Determine input based on control type: Human, Neural Network AI, or Scripted
     let activeInput = input;
-    if (this.isAi && this.genome) {
+
+    // SCRIPTED FIGHTER: Use the ScriptedFighter module for decisions
+    // This takes priority over isAi since a fighter can't be both
+    if (this.isScripted) {
+      activeInput = this.processScripted(opponent);
+    }
+    // NEURAL NETWORK AI: Use the neural network for decisions
+    else if (this.isAi && this.genome) {
       activeInput = this.processAi(opponent);
 
       // =================================================================
@@ -275,24 +286,24 @@ export class Fighter {
         this.state = FighterAction.IDLE;
       }
 
-      // --- JUMP (costs significant energy - tactical use only) ---
-      if (activeInput.up && this.y >= GROUND_Y - this.height - 1 && this.energy >= 12) {
+      // --- JUMP (costs 25% of total energy) ---
+      if (activeInput.up && this.y >= GROUND_Y - this.height - 1 && this.energy >= 25) {
         this.vy = -18;
-        this.energy -= 12;
+        this.energy -= 25;
         this.state = FighterAction.JUMP;
       }
 
-      // --- CROUCH (costs small energy, slows movement) ---
-      if (activeInput.down && this.y >= GROUND_Y - this.height - 1 && this.energy >= 0.2) {
+      // --- CROUCH (costs 50% of total energy per second, blocks 75% kicks and 50% punches) ---
+      if (activeInput.down && this.y >= GROUND_Y - this.height - 1 && this.energy >= 50) {
         this.state = FighterAction.CROUCH;
-        this.energy -= 0.2;
+        this.energy -= 50;  // 50% of total energy per second
         this.vx *= 0.5;  // Slow down while crouching
       }
 
-      // --- BLOCK (sustained defensive stance, energy drain per frame) ---
-      if (activeInput.action3 && this.energy >= 0.5) {
+      // --- BLOCK (costs 50% of total energy per second, blocks 75% punches and 50% kicks) ---
+      if (activeInput.action3 && this.energy >= 50) {
         this.state = FighterAction.BLOCK;
-        this.energy -= 0.5;
+        this.energy -= 50;  // 50% of total energy per second
         this.vx *= 0.3;  // Significant slowdown while blocking
       }
     }
@@ -302,19 +313,19 @@ export class Fighter {
 
     // Attacks can only be initiated when not in cooldown
     if (this.cooldown === 0) {
-      // PUNCH: Quick attack, less damage, faster recovery
-      if (activeInput.action1 && this.energy > 10) {
+      // PUNCH: Quick attack, less damage, faster recovery (30% of total energy)
+      if (activeInput.action1 && this.energy >= 30) {
         this.state = FighterAction.PUNCH;
         this.vx *= 0.2;       // Stop moving significantly
         this.cooldown = 30;   // 30 frames of animation
-        this.energy -= 10;    // Energy cost
+        this.energy -= 30;    // Energy cost (30% of 100)
       }
-      // KICK: Strong attack, more damage, slower recovery
-      else if (activeInput.action2 && this.energy > 15) {
+      // KICK: Strong attack, more damage, slower recovery (60% of total energy)
+      else if (activeInput.action2 && this.energy >= 60) {
         this.state = FighterAction.KICK;
         this.vx *= 0.2;
         this.cooldown = 40;   // Longer animation
-        this.energy -= 15;    // Higher energy cost
+        this.energy -= 60;    // Higher energy cost (60% of 100)
       }
     }
 
@@ -415,6 +426,63 @@ export class Fighter {
   }
 
   /**
+   * Scripted Decision Making via ScriptedFighter Module
+   * 
+   * Similar to processAi, but instead of using a neural network,
+   * this method calls the user-defined scripted logic.
+   * 
+   * The ScriptedFighter module receives a FighterState object with
+   * all relevant information about both fighters, and returns an
+   * InputState with the desired actions.
+   * 
+   * This is great for:
+   * - Testing specific behaviors against the neural network
+   * - Creating benchmark opponents
+   * - Learning how fighting game AI works
+   * 
+   * @param opponent - The other fighter
+   * @returns InputState object with boolean action flags
+   */
+  processScripted(opponent: Fighter): InputState {
+    // === BUILD FIGHTER STATE FOR SCRIPTED MODULE ===
+    // The ScriptedFighter module uses its own FighterState interface
+    // that contains all the information needed for decision-making
+
+    const selfState: FighterState = {
+      x: this.x,
+      y: this.y,
+      vx: this.vx,
+      vy: this.vy,
+      health: this.health,
+      energy: this.energy,
+      state: this.state,
+      direction: this.direction,
+      cooldown: this.cooldown,
+      width: this.width,
+      height: this.height
+    };
+
+    const opponentState: FighterState = {
+      x: opponent.x,
+      y: opponent.y,
+      vx: opponent.vx,
+      vy: opponent.vy,
+      health: opponent.health,
+      energy: opponent.energy,
+      state: opponent.state,
+      direction: opponent.direction,
+      cooldown: opponent.cooldown,
+      width: opponent.width,
+      height: opponent.height
+    };
+
+    // === CALL SCRIPTED LOGIC ===
+    // The getScriptedAction function lives in services/ScriptedFighter.ts
+    // Users can modify that file to change the fighter's behavior
+    return getScriptedAction(selfState, opponentState);
+  }
+
+  /**
    * Checks if this fighter's attack hits the opponent
    * 
    * COLLISION DETECTION
@@ -457,19 +525,26 @@ export class Fighter {
         // === DAMAGE CALCULATION ===
         let damage = this.state === FighterAction.PUNCH ? 5 : 10;
 
-        if (defenderFacingAway) {
-          damage *= 3;  // Backstab: 3x damage (instant death potential)
-        } else if (opponent.state === FighterAction.BLOCK) {
-          damage *= 0.5;  // Blocked: 50% damage reduction
+        // Removed backstab multiplier as requested
+        if (opponent.state === FighterAction.BLOCK) {
+          damage *= 0.5;  // Blocked: 50% damage reduction for punches, 75% for kicks
           opponent.energy -= 5;  // Blocking costs extra energy when hit
+        } else if (opponent.state === FighterAction.CROUCH) {
+          // Crouching blocks 75% of kicks and 50% of punches
+          if (this.state === FighterAction.KICK) {
+            damage *= 0.25;  // 75% reduction for kicks
+          } else {
+            damage *= 0.5;   // 50% reduction for punches
+          }
+          opponent.energy -= 5;  // Crouching costs extra energy when hit
         }
 
         // Apply damage (clamped to 0)
         opponent.health = Math.max(0, opponent.health - damage);
 
         // === FITNESS UPDATE (Training Only) ===
-        if (this.genome) this.genome.fitness += 50;      // +50 for landing a hit
-        if (opponent.genome) opponent.genome.fitness -= 20;  // -20 for taking a hit
+        // Removed per-hit fitness rewards as requested
+        // Only KO wins count for fitness now
 
         // === KNOCKBACK PHYSICS ===
         opponent.vx = this.direction * (this.state === FighterAction.KICK ? 15 : 8);

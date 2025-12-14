@@ -128,6 +128,17 @@ export interface GameState {
 export type GameMode = 'TRAINING' | 'ARCADE';
 
 /**
+ * OpponentType - Who the player/AI fights against
+ * 
+ * - 'AI': Neural network controlled opponent (the trained or random NN)
+ * - 'SCRIPTED': User-defined scripted logic (see services/ScriptedFighter.ts)
+ * 
+ * In TRAINING mode: Sets who the NN trains against
+ * In ARCADE mode: Sets who the human player fights against
+ */
+export type OpponentType = 'AI' | 'SCRIPTED';
+
+/**
  * TrainingSettings Interface
  * 
  * User-configurable parameters that control the training process.
@@ -140,6 +151,7 @@ export interface TrainingSettings {
   gameMode: GameMode;         // Current mode (TRAINING or ARCADE)
   isRunning: boolean;         // Whether simulation is running or paused
   backgroundTraining: boolean; // Train AI in background while playing arcade
+  opponentType: OpponentType; // Who to fight against (AI or SCRIPTED)
 }
 
 // =============================================================================

@@ -401,10 +401,17 @@ class WorkerFighter {
         // Damage calculation with multipliers
         let damage = this.state === PUNCH ? 5 : 10;
 
-        if (defenderFacingAway) {
-          damage *= 3;  // Backstab: 3x damage
-        } else if (opponent.state === BLOCK) {
-          damage *= 0.5;  // Blocked: 50% damage reduction
+        // Removed backstab multiplier as requested
+        if (opponent.state === BLOCK) {
+          damage *= 0.5;  // Blocked: 50% damage reduction for punches, 75% for kicks
+          opponent.energy -= 5;
+        } else if (opponent.state === CROUCH) {
+          // Crouching blocks 75% of kicks and 50% of punches
+          if (this.state === KICK) {
+            damage *= 0.25;  // 75% reduction for kicks
+          } else {
+            damage *= 0.5;   // 50% reduction for punches
+          }
           opponent.energy -= 5;
         }
 
@@ -446,10 +453,11 @@ class WorkerFighter {
  * @returns Match results with fitness changes
  */
 function runMatch(job: MatchJob): MatchResult {
-  // === RANDOM SIDE ASSIGNMENT ===
-  // 50% chance to swap which genome plays left vs right
-  // This ensures AI learns to fight from both sides
-  const swapSides = Math.random() > 0.5;
+  // === ROUND-BASED SIDE SWAPPING ===
+  // Alternate sides each round to prevent directional bias
+  // This ensures AI learns to fight effectively from both sides
+  // Use jobId to determine side assignment (even = normal, odd = swapped)
+  const swapSides = job.jobId % 2 === 1;
 
   const leftGenome = swapSides ? job.genome2 : job.genome1;
   const rightGenome = swapSides ? job.genome1 : job.genome2;

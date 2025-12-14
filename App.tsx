@@ -46,7 +46,7 @@ import { createRoot } from 'react-dom/client';
 import { InputManager } from './services/InputManager';
 import { Fighter, CANVAS_WIDTH, CANVAS_HEIGHT } from './services/GameEngine';
 import { createRandomNetwork, mutateNetwork, crossoverNetworks, exportGenome, importGenome } from './services/NeuralNetwork';
-import { Genome, TrainingSettings, GameState } from './types';
+import { Genome, TrainingSettings, GameState, OpponentType } from './types';
 import GameCanvas from './components/GameCanvas';
 import Dashboard from './components/Dashboard';
 import Toast, { useToast } from './components/Toast';
@@ -67,6 +67,7 @@ const App = () => {
     gameMode: 'TRAINING',
     isRunning: false, // Start paused
     backgroundTraining: false, // Background training off by default
+    opponentType: 'AI', // Default to AI opponent
   });
 
   const [gameState, setGameState] = useState<GameState>({
@@ -140,60 +141,102 @@ const App = () => {
     // If Training Mode
     if (settingsRef.current.gameMode === 'TRAINING') {
       const popSize = populationRef.current.length;
-      const totalMatches = Math.ceil(popSize / 2); // Handle odd population
+      const useScripted = settingsRef.current.opponentType === 'SCRIPTED';
+
+      // When training vs SCRIPTED:
+      // - Each genome fights one match against the scripted opponent
+      // - This helps the NN learn to beat a specific strategy
+      const totalMatches = useScripted ? popSize : Math.ceil(popSize / 2);
 
       if (currentMatchIndex.current >= totalMatches) {
         evolve();
         return;
       }
 
-      const p1Idx = currentMatchIndex.current * 2;
-      let p2Idx = p1Idx + 1;
-
-      // Handle odd population: last genome fights a random opponent
-      if (p2Idx >= popSize) {
-        p2Idx = Math.floor(Math.random() * p1Idx); // Pick random from already-paired genomes
-      }
-
-      const g1 = populationRef.current[p1Idx];
-      const g2 = populationRef.current[p2Idx];
-
       // Randomize spawn positions to encourage diverse behaviors
       const spawnOffset1 = Math.random() * 100 - 50; // -50 to +50
       const spawnOffset2 = Math.random() * 100 - 50;
 
-      // CRITICAL: Randomly swap which genome plays which side (50% chance)
-      // This ensures AI learns to fight from BOTH sides of the arena
-      const swapSides = Math.random() > 0.5;
-      const leftGenome = swapSides ? g2 : g1;
-      const rightGenome = swapSides ? g1 : g2;
+      if (useScripted) {
+        // TRAINING VS SCRIPTED: Single NN genome vs Scripted opponent
+        const genomeIdx = currentMatchIndex.current;
+        const genome = populationRef.current[genomeIdx];
 
-      const f1 = new Fighter(280 + spawnOffset1, '#ef4444', true, leftGenome);
-      const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, rightGenome);
-      f2.direction = -1;
+        // 50% chance to swap sides for variety
+        const swapSides = Math.random() > 0.5;
 
-      activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: p1Idx, p2GenomeIdx: p2Idx };
+        if (swapSides) {
+          // NN on right, Scripted on left
+          const f1 = new Fighter(280 + spawnOffset1, '#f97316', false); // Scripted (Orange)
+          f1.isScripted = true;
+          const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, genome); // NN (Blue)
+          f2.direction = -1;
+          activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: genomeIdx };
+        } else {
+          // NN on left, Scripted on right
+          const f1 = new Fighter(280 + spawnOffset1, '#3b82f6', true, genome); // NN (Blue)
+          const f2 = new Fighter(470 + spawnOffset2, '#f97316', false); // Scripted (Orange)
+          f2.isScripted = true;
+          f2.direction = -1;
+          activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: genomeIdx, p2GenomeIdx: -1 };
+        }
+      } else {
+        // TRAINING VS AI: NN vs NN (original behavior)
+        const p1Idx = currentMatchIndex.current * 2;
+        let p2Idx = p1Idx + 1;
+
+        // Handle odd population: last genome fights a random opponent
+        if (p2Idx >= popSize) {
+          p2Idx = Math.floor(Math.random() * p1Idx); // Pick random from already-paired genomes
+        }
+
+        const g1 = populationRef.current[p1Idx];
+        const g2 = populationRef.current[p2Idx];
+
+        // CRITICAL: Randomly swap which genome plays which side (50% chance)
+        // This ensures AI learns to fight from BOTH sides of the arena
+        const swapSides = Math.random() > 0.5;
+        const leftGenome = swapSides ? g2 : g1;
+        const rightGenome = swapSides ? g1 : g2;
+
+        const f1 = new Fighter(280 + spawnOffset1, '#ef4444', true, leftGenome);
+        const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, rightGenome);
+        f2.direction = -1;
+
+        activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: p1Idx, p2GenomeIdx: p2Idx };
+      }
     }
-    // If Arcade Mode (Human vs Best AI)
+    // If Arcade Mode (Human vs Best AI or Scripted)
     else {
-      const bestGenome = getBestGenome();
+      const useScripted = settingsRef.current.opponentType === 'SCRIPTED';
 
       // Randomize spawn positions slightly for variety
       const spawnOffset = Math.random() * 60 - 30; // -30 to +30
 
-      if (!bestGenome) {
-        // Fallback if population not ready
-        const fallbackGenome: Genome = { id: 'cpu', network: createRandomNetwork(), fitness: 0, matchesWon: 0 };
-        const f1 = new Fighter(280 + spawnOffset, '#ef4444', false); // Human (Red)
-        const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, fallbackGenome); // AI (Blue)
+      const f1 = new Fighter(280 + spawnOffset, '#ef4444', false); // Human (Red)
+
+      if (useScripted) {
+        // ARCADE VS SCRIPTED: Human vs Scripted opponent (Orange)
+        const f2 = new Fighter(470 - spawnOffset, '#f97316', false); // Scripted (Orange)
+        f2.isScripted = true;
         f2.direction = -1;
         activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
       } else {
-        // Use the best genome (sorted by fitness)
-        const f1 = new Fighter(280 + spawnOffset, '#ef4444', false); // Human (Red)
-        const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, bestGenome); // AI (Blue)
-        f2.direction = -1;
-        activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
+        // ARCADE VS AI: Human vs Best Neural Network (Blue)
+        const bestGenome = getBestGenome();
+
+        if (!bestGenome) {
+          // Fallback if population not ready
+          const fallbackGenome: Genome = { id: 'cpu', network: createRandomNetwork(), fitness: 0, matchesWon: 0 };
+          const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, fallbackGenome); // AI (Blue)
+          f2.direction = -1;
+          activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
+        } else {
+          // Use the best genome (sorted by fitness)
+          const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, bestGenome); // AI (Blue)
+          f2.direction = -1;
+          activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
+        }
       }
     }
 
@@ -475,25 +518,17 @@ const App = () => {
           // Apply Fitness Results
 
           if (currentSettings.gameMode === 'TRAINING') {
-            // Calculate engagement (damage dealt)
-            const damageDealt1 = 100 - p2.health;
-            const damageDealt2 = 100 - p1.health;
-            const totalEngagement = damageDealt1 + damageDealt2;
+            // NEW FITNESS SYSTEM: Only reward KO wins
+            // Removed all other fitness rewards (health, engagement, etc.)
+            // Removed stalemate penalties
 
-            if (p1.genome) p1.genome.fitness += p1.health * 2; // Reward remaining health
-            if (p2.genome) p2.genome.fitness += p2.health * 2;
-
-            // STALEMATE PENALTY: If timeout and low engagement, punish both
-            if (isTimeout && totalEngagement < 30) {
-              if (p1.genome) p1.genome.fitness -= 100;
-              if (p2.genome) p2.genome.fitness -= 100;
-            }
-
-            if (p1.health > p2.health) {
+            // Only give fitness if opponent is KO'd (health <= 0)
+            if (p1.health > 0 && p2.health <= 0) {
               if (p1.genome) { p1.genome.fitness += 500; p1.genome.matchesWon++; }
-            } else if (p2.health > p1.health) {
+            } else if (p2.health > 0 && p1.health <= 0) {
               if (p2.genome) { p2.genome.fitness += 500; p2.genome.matchesWon++; }
             }
+            // If both alive or both dead, no fitness awarded
 
             currentMatchIndex.current++;
             startMatch();
@@ -652,30 +687,97 @@ const App = () => {
           <div className="relative group">
             {/* HUD */}
             <div className="absolute top-4 left-4 right-4 flex justify-between text-xl font-bold font-mono z-10 drop-shadow-md pointer-events-none">
-              <div className="flex flex-col items-start">
-                <span className="text-red-500 font-bold">P1</span>
-                <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                  <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
-                </div>
-                <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                  <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                </div>
-              </div>
+              {/* Determine side swapping for training mode */}
+              {settings.gameMode === 'TRAINING' && activeMatchRef.current ? (
+                <>
+                  {/* Swapped sides in training mode */}
+                  {currentMatchIndex.current % 2 === 1 ? (
+                    <>
+                      {/* Odd rounds: P2 on left, P1 on right */}
+                      <div className="flex flex-col items-start">
+                        <span className="text-blue-500 font-bold">P2</span>
+                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                          <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
+                        </div>
+                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+                        </div>
+                      </div>
 
-              <div className="flex flex-col items-center">
-                <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
-                <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-              </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
+                        <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
+                      </div>
 
-              <div className="flex flex-col items-end">
-                <span className="text-blue-500 font-bold">P2</span>
-                <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                  <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
-                </div>
-                <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                  <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
-                </div>
-              </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-red-500 font-bold">P1</span>
+                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                          <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
+                        </div>
+                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Even rounds: P1 on left, P2 on right (normal) */}
+                      <div className="flex flex-col items-start">
+                        <span className="text-red-500 font-bold">P1</span>
+                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                          <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
+                        </div>
+                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-center">
+                        <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
+                        <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
+                      </div>
+
+                      <div className="flex flex-col items-end">
+                        <span className="text-blue-500 font-bold">P2</span>
+                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                          <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
+                        </div>
+                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Normal display for Arcade mode or when no match is active */}
+                  <div className="flex flex-col items-start">
+                    <span className="text-red-500 font-bold">P1</span>
+                    <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                      <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
+                    </div>
+                    <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                      <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center">
+                    <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
+                    <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
+                  </div>
+
+                  <div className="flex flex-col items-end">
+                    <span className="text-blue-500 font-bold">P2</span>
+                    <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                      <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
+                    </div>
+                    <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                      <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Canvas */}
@@ -684,6 +786,8 @@ const App = () => {
                 <GameCanvas
                   player1={activeMatchRef.current.p1}
                   player2={activeMatchRef.current.p2}
+                  isTraining={settings.gameMode === 'TRAINING'}
+                  roundNumber={currentMatchIndex.current}
                 />
               ) : (
                 <div className="w-full h-[450px] flex items-center justify-center text-slate-500">

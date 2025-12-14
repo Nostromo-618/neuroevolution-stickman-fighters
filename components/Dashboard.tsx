@@ -87,6 +87,34 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* ================================================================= */}
+      {/* OPPONENT TYPE SELECTOR                                           */}
+      {/* Toggle between fighting Neural Network AI or Scripted opponent   */}
+      {/* ================================================================= */}
+
+      <div className="space-y-2">
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Opponent Type</h2>
+        <div className="flex bg-slate-900 p-1 rounded-lg">
+          <button
+            onClick={() => setSettings(s => ({ ...s, opponentType: 'AI' }))}
+            className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'AI' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+          >
+            vs Neural AI
+          </button>
+          <button
+            onClick={() => setSettings(s => ({ ...s, opponentType: 'SCRIPTED' }))}
+            className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'SCRIPTED' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+          >
+            vs Scripted
+          </button>
+        </div>
+        <p className="text-[10px] text-slate-500 text-center">
+          {settings.opponentType === 'AI'
+            ? 'Fight against the trained neural network'
+            : 'Fight against scripted logic (services/ScriptedFighter.ts)'}
+        </p>
+      </div>
+
+      {/* ================================================================= */}
       {/* TRAINING PARAMETERS                                               */}
       {/* Only visible/enabled in Training mode                             */}
       {/* ================================================================= */}

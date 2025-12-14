@@ -50,6 +50,8 @@ import { FighterAction } from '../types';
 interface GameCanvasProps {
   player1: Fighter;  // Reference to fighter 1 object
   player2: Fighter;  // Reference to fighter 2 object
+  isTraining?: boolean;  // Whether this is a training match
+  roundNumber?: number;  // Current round number for side swapping visualization
 }
 
 // =============================================================================
@@ -65,7 +67,7 @@ interface GameCanvasProps {
  * Note: This uses useEffect for rendering, which runs after each render.
  * The actual animation loop is in App.tsx; this component just visualizes state.
  */
-const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2 }) => {
+const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = false, roundNumber = 0 }) => {
   /** Reference to the canvas DOM element */
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -404,8 +406,58 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2 }) => {
     // RENDER BOTH FIGHTERS
     // =====================================================================
 
-    drawStickman(player1);
-    drawStickman(player2);
+    // Determine side swapping for training visualization
+    const swapSides = isTraining && roundNumber % 2 === 1;
+
+    if (swapSides) {
+      // Swapped: Draw player2 first (left side), then player1 (right side)
+      drawStickman(player2);
+      drawStickman(player1);
+    } else {
+      // Normal: Draw player1 first (left side), then player2 (right side)
+      drawStickman(player1);
+      drawStickman(player2);
+    }
+
+    // =====================================================================
+    // SIDE INDICATORS (Training mode only)
+    // =====================================================================
+
+    if (isTraining) {
+      // Draw side indicators to show which fighter is on which side
+      const indicatorSize = 30;
+      const indicatorY = 50;
+
+      // Left side indicator (blue)
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';  // Blue-500 with transparency
+      ctx.beginPath();
+      ctx.arc(indicatorSize, indicatorY, indicatorSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right side indicator (red)
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';  // Red-500 with transparency
+      ctx.beginPath();
+      ctx.arc(CANVAS_WIDTH - indicatorSize, indicatorY, indicatorSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Add text labels
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Determine which fighter is on which side based on swapping
+      const leftFighter = swapSides ? 'P2' : 'P1';
+      const rightFighter = swapSides ? 'P1' : 'P2';
+
+      ctx.fillText(leftFighter, indicatorSize, indicatorY);
+      ctx.fillText(rightFighter, CANVAS_WIDTH - indicatorSize, indicatorY);
+
+      // Add round number
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Round: ${roundNumber + 1}`, CANVAS_WIDTH / 2, 30);
+    }
 
     // =====================================================================
     // ATTACK VISUAL EFFECTS

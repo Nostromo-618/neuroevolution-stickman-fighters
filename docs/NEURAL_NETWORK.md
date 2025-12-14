@@ -295,6 +295,17 @@ Fitness measures how "good" a genome is. Higher = better.
 | Remaining health | +health × 2 |
 | Stalemate (timeout, low damage) | -100 |
 
+### Side Swapping Mechanism
+
+To prevent directional bias in AI training, the system now implements **round-based side swapping**:
+
+- **Alternating sides**: Each round alternates which fighter starts on the left (blue) vs right (red) side
+- **Deterministic assignment**: Uses `jobId % 2` to determine side assignment (even = normal, odd = swapped)
+- **Fair training**: Ensures AI learns to fight effectively from both sides of the arena
+- **Prevents bias**: Eliminates the tendency for AI to favor one direction over another
+
+This change replaces the previous random 50% side assignment with a systematic approach that guarantees equal exposure to both sides across training rounds.
+
 ### Per-Frame Shaping (Training Guidance)
 
 We add small rewards/penalties each frame to guide learning:
