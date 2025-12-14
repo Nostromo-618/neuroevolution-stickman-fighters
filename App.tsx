@@ -46,6 +46,7 @@ import { createRoot } from 'react-dom/client';
 import { InputManager } from './services/InputManager';
 import { Fighter, CANVAS_WIDTH, CANVAS_HEIGHT } from './services/GameEngine';
 import { createRandomNetwork, mutateNetwork, crossoverNetworks, exportGenome, importGenome } from './services/NeuralNetwork';
+import { loadScript, compileScript, ScriptWorkerManager } from './services/CustomScriptRunner';
 import { Genome, TrainingSettings, GameState, OpponentType } from './types';
 import GameCanvas from './components/GameCanvas';
 import Dashboard from './components/Dashboard';
@@ -101,11 +102,38 @@ const App = () => {
   const workerPoolRef = useRef<WorkerPool | null>(null);
   const isWorkerTrainingRef = useRef<boolean>(false);
 
+  // Custom script worker for secure isolated execution
+  const customScriptWorkerRef = useRef<ScriptWorkerManager | null>(null);
+
   const settingsRef = useRef(settings);
   const gameStateRef = useRef(gameState);
 
   useEffect(() => { settingsRef.current = settings; }, [settings]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
+  // Pre-compile custom script worker when CUSTOM opponent is selected
+  // This ensures the worker is ready before matches start
+  useEffect(() => {
+    const compileWorker = async () => {
+      if (settings.opponentType === 'CUSTOM') {
+        const scriptCode = loadScript();
+        if (scriptCode) {
+          // Create new worker instance if needed
+          if (!customScriptWorkerRef.current) {
+            customScriptWorkerRef.current = new ScriptWorkerManager();
+          }
+          // Compile the script
+          await customScriptWorkerRef.current.compile(scriptCode);
+        }
+      }
+    };
+
+    compileWorker();
+
+    return () => {
+      // Don't terminate on unmount - we may need the worker for matches
+    };
+  }, [settings.opponentType]);
 
   // --- Initialization ---
   const initPopulation = useCallback((clearBest: boolean = true) => {
@@ -142,11 +170,12 @@ const App = () => {
     if (settingsRef.current.gameMode === 'TRAINING') {
       const popSize = populationRef.current.length;
       const useScripted = settingsRef.current.opponentType === 'SCRIPTED';
+      const useCustom = settingsRef.current.opponentType === 'CUSTOM';
 
-      // When training vs SCRIPTED:
-      // - Each genome fights one match against the scripted opponent
+      // When training vs SCRIPTED or CUSTOM:
+      // - Each genome fights one match against the scripted/custom opponent
       // - This helps the NN learn to beat a specific strategy
-      const totalMatches = useScripted ? popSize : Math.ceil(popSize / 2);
+      const totalMatches = (useScripted || useCustom) ? popSize : Math.ceil(popSize / 2);
 
       if (currentMatchIndex.current >= totalMatches) {
         evolve();
@@ -157,26 +186,42 @@ const App = () => {
       const spawnOffset1 = Math.random() * 100 - 50; // -50 to +50
       const spawnOffset2 = Math.random() * 100 - 50;
 
-      if (useScripted) {
-        // TRAINING VS SCRIPTED: Single NN genome vs Scripted opponent
+      if (useScripted || useCustom) {
+        // TRAINING VS SCRIPTED/CUSTOM: Single NN genome vs Scripted/Custom opponent
         const genomeIdx = currentMatchIndex.current;
         const genome = populationRef.current[genomeIdx];
 
         // 50% chance to swap sides for variety
         const swapSides = Math.random() > 0.5;
 
+        // Color: orange for scripted, purple for custom
+        const opponentColor = useCustom ? '#a855f7' : '#f97316';
+
+        // Get pre-compiled script worker for custom opponent
+        const scriptWorker = useCustom ? customScriptWorkerRef.current : null;
+
         if (swapSides) {
-          // NN on right, Scripted on left
-          const f1 = new Fighter(280 + spawnOffset1, '#f97316', false); // Scripted (Orange)
-          f1.isScripted = true;
+          // NN on right, Scripted/Custom on left
+          const f1 = new Fighter(280 + spawnOffset1, opponentColor, false);
+          if (useCustom && scriptWorker && scriptWorker.isReady()) {
+            f1.isCustom = true;
+            f1.scriptWorker = scriptWorker;
+          } else {
+            f1.isScripted = true;
+          }
           const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, genome); // NN (Blue)
           f2.direction = -1;
           activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: genomeIdx };
         } else {
-          // NN on left, Scripted on right
+          // NN on left, Scripted/Custom on right
           const f1 = new Fighter(280 + spawnOffset1, '#3b82f6', true, genome); // NN (Blue)
-          const f2 = new Fighter(470 + spawnOffset2, '#f97316', false); // Scripted (Orange)
-          f2.isScripted = true;
+          const f2 = new Fighter(470 + spawnOffset2, opponentColor, false);
+          if (useCustom && scriptWorker && scriptWorker.isReady()) {
+            f2.isCustom = true;
+            f2.scriptWorker = scriptWorker;
+          } else {
+            f2.isScripted = true;
+          }
           f2.direction = -1;
           activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: genomeIdx, p2GenomeIdx: -1 };
         }
@@ -206,9 +251,10 @@ const App = () => {
         activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: p1Idx, p2GenomeIdx: p2Idx };
       }
     }
-    // If Arcade Mode (Human vs Best AI or Scripted)
+    // If Arcade Mode (Human vs Best AI, Scripted, or Custom)
     else {
       const useScripted = settingsRef.current.opponentType === 'SCRIPTED';
+      const useCustom = settingsRef.current.opponentType === 'CUSTOM';
 
       // Randomize spawn positions slightly for variety
       const spawnOffset = Math.random() * 60 - 30; // -30 to +30
@@ -217,8 +263,24 @@ const App = () => {
 
       if (useScripted) {
         // ARCADE VS SCRIPTED: Human vs Scripted opponent (Orange)
-        const f2 = new Fighter(470 - spawnOffset, '#f97316', false); // Scripted (Orange)
+        const f2 = new Fighter(470 - spawnOffset, '#f97316', false);
         f2.isScripted = true;
+        f2.direction = -1;
+        activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
+      } else if (useCustom) {
+        // ARCADE VS CUSTOM: Human vs Custom script opponent (Purple)
+        const f2 = new Fighter(470 - spawnOffset, '#a855f7', false);
+
+        // Use pre-compiled script worker for secure execution
+        const scriptWorker = customScriptWorkerRef.current;
+        if (scriptWorker && scriptWorker.isReady()) {
+          f2.isCustom = true;
+          f2.scriptWorker = scriptWorker;
+        } else {
+          // Fallback to scripted if worker not ready
+          f2.isScripted = true;
+        }
+
         f2.direction = -1;
         activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
       } else {
@@ -228,12 +290,12 @@ const App = () => {
         if (!bestGenome) {
           // Fallback if population not ready
           const fallbackGenome: Genome = { id: 'cpu', network: createRandomNetwork(), fitness: 0, matchesWon: 0 };
-          const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, fallbackGenome); // AI (Blue)
+          const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, fallbackGenome);
           f2.direction = -1;
           activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
         } else {
           // Use the best genome (sorted by fitness)
-          const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, bestGenome); // AI (Blue)
+          const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, bestGenome);
           f2.direction = -1;
           activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
         }

@@ -39,6 +39,7 @@
 import { FighterAction, Genome, InputState } from '../types';
 import { predict } from './NeuralNetwork';
 import { getScriptedAction, FighterState } from './ScriptedFighter';
+import { ScriptWorkerManager, FighterState as CustomFighterState } from './CustomScriptRunner';
 
 // =============================================================================
 // WORLD CONSTANTS
@@ -97,6 +98,8 @@ export class Fighter {
   color: string;          // Display color (CSS color string)
   isAi: boolean;          // True if controlled by neural network
   isScripted: boolean;    // True if controlled by ScriptedFighter module
+  isCustom: boolean;      // True if controlled by user custom script
+  scriptWorker: ScriptWorkerManager | null = null; // Web Worker for secure custom script execution
   genome?: Genome;        // AI brain (only set for AI fighters)
 
   // --- Combat Stats ---
@@ -134,6 +137,7 @@ export class Fighter {
     this.color = color;
     this.isAi = isAi;
     this.isScripted = false;  // Default to false; set to true externally for scripted fighters
+    this.isCustom = false;    // Default to false; set to true externally for custom fighters
     this.genome = genome;
   }
 
@@ -173,9 +177,14 @@ export class Fighter {
     // Determine input based on control type: Human, Neural Network AI, or Scripted
     let activeInput = input;
 
+    // CUSTOM SCRIPT FIGHTER: Use user-defined custom script for decisions
+    // This takes highest priority. Uses Web Worker for secure isolated execution.
+    if (this.isCustom && this.scriptWorker) {
+      activeInput = this.processCustom(opponent);
+    }
     // SCRIPTED FIGHTER: Use the ScriptedFighter module for decisions
     // This takes priority over isAi since a fighter can't be both
-    if (this.isScripted) {
+    else if (this.isScripted) {
       activeInput = this.processScripted(opponent);
     }
     // NEURAL NETWORK AI: Use the neural network for decisions
@@ -480,6 +489,56 @@ export class Fighter {
     // The getScriptedAction function lives in services/ScriptedFighter.ts
     // Users can modify that file to change the fighter's behavior
     return getScriptedAction(selfState, opponentState);
+  }
+
+  /**
+   * Custom Script Decision Making via User-Defined JavaScript
+   * 
+   * Similar to processScripted, but uses the user's custom code
+   * that was compiled and stored in customScriptFn.
+   * 
+   * @param opponent - The other fighter
+   * @returns InputState object with boolean action flags
+   */
+  processCustom(opponent: Fighter): InputState {
+    if (!this.scriptWorker || !this.scriptWorker.isReady()) {
+      return { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
+    }
+
+    // Build state for custom script
+    const selfState: CustomFighterState = {
+      x: this.x,
+      y: this.y,
+      vx: this.vx,
+      vy: this.vy,
+      health: this.health,
+      energy: this.energy,
+      state: this.state,
+      direction: this.direction,
+      cooldown: this.cooldown,
+      width: this.width,
+      height: this.height
+    };
+
+    const opponentState: CustomFighterState = {
+      x: opponent.x,
+      y: opponent.y,
+      vx: opponent.vx,
+      vy: opponent.vy,
+      health: opponent.health,
+      energy: opponent.energy,
+      state: opponent.state,
+      direction: opponent.direction,
+      cooldown: opponent.cooldown,
+      width: opponent.width,
+      height: opponent.height
+    };
+
+    // Request next action computation (async, runs in worker)
+    this.scriptWorker.requestAction(selfState, opponentState);
+
+    // Return cached action (1 frame latency, ~16ms - imperceptible)
+    return this.scriptWorker.getAction();
   }
 
   /**

@@ -9,9 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "recharts": "latest",
+    "@monaco-editor/react": "^4.7.0",
+    "react": "latest",
     "react-dom": "latest",
-    "react": "latest"
+    "recharts": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
