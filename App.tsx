@@ -54,6 +54,8 @@ import Toast, { useToast } from './components/Toast';
 import { WorkerPool } from './services/WorkerPool';
 import TouchControls from './components/TouchControls';
 import pkg from './package.json';
+import DisclaimerModal from './components/DisclaimerModal';
+import GoodbyeScreen from './components/GoodbyeScreen';
 
 // =============================================================================
 // MAIN APPLICATION COMPONENT
@@ -79,6 +81,8 @@ const App = () => {
     winner: null,
     roundStatus: 'WAITING'
   });
+
+  const [disclaimerStatus, setDisclaimerStatus] = useState<'PENDING' | 'ACCEPTED' | 'DECLINED'>('PENDING');
 
   const [fitnessHistory, setFitnessHistory] = useState<{ gen: number, fitness: number }[]>([]);
   const [pendingImport, setPendingImport] = useState<Genome | null>(null);
@@ -623,6 +627,12 @@ const App = () => {
   };
 
   useEffect(() => {
+    // Check disclaimer acceptance
+    const accepted = localStorage.getItem('neurofight_disclaimer_accepted');
+    if (accepted === 'true') {
+      setDisclaimerStatus('ACCEPTED');
+    }
+
     // Initialize InputManager here to avoid side effects in render
     inputManager.current = new InputManager();
 
@@ -635,6 +645,19 @@ const App = () => {
       inputManager.current?.destroy();
     };
   }, []); // Only run once on mount
+
+  const handleAcceptDisclaimer = () => {
+    localStorage.setItem('neurofight_disclaimer_accepted', 'true');
+    setDisclaimerStatus('ACCEPTED');
+  };
+
+  const handleDeclineDisclaimer = () => {
+    setDisclaimerStatus('DECLINED');
+  };
+
+  const handleReturnToDisclaimer = () => {
+    setDisclaimerStatus('PENDING');
+  };
 
   // Restart match when population size changes (but keep best genome)
   useEffect(() => {
@@ -729,121 +752,128 @@ const App = () => {
     setPendingImport(null);
   };
 
+  if (disclaimerStatus === 'DECLINED') {
+    return <GoodbyeScreen onReturn={handleReturnToDisclaimer} />;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col items-center py-8">
-      <div className="w-full max-w-6xl px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <>
+      {disclaimerStatus === 'PENDING' && (
+        <DisclaimerModal onAccept={handleAcceptDisclaimer} onDecline={handleDeclineDisclaimer} />
+      )}
 
-        {/* Left Column: Game View */}
-        <div className="lg:col-span-2 space-y-4">
-          <header className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
-                NeuroEvolution: Stickman Fighters
-              </h1>
-              <p className="text-slate-400 text-sm">
-                {settings.gameMode === 'TRAINING' ? 'Training Neural Networks...' : 'Arcade Mode: You vs AI'}
-              </p>
-            </div>
-          </header>
+      <div className={`min-h-screen bg-slate-950 text-white font-sans flex flex-col items-center py-8 transition-all duration-700 ${disclaimerStatus === 'PENDING' ? 'blur-md pointer-events-none' : ''}`}>
+        <div className="w-full max-w-6xl px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          <div className="relative group">
-            {/* HUD */}
-            <div className="absolute top-4 left-4 right-4 flex justify-between text-xl font-bold font-mono z-10 drop-shadow-md pointer-events-none">
-              {/* Determine side swapping for training mode */}
-              {settings.gameMode === 'TRAINING' && activeMatchRef.current ? (
-                <>
-                  {/* Swapped sides in training mode */}
-                  {currentMatchIndex.current % 2 === 1 ? (
-                    <>
-                      {/* Odd rounds: P2 on left, P1 on right */}
-                      <div className="flex flex-col items-start">
-                        <span className="text-blue-500 font-bold">P2</span>
-                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                          <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
-                        </div>
-                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
-                        </div>
-                      </div>
+          {/* Left Column: Game View */}
+          <div className="lg:col-span-2 space-y-4">
+            <header className="flex justify-between items-center mb-4">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
+                  NeuroEvolution: Stickman Fighters
+                </h1>
+                <p className="text-slate-400 text-sm">
+                  {settings.gameMode === 'TRAINING' ? 'Training Neural Networks...' : 'Arcade Mode: You vs AI'}
+                </p>
+              </div>
+            </header>
 
-                      <div className="flex flex-col items-center">
-                        <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
-                        <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-                      </div>
+            <div className="relative group">
+              {/* HUD */}
+              <div className="absolute top-4 left-4 right-4 flex justify-between text-xl font-bold font-mono z-10 drop-shadow-md pointer-events-none">
+                {/* Determine side swapping for training mode */}
+                {settings.gameMode === 'TRAINING' && activeMatchRef.current ? (
+                  <>
+                    {/* Swapped sides in training mode */}
+                    {currentMatchIndex.current % 2 === 1 ? (
+                      <>
+                        {/* Odd rounds: P2 on left, P1 on right */}
+                        <div className="flex flex-col items-start">
+                          <span className="text-blue-500 font-bold">P2</span>
+                          <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                            <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
+                          </div>
+                          <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                            <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+                          </div>
+                        </div>
 
-                      <div className="flex flex-col items-end">
-                        <span className="text-red-500 font-bold">P1</span>
-                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                          <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
+                          <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
                         </div>
-                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Even rounds: P1 on left, P2 on right (normal) */}
-                      <div className="flex flex-col items-start">
-                        <span className="text-red-500 font-bold">P1</span>
-                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                          <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
-                        </div>
-                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                        </div>
-                      </div>
 
-                      <div className="flex flex-col items-center">
-                        <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
-                        <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-                      </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-red-500 font-bold">P1</span>
+                          <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                            <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
+                          </div>
+                          <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                            <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Even rounds: P1 on left, P2 on right (normal) */}
+                        <div className="flex flex-col items-start">
+                          <span className="text-red-500 font-bold">P1</span>
+                          <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                            <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
+                          </div>
+                          <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                            <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
+                          </div>
+                        </div>
 
-                      <div className="flex flex-col items-end">
-                        <span className="text-blue-500 font-bold">P2</span>
-                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                          <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
+                          <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
                         </div>
-                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+
+                        <div className="flex flex-col items-end">
+                          <span className="text-blue-500 font-bold">P2</span>
+                          <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                            <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
+                          </div>
+                          <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                            <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+                          </div>
                         </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Normal ARCADE HUD */}
+                    <div className="flex flex-col items-start">
+                      <span className="text-red-500 font-bold">PLAYER</span>
+                      <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                        <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
                       </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* Normal display for Arcade mode or when no match is active */}
-                  <div className="flex flex-col items-start">
-                    <span className="text-red-500 font-bold">P1</span>
-                    <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                      <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
+                      <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                        <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
+                      </div>
                     </div>
-                    <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                      <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-col items-center">
-                    <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
-                    <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-                  </div>
-
-                  <div className="flex flex-col items-end">
-                    <span className="text-blue-500 font-bold">P2</span>
-                    <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                      <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-white mt-2 font-bold opacity-90 tracking-widest">VS</span>
+                      <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
                     </div>
-                    <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                      <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
 
-            {/* Canvas */}
-            <div className="relative rounded-lg overflow-hidden shadow-2xl border-2 border-slate-700 bg-black">
+                    <div className="flex flex-col items-end">
+                      <span className="text-blue-500 font-bold">AI</span>
+                      <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                        <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
+                      </div>
+                      <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                        <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
               {activeMatchRef.current ? (
                 <GameCanvas
                   player1={activeMatchRef.current.p1}
@@ -852,113 +882,99 @@ const App = () => {
                   roundNumber={currentMatchIndex.current}
                 />
               ) : (
-                <div className="w-full h-[450px] flex items-center justify-center text-slate-500">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Initializing Arena...</span>
-                  </div>
+                <div className="w-full h-[450px] flex items-center justify-center bg-slate-900 rounded-xl border border-slate-700">
+                  <span className="text-slate-400 font-mono">Initializing Arena...</span>
                 </div>
               )}
 
-              {/* Overlays */}
-              {!settings.isRunning && !gameState.winner && activeMatchRef.current && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-20">
-                  <button
-                    onClick={() => setSettings(s => ({ ...s, isRunning: true }))}
-                    className="bg-teal-500 hover:bg-teal-400 text-black font-black text-2xl py-4 px-12 rounded-lg shadow-[0_0_30px_rgba(45,212,191,0.5)] transform hover:scale-105 transition-all border-2 border-teal-300"
-                  >
-                    START {settings.gameMode === 'TRAINING' ? 'TRAINING' : 'FIGHT'}
-                  </button>
-                </div>
-              )}
-
-              {/* Round Start Overlays - ARCADE Only */}
-              {settings.isRunning && settings.gameMode === 'ARCADE' && gameState.roundStatus === 'WAITING' && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-                  <div className="text-7xl font-black text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] animate-pulse tracking-widest">
-                    READY...
+              {/* Game Over Overlays */}
+              {!gameState.matchActive && gameState.roundStatus === 'FIGHTING' && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl">
+                  <div className="text-center">
+                    <h2 className="text-5xl font-black text-white italic tracking-tighter mb-2">
+                      {gameState.winner === 'PLAYER' ? 'VICTORY' : 'DEFEAT'}
+                    </h2>
+                    <p className="text-slate-400 font-mono">RESTARTING MATCH...</p>
                   </div>
                 </div>
               )}
-              {settings.isRunning && settings.gameMode === 'ARCADE' && gameState.roundStatus === 'FIGHTING' && gameState.timeRemaining > 88 && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-                  <div className="text-8xl font-black text-red-600 drop-shadow-[0_0_25px_rgba(220,38,38,0.8)] animate-bounce tracking-widest">
-                    FIGHT!
-                  </div>
-                </div>
-              )}
-
             </div>
+
+            {/* Controls Helper */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-900/50 border border-slate-800 rounded-xl text-xs font-mono text-slate-500">
+              <div className="flex flex-col gap-1">
+                <span className="text-slate-300 font-bold">MOVE</span>
+                <span>WASD / ARROWS</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-slate-300 font-bold">PUNCH</span>
+                <span>J / SPACE / Z</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-slate-300 font-bold">KICK</span>
+                <span>K / X</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-slate-300 font-bold">BLOCK</span>
+                <span>L / C / SHIFT</span>
+              </div>
+            </div>
+
+            {/* Mobile Touch Controls */}
+            <TouchControls onInput={() => { }} />
           </div>
 
-          {/* Mobile Touch Controls */}
-          {settings.gameMode === 'ARCADE' && (
-            <TouchControls inputManager={inputManager} />
-          )}
+          {/* Right Column: Dashboards & Stats */}
+          <div className="space-y-6">
+            <Dashboard
+              settings={settings}
+              setSettings={setSettings}
+              fitnessHistory={fitnessHistory}
+              currentGen={gameState.generation}
+              bestFitness={gameState.bestFitness}
+              onReset={initPopulation}
+              onModeChange={handleModeChange}
+              onExportWeights={handleExportWeights}
+              onImportWeights={handleImportWeights}
+            />
 
-        </div>
-
-        {/* Right Column: Dashboard */}
-        <div className="lg:col-span-1">
-          <Dashboard
-            settings={settings}
-            setSettings={setSettings}
-            fitnessHistory={fitnessHistory}
-            currentGen={gameState.generation}
-            bestFitness={gameState.bestFitness}
-            onReset={initPopulation}
-            onModeChange={handleModeChange}
-            onExportWeights={handleExportWeights}
-            onImportWeights={handleImportWeights}
-          />
-        </div>
-
-      </div >
-
-      {/* Import Choice Modal */}
-      {
-        pendingImport && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="bg-slate-800 rounded-xl p-6 max-w-md mx-4 border border-slate-600 shadow-2xl">
-              <h3 className="text-xl font-bold text-teal-400 mb-4">Import Successful!</h3>
-              <div className="text-slate-300 text-sm space-y-2 mb-6">
-                <p>Fitness: <span className="text-white font-mono">{pendingImport.fitness.toFixed(0)}</span></p>
-                <p>Matches Won: <span className="text-white font-mono">{pendingImport.matchesWon}</span></p>
+            {pendingImport && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                <div className="bg-slate-900 border border-teal-500/30 p-8 rounded-2xl max-w-md w-full shadow-2xl shadow-teal-500/10">
+                  <h3 className="text-2xl font-bold text-teal-400 mb-4">Weights Imported</h3>
+                  <p className="text-slate-400 mb-6 leading-relaxed">
+                    How would you like to use these weights? You can use them just for the current Arcade session, or inject them into the training population.
+                  </p>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => handleImportChoice(true)}
+                      className="w-full py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl transition-all active:scale-95"
+                    >
+                      Use for Training + Arcade
+                    </button>
+                    <button
+                      onClick={() => handleImportChoice(false)}
+                      className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all active:scale-95"
+                    >
+                      Use for Arcade Only
+                    </button>
+                  </div>
+                </div>
               </div>
-              <p className="text-slate-400 text-sm mb-4">How would you like to use these weights?</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => handleImportChoice(true)}
-                  className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold text-white transition"
-                >
-                  Training + Arcade
-                </button>
-                <button
-                  onClick={() => handleImportChoice(false)}
-                  className="flex-1 py-2 px-4 bg-slate-700 hover:bg-slate-600 rounded-lg font-semibold text-white transition"
-                >
-                  Arcade Only
-                </button>
-              </div>
-              <button
-                onClick={() => setPendingImport(null)}
-                className="w-full mt-3 py-2 text-slate-500 hover:text-slate-300 text-sm transition"
-              >
-                Cancel
-              </button>
-            </div>
+            )}
+
+            <footer className="pt-4 border-t border-slate-800 flex justify-between items-center text-[10px] text-slate-600 uppercase tracking-widest font-bold">
+              <span>{pkg.name} v{pkg.version}</span>
+              <a href="https://github.com/Nostromo-618/neuroevolution-stickman-fighters" target="_blank" rel="noreferrer" className="hover:text-teal-500 transition-colors">
+                GitHub Repo
+              </a>
+            </footer>
           </div>
-        )
-      }
-
-      {/* Version Display */}
-      <div className="fixed top-2 right-2 text-xs text-slate-500 font-mono pointer-events-none z-50 opacity-60">
-        v{pkg.version}
+        </div>
       </div>
 
-      {/* Toast Notifications */}
       <Toast toasts={toasts} removeToast={removeToast} />
-    </div >
+    </>
   );
 };
 

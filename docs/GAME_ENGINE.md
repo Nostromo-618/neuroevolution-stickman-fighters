@@ -180,7 +180,7 @@ Each fighter has a **state** that determines their animation and available actio
 | Any | Death | DEAD | Special physics |
 | IDLE | Left pressed | MOVE_LEFT | |
 | IDLE | Right pressed | MOVE_RIGHT | |
-| IDLE | Up pressed (grounded) | JUMP | Costs 12 energy |
+| IDLE | Up pressed (grounded) | JUMP | Costs 10 energy |
 | IDLE | Down pressed | CROUCH | Slows movement |
 | IDLE | Block pressed | BLOCK | Drains energy |
 | IDLE | Punch pressed | PUNCH | 30 frame cooldown |
@@ -196,8 +196,8 @@ Each fighter has a **state** that determines their animation and available actio
 
 | Attack | Damage | Energy Cost | Cooldown | Hitbox Size | Knockback |
 |--------|--------|-------------|----------|-------------|-----------|
-| Punch | 5 | 30 (30%) | 30 frames | 46 × 20 px | 8 px/frame |
-| Kick | 10 | 60 (60%) | 40 frames | 66 × 30 px | 15 px/frame |
+| Punch | 5 | 25 (25%) | 30 frames | 46 × 20 px | 8 px/frame |
+| Kick | 10 | 50 (50%) | 40 frames | 66 × 30 px | 15 px/frame |
 
 ### Attack Timing Windows
 
@@ -227,14 +227,16 @@ The system can still detect when a defender is facing away from an attacker, but
 
 ### Block Mechanics
 
-- Holding block costs **50% of total energy per second**
+- Holding block costs **0.5 energy per frame** (~30 energy/sec at 60 FPS)
+- Full energy allows **~5.5 seconds** of continuous blocking
 - Blocked hits deal **50% damage** for punches, **75% damage reduction** for kicks
 - Getting hit while blocking costs **5 extra energy**
 - Movement is reduced to **30%** while blocking
 
 ### Crouch Mechanics
 
-- Holding crouch costs **50% of total energy per second**
+- Holding crouch costs **0.5 energy per frame** (~30 energy/sec at 60 FPS)
+- Full energy allows **~5.5 seconds** of continuous crouching
 - Crouching blocks **50% damage** for kicks, **75% damage reduction** for punches
 - Movement is reduced to **50%** while crouching
 
@@ -248,12 +250,12 @@ Energy is a resource that limits rapid action spam.
 
 | Action | Energy Cost |
 |--------|-------------|
-| Moving (per frame) | 0.5 |
-| Jumping | 25 (25% of total) |
-| Crouching (per second) | 50 (50% of total) |
-| Blocking (per second) | 50 (50% of total) |
-| Punch | 30 (30% of total) |
-| Kick | 60 (60% of total) |
+| Moving (per frame) | 0.1 |
+| Jumping | 10 (10% of total) |
+| Crouching (per frame) | 0.5 |
+| Blocking (per frame) | 0.5 |
+| Punch | 25 (25% of total) |
+| Kick | 50 (50% of total) |
 
 ### Energy Regeneration
 
@@ -261,6 +263,8 @@ Energy is a resource that limits rapid action spam.
 |-------|------------|
 | Idle (standing still) | 0.5 per frame |
 | Active (moving, fighting) | 0.2 per frame |
+
+**Note:** Since `ENERGY_REGEN_ACTIVE` (0.2) > `ENERGY_COST_MOVE` (0.1), fighters gain a net +0.1 energy per frame while moving, encouraging active play.
 
 This creates a tactical tradeoff: staying still regens energy faster but makes you vulnerable.
 
