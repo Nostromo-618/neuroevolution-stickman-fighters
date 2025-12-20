@@ -24,8 +24,15 @@ A more advanced **Custom Script Editor** has been implemented that allows users 
 - **Location**: Select "Custom" in the Opponent Type selector, then click "Edit Script"
 - **Editor**: Monaco Editor (VS Code's core) with syntax highlighting
 - **Color**: Purple (`#a855f7`) for custom script fighters
-- **Security**: Runs in isolated Web Worker (no DOM/window access)
-- **Persistence**: Scripts saved to localStorage, exportable as JSON
+### 🔒 Security Architecture
+The Custom Script Editor is designed with a "Security-First" approach for client-side execution:
+
+1.  **Web Worker Isolation**: User-written code runs in a dedicated Web Worker, not the main thread.
+    *   **No DOM Access**: Scripts cannot access `window`, `document`, or cookies.
+    *   **Context Isolation**: Scripts cannot access the application's React state or variables.
+    *   **Thread Safety**: A buggy or infinite loop in a user script will not freeze the game UI.
+2.  **Safe Compilation**: We use `new Function()` inside the worker scope. It behaves like a sealed container—even if "malicious" code is executed, it has no tools to interact with the host page.
+3.  **Static Deployment Safety**: Since this is a static site (GitHub Pages), there is no backend database. Scripts are stored only in the individual user's `localStorage`. "Hacking" is limited to local cross-site scripting (Self-XSS), which is effectively mitigated by the Web Worker boundary.
 
 See:
 - `services/CustomScriptRunner.ts` - Script compilation and execution

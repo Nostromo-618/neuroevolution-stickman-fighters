@@ -9,30 +9,6 @@
  * - AI decision-making integration
  * - Fitness shaping for training
  * 
- * GAME ENGINE OVERVIEW
- * --------------------
- * The game runs at 60 FPS. Each frame:
- * 1. Process input (human or AI)
- * 2. Update physics (position, velocity, gravity)
- * 3. Check for collisions and hits
- * 4. Apply damage and effects
- * 5. Update fitness scores (training mode)
- * 
- * PHYSICS MODEL
- * -------------
- * - Gravity constantly pulls fighters down
- * - Friction slows horizontal movement
- * - Fighters are constrained to the arena boundaries
- * - Vertical collision handled for jumping over opponents
- * 
- * COMBAT SYSTEM
- * -------------
- * - Punch: Quick attack, 5 damage, 30 frame cooldown, 30% energy cost
- * - Kick: Strong attack, 10 damage, 40 frame cooldown, 60% energy cost
- * - Block: Reduces incoming damage by 50% for punches, 75% for kicks, 50% energy per second
- * - Crouch: Reduces incoming damage by 50% for punches, 75% for kicks, 50% energy per second
- * - Jump: 25% energy cost
- *
  * =============================================================================
  */
 
@@ -40,6 +16,25 @@ import { FighterAction, Genome, InputState } from '../types';
 import { predict } from './NeuralNetwork';
 import { getScriptedAction, FighterState } from './ScriptedFighter';
 import { ScriptWorkerManager, FighterState as CustomFighterState } from './CustomScriptRunner';
+
+// =============================================================================
+// GAMEPLAY CONSTANTS
+// =============================================================================
+
+/** 
+ * ENERGY_CONSTANTS
+ * Centralized settings for fighter energy mechanics.
+ */
+export const ENERGY_MAX = 100;           // Maximum energy capacity
+export const ENERGY_REGEN_IDLE = 0.5;    // Regen rate when standing still
+export const ENERGY_REGEN_ACTIVE = 0.2;  // Regen rate when moving/attacking
+export const ENERGY_COST_MOVE = 0.1;     // Cost per frame of horizontal movement
+export const ENERGY_COST_JUMP = 10;      // One-time cost to jump
+export const ENERGY_COST_CROUCH = 0.5;   // Cost per frame while crouching
+export const ENERGY_COST_BLOCK = 0.5;    // Cost per frame while blocking
+export const ENERGY_COST_PUNCH = 25;     // One-time cost to punch
+export const ENERGY_COST_KICK = 50;      // One-time cost to kick
+export const ENERGY_PENALTY_HIT = 1;     // Extra energy lost when hit while blocking/crouching
 
 // =============================================================================
 // WORLD CONSTANTS
@@ -104,7 +99,7 @@ export class Fighter {
 
   // --- Combat Stats ---
   health: number = 100;   // Current health (0 = dead)
-  energy: number = 100;   // Energy for actions (regenerates over time)
+  energy: number = ENERGY_MAX;   // Energy for actions (regenerates over time)
   state: FighterAction = FighterAction.IDLE;  // Current action/animation state
   direction: -1 | 1 = 1;  // Facing direction: 1 = right, -1 = left
 
@@ -272,8 +267,8 @@ export class Fighter {
     // === ENERGY REGENERATION ===
     // Energy regens faster when idle (encourages strategic pauses)
     const isIdle = Math.abs(this.vx) < 0.5 && this.state === FighterAction.IDLE;
-    const regenRate = isIdle ? 0.5 : 0.2;
-    if (this.energy < 100) this.energy += regenRate;
+    const regenRate = isIdle ? ENERGY_REGEN_IDLE : ENERGY_REGEN_ACTIVE;
+    if (this.energy < ENERGY_MAX) this.energy += regenRate;
 
     // === STATE MANAGEMENT ===
     // Animation lock: can't change state during attack recovery
@@ -281,38 +276,38 @@ export class Fighter {
 
     if (!isAnimationLocked) {
       // --- MOVEMENT (costs energy to prevent erratic behavior) ---
-      if (activeInput.left && this.energy >= 0.5) {
+      if (activeInput.left && this.energy >= ENERGY_COST_MOVE) {
         this.vx -= 1.5;
-        this.energy -= 0.5;
+        this.energy -= ENERGY_COST_MOVE;
         this.direction = -1;
         this.state = FighterAction.MOVE_LEFT;
-      } else if (activeInput.right && this.energy >= 0.5) {
+      } else if (activeInput.right && this.energy >= ENERGY_COST_MOVE) {
         this.vx += 1.5;
-        this.energy -= 0.5;
+        this.energy -= ENERGY_COST_MOVE;
         this.direction = 1;
         this.state = FighterAction.MOVE_RIGHT;
       } else {
         this.state = FighterAction.IDLE;
       }
 
-      // --- JUMP (costs 25% of total energy) ---
-      if (activeInput.up && this.y >= GROUND_Y - this.height - 1 && this.energy >= 25) {
+      // --- JUMP (costs energy) ---
+      if (activeInput.up && this.y >= GROUND_Y - this.height - 1 && this.energy >= ENERGY_COST_JUMP) {
         this.vy = -18;
-        this.energy -= 25;
+        this.energy -= ENERGY_COST_JUMP;
         this.state = FighterAction.JUMP;
       }
 
-      // --- CROUCH (costs 50% of total energy per second, blocks 75% kicks and 50% punches) ---
-      if (activeInput.down && this.y >= GROUND_Y - this.height - 1 && this.energy >= 50) {
+      // --- CROUCH (costs energy, blocks 75% kicks and 50% punches) ---
+      if (activeInput.down && this.y >= GROUND_Y - this.height - 1 && this.energy >= ENERGY_COST_CROUCH) {
         this.state = FighterAction.CROUCH;
-        this.energy -= 50;  // 50% of total energy per second
+        this.energy -= ENERGY_COST_CROUCH;
         this.vx *= 0.5;  // Slow down while crouching
       }
 
-      // --- BLOCK (costs 50% of total energy per second, blocks 75% punches and 50% kicks) ---
-      if (activeInput.action3 && this.energy >= 50) {
+      // --- BLOCK (costs energy, blocks 75% punches and 50% kicks) ---
+      if (activeInput.action3 && this.energy >= ENERGY_COST_BLOCK) {
         this.state = FighterAction.BLOCK;
-        this.energy -= 50;  // 50% of total energy per second
+        this.energy -= ENERGY_COST_BLOCK;
         this.vx *= 0.3;  // Significant slowdown while blocking
       }
     }
@@ -322,19 +317,19 @@ export class Fighter {
 
     // Attacks can only be initiated when not in cooldown
     if (this.cooldown === 0) {
-      // PUNCH: Quick attack, less damage, faster recovery (30% of total energy)
-      if (activeInput.action1 && this.energy >= 30) {
+      // PUNCH: Quick attack, less damage, faster recovery
+      if (activeInput.action1 && this.energy >= ENERGY_COST_PUNCH) {
         this.state = FighterAction.PUNCH;
         this.vx *= 0.2;       // Stop moving significantly
         this.cooldown = 30;   // 30 frames of animation
-        this.energy -= 30;    // Energy cost (30% of 100)
+        this.energy -= ENERGY_COST_PUNCH;
       }
-      // KICK: Strong attack, more damage, slower recovery (60% of total energy)
-      else if (activeInput.action2 && this.energy >= 60) {
+      // KICK: Strong attack, more damage, slower recovery
+      else if (activeInput.action2 && this.energy >= ENERGY_COST_KICK) {
         this.state = FighterAction.KICK;
         this.vx *= 0.2;
         this.cooldown = 40;   // Longer animation
-        this.energy -= 60;    // Higher energy cost (60% of 100)
+        this.energy -= ENERGY_COST_KICK;
       }
     }
 
@@ -409,10 +404,10 @@ export class Fighter {
     const selfH = this.health / 100;                         // Own health (0 to 1)
     const oppH = opponent.health / 100;                      // Opponent health (0 to 1)
     const oppAction = opponent.state / 7;                    // Opponent action (0 to 1)
-    const selfE = this.energy / 100;                         // Own energy (0 to 1)
+    const selfE = this.energy / ENERGY_MAX;                  // Own energy (0 to 1)
     const facing = this.direction;                           // Facing direction (-1 or 1)
     const oppCooldown = opponent.cooldown / 40;              // Opponent cooldown (0 to 1)
-    const oppEnergy = opponent.energy / 100;                 // Opponent energy (0 to 1)
+    const oppEnergy = opponent.energy / ENERGY_MAX;          // Opponent energy (0 to 1)
 
     // 9 inputs total
     const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy];
@@ -587,7 +582,7 @@ export class Fighter {
         // Removed backstab multiplier as requested
         if (opponent.state === FighterAction.BLOCK) {
           damage *= 0.5;  // Blocked: 50% damage reduction for punches, 75% for kicks
-          opponent.energy -= 5;  // Blocking costs extra energy when hit
+          opponent.energy -= ENERGY_PENALTY_HIT;  // Blocking costs extra energy when hit
         } else if (opponent.state === FighterAction.CROUCH) {
           // Crouching blocks 75% of kicks and 50% of punches
           if (this.state === FighterAction.KICK) {
@@ -595,7 +590,7 @@ export class Fighter {
           } else {
             damage *= 0.5;   // 50% reduction for punches
           }
-          opponent.energy -= 5;  // Crouching costs extra energy when hit
+          opponent.energy -= ENERGY_PENALTY_HIT;  // Crouching costs extra energy when hit
         }
 
         // Apply damage (clamped to 0)

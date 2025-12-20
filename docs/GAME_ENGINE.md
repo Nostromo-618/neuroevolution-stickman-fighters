@@ -95,10 +95,13 @@ if (isCustom && scriptWorker) {
 
 ### Custom Script Security
 
-Custom scripts run in an isolated **Web Worker**:
-- No access to DOM (`document`, `window`)
-- No access to page JavaScript context
-- Uses cached action pattern for 60 FPS performance (~1 frame latency)
+Custom scripts are handled with strict isolation protocols to ensure the application remains stable and secure:
+
+- **Isolated Web Worker**: Scripts run in a separate thread with NO access to the DOM or page context.
+- **Watchdog Pattern**: The engine uses a "cached action" pattern. If a custom script takes too long to compute, the engine simply uses the last known action, preventing UI freezes.
+- **Sandbox Boundary**: The use of `new Function()` is confined to the worker's global scope, meaning it cannot "escape" to the main application.
+
+For a detailed breakdown of the security model, see [SCRIPTED.md#security-architecture](../SCRIPTED.md#security-architecture).
 
 ---
 
