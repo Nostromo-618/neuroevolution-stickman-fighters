@@ -2,7 +2,9 @@
 
 A real-time neuroevolution fighting game where AI fighters learn to combat through genetic algorithms and neural networks. Watch artificial intelligence evolve from random behavior into skilled combatants!
 
-> **Educational Project**: This codebase is extensively documented to help you understand neuroevolution, game development, and React patterns.
+**Supports Xbox Gamepad! But you need to connect it via bluetooth. Cable not supported.**
+
+> **Educational Project**: This codebase is extensively documented to help you understand and learn. Author learns too! So please kindly forgive any errors or typos.
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
@@ -160,31 +162,6 @@ Over generations, networks that produce winning behaviors are preserved and refi
 - **Recharts** - Fitness visualization graphs
 - **Tailwind CSS** - Styling
 
----
-
-## 📊 Training Tips
-
-1. **Start with default settings** - They're tuned for good results
-2. **Let it train for 50+ generations** - Early generations are chaotic
-3. **Watch the fitness chart** - If it plateaus, try resetting
-4. **Use background training** - Play arcade while AI improves
-5. **Export good AIs** - Save your best fighters to share!
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Some ideas:
-
-- Add new attack types (uppercut, sweep, etc.)
-- Implement a tournament bracket system
-- Add sound effects and music
-- Create a multiplayer mode
-- Improve the stickman animations
-- Share custom fighter scripts
-
----
-
 ## 📄 License
 
 MIT License - feel free to use this code for learning and projects.
@@ -205,10 +182,83 @@ MIT License - feel free to use this code for learning and projects.
 | ✅ No vulnerabilities found | December 2024 |
 
 ```
-Total dependencies audited: 50
-All packages: No vulnerabilities found!
+ ________   ___  ___   ________   ___   _________       ___   ________      
+|\   __  \ |\  \|\  \ |\   ___ \ |\  \ |\___   ___\    |\  \ |\   ____\     
+\ \  \|\  \\ \  \\\  \\ \  \_|\ \\ \  \\|___ \  \_|    \ \  \\ \  \___|_    
+ \ \   __  \\ \  \\\  \\ \  \ \\ \\ \  \    \ \  \   __ \ \  \\ \_____  \   
+  \ \  \ \  \\ \  \\\  \\ \  \_\\ \\ \  \    \ \  \ |\  \\_\  \\|____|\  \  
+   \ \__\ \__\\ \_______\\ \_______\\ \__\    \ \__\\ \________\ ____\_\  \ 
+    \|__|\|__| \|_______| \|_______| \|__|     \|__| \|________||\_________\
+                                                                \|_________|
+                                                                            
+                                                                            
+  _      _                       _   _              
+ /_)    /_`_  _  _ _/_   _  _   (/  /_`_._  _   _/ _
+/_)/_/ ._//_// //_|/ /_//_//_' (_X /  ///_'/ //_/_\ 
+   _/                _//                            
+
+  AuditJS version: 4.0.47
+
+✔ Starting application
+✔ Getting coordinates for Sonatype OSS Index
+✔ Auditing your application with Sonatype OSS Index
+✔ Submitting coordinates to Sonatype OSS Index
+✔ Reticulating splines
+✔ Removing whitelisted vulnerabilities
+
+  Sonabot here, beep boop beep boop, here are your Sonatype OSS Index results:
+  Total dependencies audited: 50
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[1/50] - pkg:npm/@monaco-editor/loader@1.7.0 - No vulnerabilities found!
+[2/50] - pkg:npm/@monaco-editor/react@4.7.0 - No vulnerabilities found!
+[3/50] - pkg:npm/@reduxjs/toolkit@2.11.2 - No vulnerabilities found!
+[4/50] - pkg:npm/@standard-schema/spec@1.1.0 - No vulnerabilities found!
+[5/50] - pkg:npm/@standard-schema/utils@0.3.0 - No vulnerabilities found!
+[6/50] - pkg:npm/@types/d3-array@3.2.2 - No vulnerabilities found!
+[7/50] - pkg:npm/@types/d3-color@3.1.3 - No vulnerabilities found!
+[8/50] - pkg:npm/@types/d3-ease@3.0.2 - No vulnerabilities found!
+[9/50] - pkg:npm/@types/d3-interpolate@3.0.4 - No vulnerabilities found!
+[10/50] - pkg:npm/@types/d3-path@3.1.1 - No vulnerabilities found!
+[11/50] - pkg:npm/@types/d3-scale@4.0.9 - No vulnerabilities found!
+[12/50] - pkg:npm/@types/d3-shape@3.1.7 - No vulnerabilities found!
+[13/50] - pkg:npm/@types/d3-time@3.0.4 - No vulnerabilities found!
+[14/50] - pkg:npm/@types/d3-timer@3.0.2 - No vulnerabilities found!
+[15/50] - pkg:npm/@types/trusted-types@2.0.7 - No vulnerabilities found!
+[16/50] - pkg:npm/@types/use-sync-external-store@0.0.6 - No vulnerabilities found!
+[17/50] - pkg:npm/clsx@2.1.1 - No vulnerabilities found!
+[18/50] - pkg:npm/d3-array@3.2.4 - No vulnerabilities found!
+[19/50] - pkg:npm/d3-color@3.1.0 - No vulnerabilities found!
+[20/50] - pkg:npm/d3-ease@3.0.1 - No vulnerabilities found!
+[21/50] - pkg:npm/d3-format@3.1.0 - No vulnerabilities found!
+[22/50] - pkg:npm/d3-interpolate@3.0.1 - No vulnerabilities found!
+[23/50] - pkg:npm/d3-path@3.1.0 - No vulnerabilities found!
+[24/50] - pkg:npm/d3-scale@4.0.2 - No vulnerabilities found!
+[25/50] - pkg:npm/d3-shape@3.2.0 - No vulnerabilities found!
+[26/50] - pkg:npm/d3-time-format@4.1.0 - No vulnerabilities found!
+[27/50] - pkg:npm/d3-time@3.1.0 - No vulnerabilities found!
+[28/50] - pkg:npm/d3-timer@3.0.1 - No vulnerabilities found!
+[29/50] - pkg:npm/decimal.js-light@2.5.1 - No vulnerabilities found!
+[30/50] - pkg:npm/dompurify@3.2.7 - No vulnerabilities found!
+[31/50] - pkg:npm/es-toolkit@1.43.0 - No vulnerabilities found!
+[32/50] - pkg:npm/eventemitter3@5.0.1 - No vulnerabilities found!
+[33/50] - pkg:npm/immer@10.2.0 - No vulnerabilities found!
+[34/50] - pkg:npm/immer@11.0.1 - No vulnerabilities found!
+[35/50] - pkg:npm/internmap@2.0.3 - No vulnerabilities found!
+[36/50] - pkg:npm/marked@14.0.0 - No vulnerabilities found!
+[37/50] - pkg:npm/monaco-editor@0.55.1 - No vulnerabilities found!
+[38/50] - pkg:npm/react-dom@19.2.3 - No vulnerabilities found!
+[39/50] - pkg:npm/react-is@19.2.3 - No vulnerabilities found!
+[40/50] - pkg:npm/react-redux@9.2.0 - No vulnerabilities found!
+[41/50] - pkg:npm/react@19.2.3 - No vulnerabilities found!
+[42/50] - pkg:npm/recharts@3.6.0 - No vulnerabilities found!
+[43/50] - pkg:npm/redux-thunk@3.1.0 - No vulnerabilities found!
+[44/50] - pkg:npm/redux@5.0.1 - No vulnerabilities found!
+[45/50] - pkg:npm/reselect@5.1.1 - No vulnerabilities found!
+[46/50] - pkg:npm/scheduler@0.27.0 - No vulnerabilities found!
+[47/50] - pkg:npm/state-local@1.0.7 - No vulnerabilities found!
+[48/50] - pkg:npm/tiny-invariant@1.3.3 - No vulnerabilities found!
+[49/50] - pkg:npm/use-sync-external-store@1.6.0 - No vulnerabilities found!
+[50/50] - pkg:npm/victory-vendor@37.3.6 - No vulnerabilities found!
 ```
-
-Run security audit: `npx -y auditjs ossi`
-
 ---
