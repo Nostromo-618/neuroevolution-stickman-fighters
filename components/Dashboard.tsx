@@ -153,44 +153,44 @@ const Dashboard: React.FC<DashboardProps> = ({
           // TRAINING MODE CONFIGURATION
           <div className="space-y-2">
             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Training Opponent</h2>
-            <div className="flex bg-slate-900 p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-lg">
               <button
                 onClick={() => setSettings(s => ({ ...s, opponentType: 'AI' }))}
-                className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'AI' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                className={`py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'AI' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
               >
-                Neural AI
+                AI
               </button>
               <button
-                onClick={() => setSettings(s => ({ ...s, opponentType: 'SCRIPTED' }))}
-                className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'SCRIPTED' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                onClick={() => setSettings(s => ({ ...s, opponentType: 'CUSTOM_A' }))}
+                className={`py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'CUSTOM_A' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
               >
-                Scripted
+                Script A
               </button>
               <button
-                onClick={() => setSettings(s => ({ ...s, opponentType: 'CUSTOM' }))}
-                className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'CUSTOM' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                onClick={() => setSettings(s => ({ ...s, opponentType: 'CUSTOM_B' }))}
+                className={`py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'CUSTOM_B' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
               >
-                Custom
+                Script B
               </button>
             </div>
 
             {/* Short explanation */}
             <p className="text-[10px] text-slate-500 text-center">
               {settings.opponentType === 'AI' ? 'Train against cloned neural networks' :
-                settings.opponentType === 'SCRIPTED' ? 'Train against hard-coded logic' :
-                  'Train against your custom script'}
+                settings.opponentType === 'CUSTOM_A' ? 'Train against Script A' :
+                  'Train against Script B'}
             </p>
 
             {/* Controls moved here for Training */}
             {renderControls()}
 
             {/* Edit Script Button (Training) */}
-            {settings.opponentType === 'CUSTOM' && (
+            {(settings.opponentType === 'CUSTOM_A' || settings.opponentType === 'CUSTOM_B') && (
               <button
                 onClick={() => setScriptEditorOpen(true)}
-                className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-xs font-bold text-white transition-all flex items-center justify-center gap-2"
+                className={`w-full py-2 ${settings.opponentType === 'CUSTOM_A' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-teal-600 hover:bg-teal-700'} rounded-lg text-xs font-bold text-white transition-all flex items-center justify-center gap-2`}
               >
-                <span className="text-lg">✏️</span> Edit Script
+                <span className="text-lg">✏️</span> Edit {settings.opponentType === 'CUSTOM_A' ? 'Script A' : 'Script B'}
               </button>
             )}
           </div>
@@ -235,7 +235,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <span>Player 2 (Right)</span>
                 <span className="text-[10px] bg-blue-900/50 px-1 rounded">AUTO</span>
               </h2>
-              <div className="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-lg">
+              <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-lg">
                 <button
                   onClick={() => setSettings(s => ({ ...s, player2Type: 'AI' }))}
                   className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'AI' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
@@ -243,22 +243,16 @@ const Dashboard: React.FC<DashboardProps> = ({
                   AI
                 </button>
                 <button
-                  onClick={() => setSettings(s => ({ ...s, player2Type: 'SCRIPTED' }))}
-                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'SCRIPTED' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                >
-                  BOT
-                </button>
-                <button
                   onClick={() => setSettings(s => ({ ...s, player2Type: 'CUSTOM_A' }))}
                   className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'CUSTOM_A' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                 >
-                  SCR A
+                  SCRIPT A
                 </button>
                 <button
                   onClick={() => setSettings(s => ({ ...s, player2Type: 'CUSTOM_B' }))}
-                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'CUSTOM_B' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'CUSTOM_B' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                 >
-                  SCR B
+                  SCRIPT B
                 </button>
               </div>
             </div>

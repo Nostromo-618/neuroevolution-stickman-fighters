@@ -82,8 +82,8 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ isOpen, onClose, onSave }) 
     // Load saved script or default template on open or slot change
     useEffect(() => {
         if (isOpen) {
-            const savedCode = loadScript(activeSlot);
-            setCode(savedCode || getDefaultTemplate());
+            // loadScript now returns default template if nothing saved
+            setCode(loadScript(activeSlot));
             setError(null);
         }
     }, [isOpen, activeSlot]);
@@ -164,9 +164,9 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ isOpen, onClose, onSave }) 
         onClose();
     }, [code, activeSlot, onSave, onClose]);
 
-    // Reset to default template
+    // Load default template
     const handleReset = useCallback(() => {
-        if (confirm(`Reset ${activeSlot === 'slot1' ? 'Script A' : 'Script B'} to default template? Your changes will be lost.`)) {
+        if (confirm(`Load default template for ${activeSlot === 'slot1' ? 'Script A' : 'Script B'}? Your current code will be replaced.`)) {
             const template = getDefaultTemplate();
             setCode(template);
             saveScript(template, activeSlot);
@@ -393,8 +393,9 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ isOpen, onClose, onSave }) 
                             fontSize: '13px',
                             fontWeight: '500',
                         }}
+                        title="Replace current script with the default balanced fighter template"
                     >
-                        Reset
+                        Load Default
                     </button>
                     <button
                         onClick={handleImport}

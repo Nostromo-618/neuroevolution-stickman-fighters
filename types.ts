@@ -128,16 +128,14 @@ export interface GameState {
 export type GameMode = 'TRAINING' | 'ARCADE';
 
 /**
- * OpponentType - Who the player/AI fights against
+ * OpponentType - Who the player/AI fights against in TRAINING mode
  * 
  * - 'AI': Neural network controlled opponent (the trained or random NN)
  * - 'SCRIPTED': Default scripted logic (see services/ScriptedFighter.ts)
- * - 'CUSTOM': User-written custom script (via Script Editor)
- * 
- * In TRAINING mode: Sets who the NN trains against
- * In ARCADE mode: Sets who the human player fights against
+ * - 'CUSTOM_A': User-written custom Script A
+ * - 'CUSTOM_B': User-written custom Script B
  */
-export type OpponentType = 'AI' | 'SCRIPTED' | 'CUSTOM';
+export type OpponentType = 'AI' | 'SCRIPTED' | 'CUSTOM_A' | 'CUSTOM_B';
 
 /**
  * TrainingSettings Interface

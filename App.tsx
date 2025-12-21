@@ -126,44 +126,31 @@ const App = () => {
   // Pre-compile custom script workers based on selection
   useEffect(() => {
     const compileWorker = async (slot: 'slot1' | 'slot2', workerRef: React.MutableRefObject<ScriptWorkerManager | null>) => {
+      // loadScript always returns code (default template if nothing saved)
       const scriptCode = loadScript(slot);
-      if (scriptCode) {
-        if (!workerRef.current) {
-          workerRef.current = new ScriptWorkerManager();
-        }
 
-        if (!workerRef.current.isReady()) {
-          const result = await workerRef.current.compile(scriptCode);
-          const name = slot === 'slot1' ? 'Script A' : 'Script B';
-          if (result.success) {
-            addToastRef.current('success', `✏️ ${name} compiled successfully!`);
-          } else {
-            addToastRef.current('error', `${name} error: ${result.error}. Using default behavior.`);
-          }
-        }
-      } else {
-        // Only warn if explicitly selected
+      if (!workerRef.current) {
+        workerRef.current = new ScriptWorkerManager();
+      }
+
+      if (!workerRef.current.isReady()) {
+        const result = await workerRef.current.compile(scriptCode);
         const name = slot === 'slot1' ? 'Script A' : 'Script B';
-        const isSelected =
-          (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM' && slot === 'slot1') ||
-          (settings.gameMode === 'ARCADE' && (
-            (slot === 'slot1' && (settings.player1Type === 'CUSTOM_A' || settings.player2Type === 'CUSTOM_A')) ||
-            (slot === 'slot2' && (settings.player1Type === 'CUSTOM_B' || settings.player2Type === 'CUSTOM_B'))
-          ));
-
-        if (isSelected) {
-          addToastRef.current('info', `No ${name} found. Open Editor to create one.`);
+        if (!result.success) {
+          addToastRef.current('error', `${name} error: ${result.error}`);
         }
+        // Success is silent - no need to spam the user with "compiled successfully"
       }
     };
 
     // Check if we need Worker A (Slot 1)
     const needsA =
-      (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM') ||
+      (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM_A') ||
       (settings.gameMode === 'ARCADE' && (settings.player1Type === 'CUSTOM_A' || settings.player2Type === 'CUSTOM_A'));
 
     // Check if we need Worker B (Slot 2)
     const needsB =
+      (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM_B') ||
       (settings.gameMode === 'ARCADE' && (settings.player1Type === 'CUSTOM_B' || settings.player2Type === 'CUSTOM_B'));
 
     if (needsA) compileWorker('slot1', customScriptWorkerARef);
@@ -268,23 +255,20 @@ const App = () => {
           f.isCustom = true;
           f.scriptWorker = worker;
         } else {
-          f.isScripted = true; // Fallback
-          // Only show toast for P1 to avoid spam, or if it's the only custom one
-          addToastRef.current('info', 'Script A not ready - using default scripted bot.');
+          f.isScripted = true; // Fallback silently - user was notified on compile
         }
         return f;
       }
 
       // 5. CUSTOM SCRIPT B
       if (type === 'CUSTOM_B') {
-        const f = new Fighter(x, '#d946ef', false); // Slightly different purple/pink
+        const f = new Fighter(x, '#14b8a6', false); // Teal - distinct from Script A purple
         const worker = customScriptWorkerBRef.current;
         if (worker && worker.isReady()) {
           f.isCustom = true;
           f.scriptWorker = worker;
         } else {
-          f.isScripted = true; // Fallback
-          addToastRef.current('info', 'Script B not ready - using default scripted bot.');
+          f.isScripted = true; // Fallback silently - user was notified on compile
         }
         return f;
       }
@@ -297,7 +281,9 @@ const App = () => {
     if (settingsRef.current.gameMode === 'TRAINING') {
       const popSize = populationRef.current.length;
       const useScripted = settingsRef.current.opponentType === 'SCRIPTED';
-      const useCustom = settingsRef.current.opponentType === 'CUSTOM';
+      const useCustomA = settingsRef.current.opponentType === 'CUSTOM_A';
+      const useCustomB = settingsRef.current.opponentType === 'CUSTOM_B';
+      const useCustom = useCustomA || useCustomB;
 
       // When training vs SCRIPTED or CUSTOM:
       // - Each genome fights one match against the scripted/custom opponent
@@ -321,11 +307,15 @@ const App = () => {
         // 50% chance to swap sides for variety
         const swapSides = Math.random() > 0.5;
 
-        // Color: orange for scripted, purple for custom
-        const opponentColor = useCustom ? '#a855f7' : '#f97316';
+        // Color: purple for Script A, teal for Script B, orange for scripted
+        const opponentColor = useCustomA ? '#a855f7' : useCustomB ? '#14b8a6' : '#f97316';
 
-        // Get pre-compiled script worker for custom opponent
-        const scriptWorker = useCustom ? customScriptWorkerARef.current : null;
+        // Get pre-compiled script worker (A or B based on selection)
+        const scriptWorker = useCustomA
+          ? customScriptWorkerARef.current
+          : useCustomB
+            ? customScriptWorkerBRef.current
+            : null;
 
         if (swapSides) {
           // NN on right, Scripted/Custom on left
@@ -335,9 +325,6 @@ const App = () => {
             f1.scriptWorker = scriptWorker;
           } else {
             f1.isScripted = true;
-            if (useCustom) {
-              console.warn('Custom script worker not ready, falling back to scripted opponent');
-            }
           }
           const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, genome); // NN (Blue)
           f2.direction = -1;
@@ -351,9 +338,6 @@ const App = () => {
             f2.scriptWorker = scriptWorker;
           } else {
             f2.isScripted = true;
-            if (useCustom) {
-              console.warn('Custom script worker not ready, falling back to scripted opponent');
-            }
           }
           f2.direction = -1;
           activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: genomeIdx, p2GenomeIdx: -1 };
@@ -997,30 +981,56 @@ const App = () => {
                 ) : (
                   <>
                     {/* Normal ARCADE HUD */}
-                    <div className="flex flex-col items-start">
-                      <span className="text-red-500 font-bold">PLAYER</span>
-                      <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                        <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
-                      </div>
-                      <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                        <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                      </div>
-                    </div>
+                    {(() => {
+                      // Helper to get label and color for each player type
+                      const getP1Info = () => {
+                        switch (settings.player1Type) {
+                          case 'HUMAN': return { label: 'HUMAN', color: 'text-red-500', barColor: 'bg-red-500' };
+                          case 'CUSTOM_A': return { label: 'SCRIPT A', color: 'text-purple-400', barColor: 'bg-purple-400' };
+                          case 'CUSTOM_B': return { label: 'SCRIPT B', color: 'text-teal-400', barColor: 'bg-teal-400' };
+                          default: return { label: 'P1', color: 'text-red-500', barColor: 'bg-red-500' };
+                        }
+                      };
+                      const getP2Info = () => {
+                        switch (settings.player2Type) {
+                          case 'AI': return { label: 'AI', color: 'text-blue-500', barColor: 'bg-blue-500' };
+                          case 'SCRIPTED': return { label: 'BOT', color: 'text-orange-400', barColor: 'bg-orange-400' };
+                          case 'CUSTOM_A': return { label: 'SCRIPT A', color: 'text-purple-400', barColor: 'bg-purple-400' };
+                          case 'CUSTOM_B': return { label: 'SCRIPT B', color: 'text-teal-400', barColor: 'bg-teal-400' };
+                          default: return { label: 'P2', color: 'text-blue-500', barColor: 'bg-blue-500' };
+                        }
+                      };
+                      const p1 = getP1Info();
+                      const p2 = getP2Info();
+                      return (
+                        <>
+                          <div className="flex flex-col items-start">
+                            <span className={`${p1.color} font-bold text-xs`}>{p1.label}</span>
+                            <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                              <div className={`h-full ${p1.barColor} transition-all duration-75`} style={{ width: `${gameState.player1Health}%` }}></div>
+                            </div>
+                            <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                              <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
+                            </div>
+                          </div>
 
-                    <div className="flex flex-col items-center">
-                      <span className="text-white mt-2 font-bold opacity-90 tracking-widest">VS</span>
-                      <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-                    </div>
+                          <div className="flex flex-col items-center">
+                            <span className="text-white mt-2 font-bold opacity-90 tracking-widest">VS</span>
+                            <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
+                          </div>
 
-                    <div className="flex flex-col items-end">
-                      <span className="text-blue-500 font-bold">AI</span>
-                      <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                        <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
-                      </div>
-                      <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                        <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
-                      </div>
-                    </div>
+                          <div className="flex flex-col items-end">
+                            <span className={`${p2.color} font-bold text-xs`}>{p2.label}</span>
+                            <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                              <div className={`h-full ${p2.barColor} transition-all duration-75`} style={{ width: `${gameState.player2Health}%` }}></div>
+                            </div>
+                            <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                              <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </>
                 )}
               </div>

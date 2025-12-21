@@ -755,16 +755,18 @@ export function saveScript(scriptCode: string, slotId: string = 'slot1'): void {
 
 /**
  * Loads user script from the browser's localStorage.
+ * If no saved script exists, returns the default template so scripts work out-of-the-box.
  * 
  * @param slotId - The slot identifier (e.g., 'slot1', 'slot2')
- * @returns The saved script code, or null if nothing was saved
+ * @returns The saved script code, or default template if nothing was saved
  */
-export function loadScript(slotId: string = 'slot1'): string | null {
+export function loadScript(slotId: string = 'slot1'): string {
     try {
-        return localStorage.getItem(`${LOCALSTORAGE_SCRIPT_KEY_PREFIX}${slotId}`);
+        const saved = localStorage.getItem(`${LOCALSTORAGE_SCRIPT_KEY_PREFIX}${slotId}`);
+        return saved || getDefaultTemplate();
     } catch (storageError) {
         console.warn('Failed to load script from localStorage:', storageError);
-        return null;
+        return getDefaultTemplate();
     }
 }
 

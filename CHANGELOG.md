@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2025-12-21
+
+### Changed - UI Simplification & Script Selector
+Major UX improvements for clearer script selection in both Training and Arcade modes:
+
+- **Training mode**: Replaced confusing "Custom" with explicit **Script A** and **Script B** buttons
+- **Arcade mode P2**: Removed "BOT" option, renamed "SCR A/B" to **SCRIPT A** and **SCRIPT B**
+- **Fighter colors**: Script B now uses distinct **teal** color (was pink, too similar to Script A purple)
+- **HUD labels**: Now show actual player type (AI, SCRIPT A, SCRIPT B, HUMAN) with matching colors
+- **Scripts auto-load**: Default template loads automatically if no custom script saved
+- **Quiet notifications**: Removed spammy "Script not ready" toasts; only errors show notifications
+- **Script Editor**: Renamed "Reset" to **"Load Default"** for clarity
+
+### Fixed
+- Toast notification spam when selecting script modes
+
 ## [1.2.3] - 2025-12-21
 
 ### Changed - Import/Export Improvements
