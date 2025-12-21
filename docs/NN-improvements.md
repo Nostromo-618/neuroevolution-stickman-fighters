@@ -79,6 +79,20 @@ Default sizes need 50-200 individuals for complex tasks.
 - Better genetic diversity
 - More exploration of solution space
 
+### Fix 7: Improved Import/Export (NeuralNetwork.ts, App.tsx)
+**Before:** 
+- Export didn't save generation number
+- Import failed silently on architecture mismatch
+- "Arcade Only" option was confusing
+- Imported genome easily "washed out" by random parents
+
+**After:**
+- Export saves generation + architecture metadata (version 1.1 format)
+- Import shows clear error messages for incompatible files
+- Import restores generation counter for seamless continuation
+- Import seeds 25% of population (12 genomes) with imported weights
+- Simplified UI: single "Continue Training" button, hidden in Arcade mode
+
 ---
 
 ## Expected Results
@@ -87,3 +101,4 @@ Default sizes need 50-200 individuals for complex tasks.
 - Better timing and spacing behaviors
 - More diverse strategies in the population
 - Fighters that actually land hits and KO opponents
+- Seamless save/load workflow for sharing trained AIs

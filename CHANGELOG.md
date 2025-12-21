@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 2025-12-21
+
+### Changed - Import/Export Improvements
+- **Export now saves generation number**: Continuation from where you left off.
+- **Export includes architecture metadata**: Helps detect version mismatches.
+- **Import shows detailed error messages**: Clear feedback on incompatible files.
+- **Import restores generation counter**: Training continues from exported generation.
+- **Import seeds 25% of population**: Better gene preservation through crossover.
+- **Simplified UI**: Removed confusing "Arcade Only" option; import/export hidden in Arcade mode.
+
 ## [1.2.2] - 2025-12-21
 
 ### Changed - Neural Network Training Improvements

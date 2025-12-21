@@ -373,38 +373,40 @@ const Dashboard: React.FC<DashboardProps> = ({
           {/* Moved to renderControls() and placed in mode configs */}
 
           {/* --- Export/Import Weights --- */}
-          {/* Allows saving and loading trained AI */}
-          <div className="border-t border-slate-700 pt-3 space-y-2">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Weights Management</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={onExportWeights}
-                disabled={bestFitness === 0}
-                className="py-2 px-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-200 transition-all border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                title="Export best AI weights to JSON file"
-              >
-                {/* Download icon */}
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                EXPORT
-              </button>
-              <button
-                onClick={onImportWeights}
-                className="py-2 px-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-200 transition-all border border-slate-600 flex items-center justify-center gap-1.5"
-                title="Import AI weights from JSON file"
-              >
-                {/* Upload icon */}
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                IMPORT
-              </button>
+          {/* Only show in Training mode to avoid confusion */}
+          {settings.gameMode === 'TRAINING' && (
+            <div className="border-t border-slate-700 pt-3 space-y-2">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Weights Management</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={onExportWeights}
+                  disabled={bestFitness === 0}
+                  className="py-2 px-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-200 transition-all border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  title="Export best AI weights to JSON file"
+                >
+                  {/* Download icon */}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  EXPORT
+                </button>
+                <button
+                  onClick={onImportWeights}
+                  className="py-2 px-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-200 transition-all border border-slate-600 flex items-center justify-center gap-1.5"
+                  title="Import AI weights from JSON file"
+                >
+                  {/* Upload icon */}
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  IMPORT
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500 text-center">
+                Save/load trained AI weights
+              </p>
             </div>
-            <p className="text-[10px] text-slate-500 text-center">
-              Save/load trained AI weights
-            </p>
-          </div>
+          )}
 
           {/* ================================================================= */}
           {/* ARCADE MODE EXTRAS                                               */}

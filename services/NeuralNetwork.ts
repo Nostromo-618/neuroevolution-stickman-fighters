@@ -345,26 +345,53 @@ export const crossoverNetworks = (a: NeuralNetwork, b: NeuralNetwork): NeuralNet
  * - Loaded later for continued training or play
  * 
  * @param genome - The genome to export
+ * @param generation - Current generation number (for continuation)
  * @returns JSON string representation
  */
-export const exportGenome = (genome: { id: string; network: NeuralNetwork; fitness: number; matchesWon: number }): string => {
+export const exportGenome = (
+  genome: { id: string; network: NeuralNetwork; fitness: number; matchesWon: number },
+  generation: number = 1
+): string => {
   return JSON.stringify({
     id: genome.id,
     network: genome.network,
     fitness: genome.fitness,
     matchesWon: genome.matchesWon,
+    generation: generation,
     metadata: {
       exportedAt: new Date().toISOString(),
-      version: '1.0'
+      version: '1.1',
+      architecture: {
+        inputNodes: INPUT_NODES,
+        hiddenNodes: HIDDEN_NODES,
+        outputNodes: OUTPUT_NODES
+      }
     }
   }, null, 2);
+};
+
+/**
+ * Import result type - either success with genome or error with message
+ */
+export type ImportResult = {
+  success: true;
+  genome: {
+    id: string;
+    network: NeuralNetwork;
+    fitness: number;
+    matchesWon: number;
+  };
+  generation: number;
+} | {
+  success: false;
+  error: string;
 };
 
 /**
  * Imports a genome from a JSON string
  * 
  * Validates the structure to ensure the JSON contains valid network data.
- * Returns null if the format is invalid.
+ * Returns a result object with either the genome or an error message.
  * 
  * Validation checks:
  * - Network object exists
@@ -372,36 +399,52 @@ export const exportGenome = (genome: { id: string; network: NeuralNetwork; fitne
  * - Bias array has correct length
  * 
  * @param jsonString - JSON string to parse
- * @returns Parsed genome or null if invalid
+ * @returns ImportResult with genome data or error message
  */
-export const importGenome = (jsonString: string): { id: string; network: NeuralNetwork; fitness: number; matchesWon: number } | null => {
+export const importGenome = (jsonString: string): ImportResult => {
   try {
     const data = JSON.parse(jsonString);
 
     // Validate structure
     if (!data.network || !data.network.inputWeights || !data.network.outputWeights || !data.network.biases) {
-      throw new Error('Invalid genome format: missing network data');
+      return { success: false, error: 'Invalid file format: missing network data' };
     }
 
-    // Validate dimensions match our architecture
+    // Check architecture compatibility
+    const fileHidden = data.network.outputWeights.length;
+    const fileBiases = data.network.biases.length;
+
     if (data.network.inputWeights.length !== INPUT_NODES) {
-      throw new Error(`Invalid input dimension: expected ${INPUT_NODES}, got ${data.network.inputWeights.length}`);
+      return {
+        success: false,
+        error: `Input dimension mismatch: file has ${data.network.inputWeights.length}, app expects ${INPUT_NODES}`
+      };
     }
-    if (data.network.outputWeights.length !== HIDDEN_NODES) {
-      throw new Error(`Invalid hidden dimension: expected ${HIDDEN_NODES}, got ${data.network.outputWeights.length}`);
+    if (fileHidden !== HIDDEN_NODES) {
+      return {
+        success: false,
+        error: `Architecture mismatch: file has ${fileHidden} hidden neurons, app expects ${HIDDEN_NODES}. This file was exported from an older version.`
+      };
     }
-    if (data.network.biases.length !== HIDDEN_NODES + OUTPUT_NODES) {
-      throw new Error(`Invalid bias dimension: expected ${HIDDEN_NODES + OUTPUT_NODES}, got ${data.network.biases.length}`);
+    if (fileBiases !== HIDDEN_NODES + OUTPUT_NODES) {
+      return {
+        success: false,
+        error: `Bias count mismatch: file has ${fileBiases}, app expects ${HIDDEN_NODES + OUTPUT_NODES}`
+      };
     }
 
     return {
-      id: data.id || `imported-${Date.now()}`,
-      network: data.network,
-      fitness: data.fitness || 0,
-      matchesWon: data.matchesWon || 0
+      success: true,
+      genome: {
+        id: data.id || `imported-${Date.now()}`,
+        network: data.network,
+        fitness: data.fitness || 0,
+        matchesWon: data.matchesWon || 0
+      },
+      generation: data.generation || 1
     };
   } catch (error) {
     console.error('Failed to import genome:', error);
-    return null;
+    return { success: false, error: 'Failed to parse file. Is this a valid JSON file?' };
   }
 };

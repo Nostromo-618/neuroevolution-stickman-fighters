@@ -45,7 +45,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { InputManager } from './services/InputManager';
 import { Fighter, CANVAS_WIDTH, CANVAS_HEIGHT } from './services/GameEngine';
-import { createRandomNetwork, mutateNetwork, crossoverNetworks, exportGenome, importGenome } from './services/NeuralNetwork';
+import { createRandomNetwork, mutateNetwork, crossoverNetworks, exportGenome, importGenome, ImportResult } from './services/NeuralNetwork';
 import { loadScript, compileScript, ScriptWorkerManager } from './services/CustomScriptRunner';
 import { Genome, TrainingSettings, GameState, OpponentType } from './types';
 import GameCanvas from './components/GameCanvas';
@@ -87,7 +87,7 @@ const App = () => {
   const [disclaimerStatus, setDisclaimerStatus] = useState<'PENDING' | 'ACCEPTED' | 'DECLINED'>('PENDING');
 
   const [fitnessHistory, setFitnessHistory] = useState<{ gen: number, fitness: number }[]>([]);
-  const [pendingImport, setPendingImport] = useState<Genome | null>(null);
+  const [pendingImport, setPendingImport] = useState<{ genome: Genome; generation: number } | null>(null);
 
   // Toast notifications
   const { toasts, addToast, removeToast } = useToast();
@@ -830,7 +830,8 @@ const App = () => {
       return;
     }
 
-    const json = exportGenome(bestGenome);
+    // Pass current generation to export for continuation support
+    const json = exportGenome(bestGenome, gameState.generation);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -840,7 +841,7 @@ const App = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    addToast('success', 'Weights exported successfully!');
+    addToast('success', `Weights exported (Gen ${gameState.generation})!`);
   };
 
   const handleImportWeights = () => {
@@ -854,44 +855,51 @@ const App = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const text = event.target?.result as string;
-        const importedGenome = importGenome(text);
+        const result = importGenome(text);
 
-        if (!importedGenome) {
-          addToast('error', 'Invalid file format. Check the JSON structure.');
+        if (result.success === false) {
+          addToast('error', result.error);
           return;
         }
 
-        // Show inline UI for user choice
-        setPendingImport(importedGenome);
+        // Show inline UI for user choice with generation info
+        setPendingImport({ genome: result.genome, generation: result.generation });
+        addToast('info', `Loaded: Gen ${result.generation}, Fitness ${result.genome.fitness.toFixed(0)}`);
       };
       reader.readAsText(file);
     };
     input.click();
   };
 
-  const handleImportChoice = (useForTraining: boolean) => {
+  const handleImportChoice = () => {
     if (!pendingImport) return;
 
-    // Always store imported genome as best for ARCADE mode
-    const arcadeGenome = { ...pendingImport, id: `imported-${Date.now()}` };
+    const { genome, generation } = pendingImport;
+
+    // Store imported genome as best for ARCADE mode
+    const arcadeGenome = { ...genome, id: `imported-${Date.now()}` };
     bestTrainedGenomeRef.current = arcadeGenome;
 
-    if (useForTraining) {
-      const pop = populationRef.current;
-      if (pop.length > 0) {
-        pop.sort((a, b) => b.fitness - a.fitness);
-        pop[0] = {
-          ...pendingImport,
+    // Seed the first 25% of population with copies of imported genome
+    // This helps preserve good genes through crossover
+    const pop = populationRef.current;
+    if (pop.length > 0) {
+      const seedCount = Math.max(2, Math.floor(pop.length / 4));
+      for (let i = 0; i < seedCount && i < pop.length; i++) {
+        pop[i] = {
+          ...genome,
           fitness: 0,
           matchesWon: 0,
-          id: `training-imported-${Date.now()}`
+          id: `imported-${Date.now()}-${i}`
         };
       }
-      addToast('success', 'Weights imported for training + arcade!');
-    } else {
-      addToast('success', 'Weights imported for arcade mode!');
     }
 
+    // Restore generation number so training continues from where it left off
+    setGameState(prev => ({ ...prev, generation: generation }));
+    gameStateRef.current.generation = generation;
+
+    addToast('success', `Imported! Continuing from Gen ${generation}`);
     setPendingImport(null);
   };
 
@@ -1085,22 +1093,27 @@ const App = () => {
             {pendingImport && (
               <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
                 <div className="bg-slate-900 border border-teal-500/30 p-8 rounded-2xl max-w-md w-full shadow-2xl shadow-teal-500/10">
-                  <h3 className="text-2xl font-bold text-teal-400 mb-4">Weights Imported</h3>
-                  <p className="text-slate-400 mb-6 leading-relaxed">
-                    How would you like to use these weights? You can use them just for the current Arcade session, or inject them into the training population.
+                  <h3 className="text-2xl font-bold text-teal-400 mb-2">Import Weights</h3>
+                  <div className="bg-slate-800/50 rounded-lg p-3 mb-4 text-sm font-mono">
+                    <span className="text-slate-400">Generation:</span> <span className="text-teal-300">{pendingImport.generation}</span>
+                    <span className="mx-2 text-slate-600">|</span>
+                    <span className="text-slate-400">Fitness:</span> <span className="text-teal-300">{pendingImport.genome.fitness.toFixed(0)}</span>
+                  </div>
+                  <p className="text-slate-400 mb-6 leading-relaxed text-sm">
+                    This will inject the weights into training and continue from Generation {pendingImport.generation}.
                   </p>
                   <div className="space-y-3">
                     <button
-                      onClick={() => handleImportChoice(true)}
+                      onClick={handleImportChoice}
                       className="w-full py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl transition-all active:scale-95"
                     >
-                      Use for Training + Arcade
+                      Continue Training (Gen {pendingImport.generation})
                     </button>
                     <button
-                      onClick={() => handleImportChoice(false)}
-                      className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-all active:scale-95"
+                      onClick={() => setPendingImport(null)}
+                      className="w-full py-2 text-slate-500 hover:text-slate-300 text-sm transition-colors"
                     >
-                      Use for Arcade Only
+                      Cancel
                     </button>
                   </div>
                 </div>
