@@ -50,7 +50,7 @@ Our network has three layers:
 | Layer | Neurons | Purpose |
 |-------|---------|---------|
 | **Input** | 9 | Perceive game state |
-| **Hidden** | 10 | Process and combine information |
+| **Hidden** | 16 | Process and combine information |
 | **Output** | 8 | Decide which actions to take |
 
 ### Input Neurons (9 total)
@@ -234,7 +234,7 @@ After all matches in a generation:
 1. Sort genomes by total fitness (highest first)
 2. Top performers are more likely to reproduce
 
-We use **tournament selection**: randomly pick from top 50% of population.
+We use **tournament selection**: pick parents from top 25% of population for stronger selection pressure.
 
 ### 2. Elitism (Preserve the Best)
 
@@ -276,8 +276,9 @@ Mutated:   [0.5, 0.82, 0.8, 0.9, -0.18]
 ```
 
 **Adaptive Mutation Rate:**
-- Starts at 25% (lots of exploration)
-- Decays to 5% over ~50 generations (more refinement)
+- Starts at 30% (lots of exploration)
+- Decays to 5% over ~30 generations (more refinement)
+- 10% of mutations are "big mutations" (±2.0) for escaping local optima
 
 ---
 
@@ -333,18 +334,18 @@ We add small rewards/penalties each frame to guide learning:
 // File: services/NeuralNetwork.ts
 
 export const createRandomNetwork = (): NeuralNetwork => {
-  // 9 inputs × 10 hidden = 90 weights
+  // 9 inputs × 16 hidden = 144 weights
   const inputWeights = Array(9).fill(0).map(() => 
-    Array(10).fill(0).map(() => Math.random() * 2 - 1)  // Range: -1 to 1
+    Array(16).fill(0).map(() => Math.random() * 2 - 1)  // Range: -1 to 1
   );
   
-  // 10 hidden × 8 outputs = 80 weights
-  const outputWeights = Array(10).fill(0).map(() => 
+  // 16 hidden × 8 outputs = 128 weights
+  const outputWeights = Array(16).fill(0).map(() => 
     Array(8).fill(0).map(() => Math.random() * 2 - 1)
   );
 
-  // 10 hidden biases + 8 output biases = 18 total
-  const biases = Array(18).fill(0).map(() => Math.random() * 2 - 1);
+  // 16 hidden biases + 8 output biases = 24 total
+  const biases = Array(24).fill(0).map(() => Math.random() * 2 - 1);
 
   return { inputWeights, outputWeights, biases };
 };
@@ -358,7 +359,7 @@ export const createRandomNetwork = (): NeuralNetwork => {
 export const predict = (network: NeuralNetwork, inputs: number[]): number[] => {
   // Hidden layer: Input → Hidden
   const hidden = [];
-  for (let h = 0; h < 10; h++) {
+  for (let h = 0; h < 16; h++) {
     let sum = network.biases[h];
     for (let i = 0; i < 9; i++) {
       sum += inputs[i] * network.inputWeights[i][h];
@@ -369,8 +370,8 @@ export const predict = (network: NeuralNetwork, inputs: number[]): number[] => {
   // Output layer: Hidden → Output
   const outputs = [];
   for (let o = 0; o < 8; o++) {
-    let sum = network.biases[10 + o];
-    for (let h = 0; h < 10; h++) {
+    let sum = network.biases[16 + o];
+    for (let h = 0; h < 16; h++) {
       sum += hidden[h] * network.outputWeights[h][o];
     }
     outputs.push(1 / (1 + Math.exp(-sum)));  // Sigmoid
@@ -397,9 +398,10 @@ const evolve = () => {
   
   // Fill rest with offspring
   while (newPop.length < POPULATION_SIZE) {
-    // Tournament selection from top 50%
-    const parentA = population[randomInt(population.length / 2)];
-    const parentB = population[randomInt(population.length / 2)];
+    // Tournament selection from top 25% (stronger pressure)
+    const selectionPoolSize = Math.floor(population.length / 4);
+    const parentA = population[randomInt(selectionPoolSize)];
+    const parentB = population[randomInt(selectionPoolSize)];
     
     // Crossover
     let child = crossoverNetworks(parentA.network, parentB.network);

@@ -52,20 +52,20 @@ export enum FighterAction {
  * Represents the "brain" of an AI fighter. This is a simple feedforward
  * neural network with one hidden layer:
  * 
- *   INPUT (9 nodes) → HIDDEN (10 nodes) → OUTPUT (8 nodes)
+ *   INPUT (9 nodes) → HIDDEN (16 nodes) → OUTPUT (8 nodes)
  * 
  * The weights determine how signals flow through the network:
- * - inputWeights: Connections from input layer to hidden layer [9x10 matrix]
- * - outputWeights: Connections from hidden layer to output [10x8 matrix]
- * - biases: Offset values added at each neuron [10 hidden + 8 output = 18 total]
+ * - inputWeights: Connections from input layer to hidden layer [9x16 matrix]
+ * - outputWeights: Connections from hidden layer to output [16x8 matrix]
+ * - biases: Offset values added at each neuron [16 hidden + 8 output = 24 total]
  * 
  * During evolution, these weights are mutated and crossed over to create
  * new variations, allowing the AI to "learn" through natural selection.
  */
 export interface NeuralNetwork {
-  inputWeights: number[][];   // 9 inputs × 10 hidden neurons
-  outputWeights: number[][];  // 10 hidden × 8 output neurons
-  biases: number[];           // 18 bias values (10 hidden + 8 output)
+  inputWeights: number[][];   // 9 inputs × 16 hidden neurons
+  outputWeights: number[][];  // 16 hidden × 8 output neurons
+  biases: number[];           // 24 bias values (16 hidden + 8 output)
 }
 
 /**
@@ -146,7 +146,7 @@ export type OpponentType = 'AI' | 'SCRIPTED' | 'CUSTOM';
  * These can be adjusted in real-time through the Dashboard UI.
  */
 export interface TrainingSettings {
-  populationSize: number;     // Number of AI genomes per generation (default: 24)
+  populationSize: number;     // Number of AI genomes per generation (default: 48)
   mutationRate: number;       // Probability of mutating each weight (0-1)
   hiddenLayers: number[];
   fps: number;

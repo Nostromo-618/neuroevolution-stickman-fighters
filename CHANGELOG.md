@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2025-12-21
+
+### Changed - Neural Network Training Improvements
+Major improvements to accelerate AI learning and produce more effective fighters:
+
+- **Rich Fitness Shaping**: Restored incremental rewards for damage dealt (+3/point), remaining health (+2/point), and timeout wins (+200). Added stalemate penalty (-100) for passive play.
+- **Stronger Selection Pressure**: Parents now selected from top 25% (was 50%) for faster convergence on good strategies.
+- **Improved Mutation**: Larger base mutations (±0.5 to ±1.0 instead of ±0.25). Added 10% chance of "big mutations" (±2.0) to escape local optima.
+- **Faster Adaptive Decay**: Mutation rate now decays from 30% to 5% over ~30 generations (was 25%→5% over ~50 generations).
+- **Increased Network Capacity**: Hidden layer increased from 10 to 16 neurons (+60% capacity, 272 total weights).
+- **Larger Population**: Default population size increased from 24 to 48 for better genetic diversity.
+
+### Breaking Changes
+- **Saved weights incompatible**: Previously exported AI weights will not work with the new 16-neuron architecture. Please retrain your AI.
+
+### Documentation
+- Added `docs/NN-improvements.md` with detailed analysis and implementation notes.
+- Updated `docs/NEURAL_NETWORK.md` with new parameters and code examples.
+
 ## [1.2.1] - 2025-12-21
 
 ### Fixed

@@ -14,7 +14,7 @@ const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ onAccept, onDecline }
           <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
             Disclaimer & Terms of Use
           </h2>
-          <p className="text-slate-400 text-sm mt-1">Last Updated: December 20, 2025</p>
+          <p className="text-slate-400 text-sm mt-1">Last Updated: December 21, 2025</p>
         </div>
 
         {/* Content */}
@@ -39,7 +39,7 @@ const DisclaimerModal: React.FC<DisclaimerModalProps> = ({ onAccept, onDecline }
               The developer(s) shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of data, loss of productivity, or personal injury arising from the use or inability to use this application.
             </p>
           </section>
-          
+
           <section>
             <h4 className="font-semibold text-slate-100 mb-1 font-mono uppercase text-xs tracking-wider">User Responsibility</h4>
             <p className="text-sm">

@@ -64,7 +64,7 @@ import GoodbyeScreen from './components/GoodbyeScreen';
 const App = () => {
   // --- State ---
   const [settings, setSettings] = useState<TrainingSettings>({
-    populationSize: 24,
+    populationSize: 48,  // Increased from 24 for better genetic diversity
     mutationRate: 0.1,
     simulationSpeed: 1,
     gameMode: 'TRAINING',
@@ -465,13 +465,17 @@ const App = () => {
     ];
 
     // Fill rest with adaptive mutation rate
-    // Starts at 25%, decays to 5% minimum over ~50 generations
-    const adaptiveRate = Math.max(0.05, 0.25 - (currentGen * 0.004));
+    // Starts higher (30%) and decays faster to 5% minimum over ~30 generations
+    // This encourages more exploration early, then refinement later
+    const adaptiveRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
+
+    // Selection pool: top 25% of population (stronger selection pressure)
+    const selectionPoolSize = Math.max(2, Math.floor(pop.length / 4));
 
     while (newPop.length < settingsRef.current.populationSize) {
-      // Tournament Selection
-      const parentA = pop[Math.floor(Math.random() * (pop.length / 2))]; // Select from top 50%
-      const parentB = pop[Math.floor(Math.random() * (pop.length / 2))];
+      // Tournament Selection from top 25% (stronger pressure than 50%)
+      const parentA = pop[Math.floor(Math.random() * selectionPoolSize)];
+      const parentB = pop[Math.floor(Math.random() * selectionPoolSize)];
 
       let childNet = crossoverNetworks(parentA.network, parentB.network);
       childNet = mutateNetwork(childNet, adaptiveRate);
@@ -546,11 +550,12 @@ const App = () => {
         { ...pop[1], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-1` }
       ];
 
-      const adaptiveRate = Math.max(0.05, 0.25 - (currentGen * 0.004));
+      const adaptiveRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
+      const selectionPoolSize = Math.max(2, Math.floor(pop.length / 4));
 
       while (newPop.length < popSize) {
-        const parentA = pop[Math.floor(Math.random() * (pop.length / 2))];
-        const parentB = pop[Math.floor(Math.random() * (pop.length / 2))];
+        const parentA = pop[Math.floor(Math.random() * selectionPoolSize)];
+        const parentB = pop[Math.floor(Math.random() * selectionPoolSize)];
         let childNet = crossoverNetworks(parentA.network, parentB.network);
         childNet = mutateNetwork(childNet, adaptiveRate);
         newPop.push({
@@ -694,17 +699,45 @@ const App = () => {
           // Apply Fitness Results
 
           if (currentSettings.gameMode === 'TRAINING') {
-            // NEW FITNESS SYSTEM: Only reward KO wins
-            // Removed all other fitness rewards (health, engagement, etc.)
-            // Removed stalemate penalties
+            // IMPROVED FITNESS SYSTEM: Rich rewards for learning
+            // Matches the TrainingWorker.ts fitness shaping for consistency
 
-            // Only give fitness if opponent is KO'd (health <= 0)
+            // Calculate damage dealt by each fighter
+            const p1DamageDealt = 100 - p2.health;
+            const p2DamageDealt = 100 - p1.health;
+            const totalEngagement = p1DamageDealt + p2DamageDealt;
+
+            // Base fitness: damage dealt + remaining health bonus
+            if (p1.genome) {
+              p1.genome.fitness += p1DamageDealt * 3;  // Reward damage dealt
+              p1.genome.fitness += p1.health * 2;       // Reward staying alive
+            }
+            if (p2.genome) {
+              p2.genome.fitness += p2DamageDealt * 3;
+              p2.genome.fitness += p2.health * 2;
+            }
+
+            // KO bonus (significant reward for decisive wins)
             if (p1.health > 0 && p2.health <= 0) {
               if (p1.genome) { p1.genome.fitness += 500; p1.genome.matchesWon++; }
             } else if (p2.health > 0 && p1.health <= 0) {
               if (p2.genome) { p2.genome.fitness += 500; p2.genome.matchesWon++; }
+            } else if (isTimeout) {
+              // Timeout: reward whoever has more health
+              if (p1.health > p2.health && p1.genome) {
+                p1.genome.fitness += 200;
+                p1.genome.matchesWon++;
+              } else if (p2.health > p1.health && p2.genome) {
+                p2.genome.fitness += 200;
+                p2.genome.matchesWon++;
+              }
             }
-            // If both alive or both dead, no fitness awarded
+
+            // Stalemate penalty: punish passive play
+            if (isTimeout && totalEngagement < 30) {
+              if (p1.genome) p1.genome.fitness -= 100;
+              if (p2.genome) p2.genome.fitness -= 100;
+            }
 
             currentMatchIndex.current++;
             startMatch();

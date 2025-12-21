@@ -96,7 +96,7 @@ const GRAVITY = 0.8;
 const FRICTION = 0.85;
 const GROUND_Y = 380;
 const INPUT_NODES = 9;
-const HIDDEN_NODES = 10;
+const HIDDEN_NODES = 16;  // Increased from 10 for better learning capacity
 const OUTPUT_NODES = 8;
 
 // Fighter Actions (numeric constants instead of enum for simplicity in worker)

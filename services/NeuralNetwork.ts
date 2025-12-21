@@ -72,11 +72,12 @@ export const INPUT_NODES = 9;
 /**
  * HIDDEN_NODES: Number of neurons in the hidden layer
  * 
- * The hidden layer is where "reasoning" happens. 10 neurons provide
- * enough capacity to learn complex behaviors while keeping computation fast.
+ * The hidden layer is where "reasoning" happens. 16 neurons provide
+ * enough capacity to learn complex fighting behaviors while keeping
+ * computation fast. Increased from 10 for better pattern recognition.
  * More neurons = more complex behaviors but slower training.
  */
-export const HIDDEN_NODES = 10;
+export const HIDDEN_NODES = 16;
 
 /**
  * OUTPUT_NODES: Number of output neurons (one per FighterAction)
@@ -109,17 +110,17 @@ export const OUTPUT_NODES = 8;
  * @returns A new NeuralNetwork with random weights and biases
  */
 export const createRandomNetwork = (): NeuralNetwork => {
-  // Input → Hidden weights (9 inputs × 10 hidden = 90 weights)
+  // Input → Hidden weights (9 inputs × 16 hidden = 144 weights)
   const inputWeights = Array(INPUT_NODES).fill(0).map(() =>
     Array(HIDDEN_NODES).fill(0).map(() => Math.random() * 2 - 1)
   );
 
-  // Hidden → Output weights (10 hidden × 8 outputs = 80 weights)
+  // Hidden → Output weights (16 hidden × 8 outputs = 128 weights)
   const outputWeights = Array(HIDDEN_NODES).fill(0).map(() =>
     Array(OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1)
   );
 
-  // Biases: one per neuron in hidden and output layers (10 + 8 = 18)
+  // Biases: one per neuron in hidden and output layers (16 + 8 = 24)
   const biases = Array(HIDDEN_NODES + OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1);
 
   return { inputWeights, outputWeights, biases };
@@ -260,8 +261,15 @@ export const mutateNetwork = (network: NeuralNetwork, rate: number): NeuralNetwo
   // Helper function to potentially mutate a single weight
   const mutateValue = (val: number) => {
     if (Math.random() < rate) {
-      // Nudge the weight by a small random amount
-      return val + (Math.random() * 0.5 - 0.25);
+      // 10% chance of "big mutation" for exploration (helps escape local optima)
+      if (Math.random() < 0.1) {
+        // Big mutation: ±2.0 range
+        return val + (Math.random() * 4.0 - 2.0);
+      }
+      // Normal mutation: ±0.5 range (doubled from ±0.25)
+      // Scale by rate - higher rate means bigger changes
+      const magnitude = 0.5 + (rate * 0.5); // 0.5 to 1.0 based on rate
+      return val + (Math.random() * 2 * magnitude - magnitude);
     }
     return val;
   };

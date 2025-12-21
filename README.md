@@ -51,6 +51,9 @@ Open `http://localhost:3003` in your browser.
 4. Monitor the **Fitness Chart** to see learning progress
 5. After ~50+ generations, switch to Arcade Mode to fight your AI!
 
+> **Tip**: Reaching generation >1500 with a 9% mutation rate observed resulted in more "reasonable" fighter behavior during training.
+
+
 ### Arcade Mode (Human vs AI)
 | Control | Keyboard | Gamepad |
 |---------|----------|---------|
@@ -122,7 +125,7 @@ neuroevolution-stickman-fighters/
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  1. INITIALIZE                                               │
-│     └── Create 24 genomes with random neural networks        │
+│     └── Create 48 genomes with random neural networks        │
 │                                                              │
 │  2. EVALUATE                                                 │
 │     └── Pair genomes and simulate fights                     │
@@ -137,7 +140,7 @@ neuroevolution-stickman-fighters/
 │     └── Keep top 2 unchanged (elitism)                       │
 │                                                              │
 │  4. REPRODUCE                                                │
-│     └── Select parents from top 50%                          │
+│     └── Select parents from top 25%                          │
 │     └── Combine their neural networks (crossover)            │
 │     └── Apply random changes (mutation)                      │
 │                                                              │
