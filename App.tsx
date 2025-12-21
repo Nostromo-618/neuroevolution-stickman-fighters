@@ -71,6 +71,8 @@ const App = () => {
     isRunning: false, // Start paused
     backgroundTraining: false, // Background training off by default
     opponentType: 'AI', // Default to AI opponent
+    player1Type: 'HUMAN',
+    player2Type: 'AI'
   });
 
   const [gameState, setGameState] = useState<GameState>({
@@ -107,7 +109,9 @@ const App = () => {
   const isWorkerTrainingRef = useRef<boolean>(false);
 
   // Custom script worker for secure isolated execution
-  const customScriptWorkerRef = useRef<ScriptWorkerManager | null>(null);
+  // We now have two workers to support Custom vs Custom matches
+  const customScriptWorkerARef = useRef<ScriptWorkerManager | null>(null);
+  const customScriptWorkerBRef = useRef<ScriptWorkerManager | null>(null);
 
   const settingsRef = useRef(settings);
   const gameStateRef = useRef(gameState);
@@ -115,29 +119,87 @@ const App = () => {
   useEffect(() => { settingsRef.current = settings; }, [settings]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
-  // Pre-compile custom script worker when CUSTOM opponent is selected
-  // This ensures the worker is ready before matches start
+  // Store addToast in a ref to avoid dependency issues
+  const addToastRef = useRef(addToast);
+  useEffect(() => { addToastRef.current = addToast; }, [addToast]);
+
+  // Pre-compile custom script workers based on selection
   useEffect(() => {
-    const compileWorker = async () => {
-      if (settings.opponentType === 'CUSTOM') {
-        const scriptCode = loadScript();
-        if (scriptCode) {
-          // Create new worker instance if needed
-          if (!customScriptWorkerRef.current) {
-            customScriptWorkerRef.current = new ScriptWorkerManager();
+    const compileWorker = async (slot: 'slot1' | 'slot2', workerRef: React.MutableRefObject<ScriptWorkerManager | null>) => {
+      const scriptCode = loadScript(slot);
+      if (scriptCode) {
+        if (!workerRef.current) {
+          workerRef.current = new ScriptWorkerManager();
+        }
+
+        if (!workerRef.current.isReady()) {
+          const result = await workerRef.current.compile(scriptCode);
+          const name = slot === 'slot1' ? 'Script A' : 'Script B';
+          if (result.success) {
+            addToastRef.current('success', `✏️ ${name} compiled successfully!`);
+          } else {
+            addToastRef.current('error', `${name} error: ${result.error}. Using default behavior.`);
           }
-          // Compile the script
-          await customScriptWorkerRef.current.compile(scriptCode);
+        }
+      } else {
+        // Only warn if explicitly selected
+        const name = slot === 'slot1' ? 'Script A' : 'Script B';
+        const isSelected =
+          (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM' && slot === 'slot1') ||
+          (settings.gameMode === 'ARCADE' && (
+            (slot === 'slot1' && (settings.player1Type === 'CUSTOM_A' || settings.player2Type === 'CUSTOM_A')) ||
+            (slot === 'slot2' && (settings.player1Type === 'CUSTOM_B' || settings.player2Type === 'CUSTOM_B'))
+          ));
+
+        if (isSelected) {
+          addToastRef.current('info', `No ${name} found. Open Editor to create one.`);
         }
       }
     };
 
-    compileWorker();
+    // Check if we need Worker A (Slot 1)
+    const needsA =
+      (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM') ||
+      (settings.gameMode === 'ARCADE' && (settings.player1Type === 'CUSTOM_A' || settings.player2Type === 'CUSTOM_A'));
 
-    return () => {
-      // Don't terminate on unmount - we may need the worker for matches
+    // Check if we need Worker B (Slot 2)
+    const needsB =
+      (settings.gameMode === 'ARCADE' && (settings.player1Type === 'CUSTOM_B' || settings.player2Type === 'CUSTOM_B'));
+
+    if (needsA) compileWorker('slot1', customScriptWorkerARef);
+    if (needsB) compileWorker('slot2', customScriptWorkerBRef);
+
+  }, [settings.gameMode, settings.opponentType, settings.player1Type, settings.player2Type]);
+
+  // Function to recompile custom script (called after saving from editor)
+  const recompileCustomScript = useCallback(async () => {
+    // Force recompile logic by clearing ready state or just calling compile again
+    // We'll just define a helper here similar to above but forced
+
+    // We don't know exactly which slot was saved, so we recheck both if they are active
+    const recompileSlot = async (slot: 'slot1' | 'slot2', workerRef: React.MutableRefObject<ScriptWorkerManager | null>) => {
+      const scriptCode = loadScript(slot);
+      if (!scriptCode) return;
+
+      if (!workerRef.current) {
+        workerRef.current = new ScriptWorkerManager();
+      }
+
+      const result = await workerRef.current.compile(scriptCode);
+      const name = slot === 'slot1' ? 'Script A' : 'Script B';
+
+      if (result.success) {
+        addToastRef.current('success', `✏️ ${name} recompiled!`);
+      } else {
+        addToastRef.current('error', `${name} error: ${result.error}.`);
+      }
     };
-  }, [settings.opponentType]);
+
+    // Always try to recompile active workers when saved
+    if (customScriptWorkerARef.current) recompileSlot('slot1', customScriptWorkerARef);
+    if (customScriptWorkerBRef.current) recompileSlot('slot2', customScriptWorkerBRef);
+
+  }, []);
 
   // --- Initialization ---
   const initPopulation = useCallback((clearBest: boolean = true) => {
@@ -169,6 +231,67 @@ const App = () => {
 
   const startMatch = useCallback(() => {
     matchTimerRef.current = 90; // Reset timer (90 seconds for longer matches)
+
+    // Helper to create a fighter based on type
+    const createFighter = (
+      type: 'HUMAN' | 'AI' | 'SCRIPTED' | 'CUSTOM_A' | 'CUSTOM_B',
+      x: number,
+      defaultColor: string,
+      isP2: boolean
+    ): Fighter => {
+      // 1. HUMAN
+      if (type === 'HUMAN') {
+        const f = new Fighter(x, defaultColor, false);
+        return f;
+      }
+
+      // 2. AI (Neural Network)
+      if (type === 'AI') {
+        const bestGenome = getBestGenome();
+        const genomeToUse = bestGenome || { id: 'cpu', network: createRandomNetwork(), fitness: 0, matchesWon: 0 };
+        const f = new Fighter(x, '#3b82f6', true, genomeToUse);
+        return f;
+      }
+
+      // 3. SCRIPTED BOT
+      if (type === 'SCRIPTED') {
+        const f = new Fighter(x, '#f97316', false);
+        f.isScripted = true;
+        return f;
+      }
+
+      // 4. CUSTOM SCRIPT A
+      if (type === 'CUSTOM_A') {
+        const f = new Fighter(x, '#a855f7', false);
+        const worker = customScriptWorkerARef.current;
+        if (worker && worker.isReady()) {
+          f.isCustom = true;
+          f.scriptWorker = worker;
+        } else {
+          f.isScripted = true; // Fallback
+          // Only show toast for P1 to avoid spam, or if it's the only custom one
+          addToastRef.current('info', 'Script A not ready - using default scripted bot.');
+        }
+        return f;
+      }
+
+      // 5. CUSTOM SCRIPT B
+      if (type === 'CUSTOM_B') {
+        const f = new Fighter(x, '#d946ef', false); // Slightly different purple/pink
+        const worker = customScriptWorkerBRef.current;
+        if (worker && worker.isReady()) {
+          f.isCustom = true;
+          f.scriptWorker = worker;
+        } else {
+          f.isScripted = true; // Fallback
+          addToastRef.current('info', 'Script B not ready - using default scripted bot.');
+        }
+        return f;
+      }
+
+      // Fallback
+      return new Fighter(x, defaultColor, false);
+    };
 
     // If Training Mode
     if (settingsRef.current.gameMode === 'TRAINING') {
@@ -202,7 +325,7 @@ const App = () => {
         const opponentColor = useCustom ? '#a855f7' : '#f97316';
 
         // Get pre-compiled script worker for custom opponent
-        const scriptWorker = useCustom ? customScriptWorkerRef.current : null;
+        const scriptWorker = useCustom ? customScriptWorkerARef.current : null;
 
         if (swapSides) {
           // NN on right, Scripted/Custom on left
@@ -212,6 +335,9 @@ const App = () => {
             f1.scriptWorker = scriptWorker;
           } else {
             f1.isScripted = true;
+            if (useCustom) {
+              console.warn('Custom script worker not ready, falling back to scripted opponent');
+            }
           }
           const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, genome); // NN (Blue)
           f2.direction = -1;
@@ -225,6 +351,9 @@ const App = () => {
             f2.scriptWorker = scriptWorker;
           } else {
             f2.isScripted = true;
+            if (useCustom) {
+              console.warn('Custom script worker not ready, falling back to scripted opponent');
+            }
           }
           f2.direction = -1;
           activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: genomeIdx, p2GenomeIdx: -1 };
@@ -257,53 +386,18 @@ const App = () => {
     }
     // If Arcade Mode (Human vs Best AI, Scripted, or Custom)
     else {
-      const useScripted = settingsRef.current.opponentType === 'SCRIPTED';
-      const useCustom = settingsRef.current.opponentType === 'CUSTOM';
+      const p1Type = settingsRef.current.player1Type;
+      const p2Type = settingsRef.current.player2Type;
 
       // Randomize spawn positions slightly for variety
       const spawnOffset = Math.random() * 60 - 30; // -30 to +30
 
-      const f1 = new Fighter(280 + spawnOffset, '#ef4444', false); // Human (Red)
+      // Create Fighters
+      const f1 = createFighter(p1Type, 280 + spawnOffset, '#ef4444', false);
+      const f2 = createFighter(p2Type, 470 - spawnOffset, '#3b82f6', true);
+      f2.direction = -1;
 
-      if (useScripted) {
-        // ARCADE VS SCRIPTED: Human vs Scripted opponent (Orange)
-        const f2 = new Fighter(470 - spawnOffset, '#f97316', false);
-        f2.isScripted = true;
-        f2.direction = -1;
-        activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
-      } else if (useCustom) {
-        // ARCADE VS CUSTOM: Human vs Custom script opponent (Purple)
-        const f2 = new Fighter(470 - spawnOffset, '#a855f7', false);
-
-        // Use pre-compiled script worker for secure execution
-        const scriptWorker = customScriptWorkerRef.current;
-        if (scriptWorker && scriptWorker.isReady()) {
-          f2.isCustom = true;
-          f2.scriptWorker = scriptWorker;
-        } else {
-          // Fallback to scripted if worker not ready
-          f2.isScripted = true;
-        }
-
-        f2.direction = -1;
-        activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
-      } else {
-        // ARCADE VS AI: Human vs Best Neural Network (Blue)
-        const bestGenome = getBestGenome();
-
-        if (!bestGenome) {
-          // Fallback if population not ready
-          const fallbackGenome: Genome = { id: 'cpu', network: createRandomNetwork(), fitness: 0, matchesWon: 0 };
-          const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, fallbackGenome);
-          f2.direction = -1;
-          activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
-        } else {
-          // Use the best genome (sorted by fitness)
-          const f2 = new Fighter(470 - spawnOffset, '#3b82f6', true, bestGenome);
-          f2.direction = -1;
-          activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
-        }
-      }
+      activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
     }
 
     const isArcade = settingsRef.current.gameMode === 'ARCADE';
@@ -329,7 +423,23 @@ const App = () => {
         }
       }, 1500);
     }
-  }, [getBestGenome]);
+  }, [getBestGenome]); // Removed addToast, should be stable now or use addToastRef
+
+  // Immediate update when switching fighters in Arcade Mode
+  useEffect(() => {
+    // Only update if in Arcade mode and not currently mid-fight (waiting or paused)
+    // or if we just want to swap the visual sprites immediately
+    if (settings.gameMode === 'ARCADE' && gameState.roundStatus === 'WAITING') {
+      startMatch();
+    }
+  }, [
+    settings.gameMode,
+    settings.player1Type,
+    settings.player2Type,
+    settings.opponentType, // For Training mode if we want immediate feedback there too
+    startMatch,
+    // gameState.roundStatus // REMOVE THIS to avoid loop if startMatch resets it to WAITING
+  ]);
 
   const evolve = () => {
     const pop = populationRef.current;
@@ -936,6 +1046,7 @@ const App = () => {
               onModeChange={handleModeChange}
               onExportWeights={handleExportWeights}
               onImportWeights={handleImportWeights}
+              onScriptRecompile={recompileCustomScript}
             />
 
             {pendingImport && (

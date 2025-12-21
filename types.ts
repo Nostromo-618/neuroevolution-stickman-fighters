@@ -148,11 +148,16 @@ export type OpponentType = 'AI' | 'SCRIPTED' | 'CUSTOM';
 export interface TrainingSettings {
   populationSize: number;     // Number of AI genomes per generation (default: 24)
   mutationRate: number;       // Probability of mutating each weight (0-1)
-  simulationSpeed: number;    // How many physics steps per frame (1x to 5000x)
-  gameMode: GameMode;         // Current mode (TRAINING or ARCADE)
-  isRunning: boolean;         // Whether simulation is running or paused
-  backgroundTraining: boolean; // Train AI in background while playing arcade
-  opponentType: OpponentType; // Who to fight against (AI or SCRIPTED)
+  hiddenLayers: number[];
+  fps: number;
+  simulationSpeed: number;           // Physics steps per frame (1 = normal, >1 = fast forward)
+  gameMode: GameMode;                // 'TRAINING' or 'ARCADE'
+  opponentType: 'AI' | 'SCRIPTED' | 'CUSTOM'; // For Training Mode: Who does the AI fight against?
+  // Arcade Mode Settings
+  player1Type: 'HUMAN' | 'CUSTOM_A' | 'CUSTOM_B';
+  player2Type: 'AI' | 'SCRIPTED' | 'CUSTOM_A' | 'CUSTOM_B';
+  isRunning: boolean;                // Is the evolution/game loop running?
+  backgroundTraining: boolean;       // Continue training in background while playing arcade?
 }
 
 // =============================================================================

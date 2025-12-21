@@ -58,6 +58,13 @@ Open `http://localhost:3003` in your browser.
 | Kick | K | B Button |
 | Block | L / Shift | RB / RT |
 
+**New Features in v1.2.0:**
+- **Custom Player Slots**: You can now choose who fights!
+  - **Player 1**: Human, Custom Script A, or Custom Script B.
+  - **Player 2**: Neural AI, Scripted Bot, Custom Script A, or Custom Script B.
+- **Script vs Script**: Pit two different custom scripts against each other to test strategies.
+- **Immediate Feedback**: Canvas updates instantly when you change fighter settings.
+
 ---
 
 ## 📖 Deep Dive Documentation
@@ -69,7 +76,6 @@ For detailed explanations of how everything works:
 | [Neural Network & Genetic Algorithm](docs/NEURAL_NETWORK.md) | How the AI brain works and evolves |
 | [Game Engine & Physics](docs/GAME_ENGINE.md) | Combat mechanics, fitness shaping, rules |
 | [Visual Rendering](docs/RENDERING.md) | Canvas graphics and animation system |
-| [Scripted Fighter](SCRIPTED.md) | Default scripted opponent implementation |
 
 ---
 

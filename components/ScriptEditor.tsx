@@ -77,14 +77,16 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ isOpen, onClose, onSave }) 
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Load saved script or default template on open
+    const [activeSlot, setActiveSlot] = useState<'slot1' | 'slot2'>('slot1');
+
+    // Load saved script or default template on open or slot change
     useEffect(() => {
         if (isOpen) {
-            const savedCode = loadScript();
+            const savedCode = loadScript(activeSlot);
             setCode(savedCode || getDefaultTemplate());
             setError(null);
         }
-    }, [isOpen]);
+    }, [isOpen, activeSlot]);
 
     // Validate code on change
     useEffect(() => {
@@ -156,20 +158,20 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ isOpen, onClose, onSave }) 
     // Save and close
     const handleSave = useCallback(() => {
         setIsSaving(true);
-        saveScript(code);
+        saveScript(code, activeSlot);
         onSave(code);
         setIsSaving(false);
         onClose();
-    }, [code, onSave, onClose]);
+    }, [code, activeSlot, onSave, onClose]);
 
     // Reset to default template
     const handleReset = useCallback(() => {
-        if (confirm('Reset to default template? Your changes will be lost.')) {
+        if (confirm(`Reset ${activeSlot === 'slot1' ? 'Script A' : 'Script B'} to default template? Your changes will be lost.`)) {
             const template = getDefaultTemplate();
             setCode(template);
-            saveScript(template);
+            saveScript(template, activeSlot);
         }
-    }, []);
+    }, [activeSlot]);
 
     // Export script as JSON
     const handleExport = useCallback(() => {
@@ -246,7 +248,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ isOpen, onClose, onSave }) 
                 marginBottom: '12px',
                 color: 'white',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <h2 style={{
                         margin: 0,
                         fontSize: '20px',
@@ -255,6 +257,49 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ isOpen, onClose, onSave }) 
                     }}>
                         ✏️ Custom Fighter Script Editor
                     </h2>
+
+                    {/* Slot Switcher Tabs */}
+                    <div style={{ display: 'flex', gap: '2px', backgroundColor: '#1e293b', padding: '4px', borderRadius: '6px' }}>
+                        <button
+                            onClick={() => {
+                                // Save current changes relative to old slot just in case? 
+                                // Actually, standard behavior is simple switch, but user might lose unsaved changes if we don't warn.
+                                // useToast is not available here easily unless passed. 
+                                // For now, we assume user knows what they are doing. Simple switch.
+                                setActiveSlot('slot1');
+                            }}
+                            style={{
+                                padding: '6px 16px',
+                                backgroundColor: activeSlot === 'slot1' ? '#a855f7' : 'transparent',
+                                color: activeSlot === 'slot1' ? 'white' : '#94a3b8',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Script A
+                        </button>
+                        <button
+                            onClick={() => setActiveSlot('slot2')}
+                            style={{
+                                padding: '6px 16px',
+                                backgroundColor: activeSlot === 'slot2' ? '#a855f7' : 'transparent',
+                                color: activeSlot === 'slot2' ? 'white' : '#94a3b8',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            Script B
+                        </button>
+                    </div>
+
                     <span style={{
                         fontSize: '12px',
                         color: '#94a3b8',

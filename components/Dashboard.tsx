@@ -42,6 +42,7 @@ interface DashboardProps {
   onModeChange: (mode: GameMode) => void;                         // Mode switch callback
   onExportWeights: () => void;                                    // Export weights callback
   onImportWeights: () => void;                                    // Import weights callback
+  onScriptRecompile?: () => void;                                 // Recompile custom script callback
 }
 
 // =============================================================================
@@ -63,7 +64,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onReset,
   onModeChange,
   onExportWeights,
-  onImportWeights
+  onImportWeights,
+  onScriptRecompile
 }) => {
   // State for custom script editor modal
   const [scriptEditorOpen, setScriptEditorOpen] = useState(false);
@@ -71,7 +73,11 @@ const Dashboard: React.FC<DashboardProps> = ({
   // Handle script save from editor
   const handleScriptSave = useCallback((code: string) => {
     saveScript(code);
-  }, []);
+    // Trigger recompilation after saving
+    if (onScriptRecompile) {
+      onScriptRecompile();
+    }
+  }, [onScriptRecompile]);
 
   return (
     <>
@@ -104,53 +110,128 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* ================================================================= */}
-        {/* OPPONENT TYPE SELECTOR                                           */}
-        {/* Toggle between fighting Neural Network AI, Scripted, or Custom   */}
+        {/* MATCH CONFIGURATION                                               */}
+        {/* Training: Who does AI fight?                                      */}
+        {/* Arcade: Who fights against Who?                                   */}
         {/* ================================================================= */}
 
-        <div className="space-y-2">
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Opponent Type</h2>
-          <div className="flex bg-slate-900 p-1 rounded-lg">
-            <button
-              onClick={() => setSettings(s => ({ ...s, opponentType: 'AI' }))}
-              className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'AI' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-            >
-              Neural AI
-            </button>
-            <button
-              onClick={() => setSettings(s => ({ ...s, opponentType: 'SCRIPTED' }))}
-              className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'SCRIPTED' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-            >
-              Scripted
-            </button>
-            <button
-              onClick={() => setSettings(s => ({ ...s, opponentType: 'CUSTOM' }))}
-              className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'CUSTOM' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-            >
-              ✏️ Custom
-            </button>
-          </div>
-          <p className="text-[10px] text-slate-500 text-center">
-            {settings.opponentType === 'AI'
-              ? 'Fight against the trained neural network'
-              : settings.opponentType === 'SCRIPTED'
-                ? 'Fight against default scripted logic'
-                : 'Fight against your custom JavaScript fighter'}
-          </p>
+        {settings.gameMode === 'TRAINING' ? (
+          // TRAINING MODE CONFIGURATION
+          <div className="space-y-2">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Training Opponent</h2>
+            <div className="flex bg-slate-900 p-1 rounded-lg">
+              <button
+                onClick={() => setSettings(s => ({ ...s, opponentType: 'AI' }))}
+                className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'AI' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              >
+                Neural AI
+              </button>
+              <button
+                onClick={() => setSettings(s => ({ ...s, opponentType: 'SCRIPTED' }))}
+                className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'SCRIPTED' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              >
+                Scripted
+              </button>
+              <button
+                onClick={() => setSettings(s => ({ ...s, opponentType: 'CUSTOM' }))}
+                className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${settings.opponentType === 'CUSTOM' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              >
+                Custom
+              </button>
+            </div>
 
-          {/* Edit Script Button - only visible when Custom is selected */}
-          {settings.opponentType === 'CUSTOM' && (
+            {/* Short explanation */}
+            <p className="text-[10px] text-slate-500 text-center">
+              {settings.opponentType === 'AI' ? 'Train against cloned neural networks' :
+                settings.opponentType === 'SCRIPTED' ? 'Train against hard-coded logic' :
+                  'Train against your custom script'}
+            </p>
+
+            {/* Edit Script Button (Training) */}
+            {settings.opponentType === 'CUSTOM' && (
+              <button
+                onClick={() => setScriptEditorOpen(true)}
+                className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-xs font-bold text-white transition-all flex items-center justify-center gap-2"
+              >
+                <span className="text-lg">✏️</span> Edit Script
+              </button>
+            )}
+          </div>
+        ) : (
+          // ARCADE MODE CONFIGURATION (P1 vs P2)
+          <div className="space-y-4">
+
+            {/* Player 1 Selector */}
+            <div className="space-y-1">
+              <h2 className="text-xs font-bold text-red-400 uppercase tracking-widest flex justify-between">
+                <span>Player 1 (Left)</span>
+                {settings.player1Type !== 'HUMAN' && <span className="text-[10px] bg-red-900/50 px-1 rounded">AUTO</span>}
+              </h2>
+              <div className="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-lg">
+                <button
+                  onClick={() => setSettings(s => ({ ...s, player1Type: 'HUMAN' }))}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player1Type === 'HUMAN' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                >
+                  HUMAN
+                </button>
+                <button
+                  onClick={() => setSettings(s => ({ ...s, player1Type: 'CUSTOM_A' }))}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player1Type === 'CUSTOM_A' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                >
+                  SCRIPT A
+                </button>
+                <button
+                  onClick={() => setSettings(s => ({ ...s, player1Type: 'CUSTOM_B' }))}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player1Type === 'CUSTOM_B' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                >
+                  SCRIPT B
+                </button>
+              </div>
+            </div>
+
+            {/* Player 2 Selector */}
+            <div className="space-y-1">
+              <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest flex justify-between">
+                <span>Player 2 (Right)</span>
+                <span className="text-[10px] bg-blue-900/50 px-1 rounded">AUTO</span>
+              </h2>
+              <div className="grid grid-cols-4 gap-1 bg-slate-900 p-1 rounded-lg">
+                <button
+                  onClick={() => setSettings(s => ({ ...s, player2Type: 'AI' }))}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'AI' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                >
+                  AI
+                </button>
+                <button
+                  onClick={() => setSettings(s => ({ ...s, player2Type: 'SCRIPTED' }))}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'SCRIPTED' ? 'bg-orange-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                >
+                  BOT
+                </button>
+                <button
+                  onClick={() => setSettings(s => ({ ...s, player2Type: 'CUSTOM_A' }))}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'CUSTOM_A' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                >
+                  SCR A
+                </button>
+                <button
+                  onClick={() => setSettings(s => ({ ...s, player2Type: 'CUSTOM_B' }))}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === 'CUSTOM_B' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                >
+                  SCR B
+                </button>
+              </div>
+            </div>
+
+            {/* Edit Script Button (Arcade - available if any script is used) */}
             <button
               onClick={() => setScriptEditorOpen(true)}
-              className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-xs font-bold text-white transition-all flex items-center justify-center gap-2"
+              className="w-full py-2 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-xs font-bold text-slate-200 transition-all flex items-center justify-center gap-2"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-              </svg>
-              Edit Script
+              <span className="text-lg">✏️</span> Open Script Editor
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* ================================================================= */}
         {/* TRAINING PARAMETERS                                               */}

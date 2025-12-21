@@ -735,17 +735,18 @@ export class ScriptWorkerManager {
 // PERSISTENCE - LocalStorage
 // =============================================================================
 
+// Keys for localStorage
+const LOCALSTORAGE_SCRIPT_KEY_PREFIX = 'neuroevolution_fighter_script_';
+
 /**
  * Saves user script to the browser's localStorage.
  * 
- * LocalStorage is a simple key-value store built into browsers.
- * Data persists even after closing the browser window.
- * 
- * @param scriptCode - The script code to save
+ * @param scriptCode - The JavaScript code to save
+ * @param slotId - The slot identifier (e.g., 'slot1', 'slot2')
  */
-export function saveScript(scriptCode: string): void {
+export function saveScript(scriptCode: string, slotId: string = 'slot1'): void {
     try {
-        localStorage.setItem(LOCALSTORAGE_SCRIPT_KEY, scriptCode);
+        localStorage.setItem(`${LOCALSTORAGE_SCRIPT_KEY_PREFIX}${slotId}`, scriptCode);
     } catch (storageError) {
         // This can fail if localStorage is full or disabled
         console.warn('Failed to save script to localStorage:', storageError);
@@ -755,11 +756,12 @@ export function saveScript(scriptCode: string): void {
 /**
  * Loads user script from the browser's localStorage.
  * 
+ * @param slotId - The slot identifier (e.g., 'slot1', 'slot2')
  * @returns The saved script code, or null if nothing was saved
  */
-export function loadScript(): string | null {
+export function loadScript(slotId: string = 'slot1'): string | null {
     try {
-        return localStorage.getItem(LOCALSTORAGE_SCRIPT_KEY);
+        return localStorage.getItem(`${LOCALSTORAGE_SCRIPT_KEY_PREFIX}${slotId}`);
     } catch (storageError) {
         console.warn('Failed to load script from localStorage:', storageError);
         return null;
