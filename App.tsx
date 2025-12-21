@@ -1031,7 +1031,7 @@ const App = () => {
             </div>
 
             {/* Mobile Touch Controls */}
-            <TouchControls onInput={() => { }} />
+            <TouchControls inputManager={inputManager} />
           </div>
 
           {/* Right Column: Dashboards & Stats */}

@@ -69,6 +69,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   // State for custom script editor modal
   const [scriptEditorOpen, setScriptEditorOpen] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   // Handle script save from editor
   const handleScriptSave = useCallback((code: string) => {
@@ -78,6 +79,39 @@ const Dashboard: React.FC<DashboardProps> = ({
       onScriptRecompile();
     }
   }, [onScriptRecompile]);
+
+  const renderControls = () => (
+    <div className="grid grid-cols-2 gap-2 my-2">
+      <button
+        onClick={() => {
+          if (!hasStarted) setHasStarted(true);
+          setSettings(s => ({ ...s, isRunning: !s.isRunning }));
+        }}
+        className={`py-3 px-4 rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2 ${settings.isRunning ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+      >
+        {settings.isRunning ? (
+          <>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+            PAUSE
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+            {!hasStarted ? 'START' : 'RESUME'}
+          </>
+        )}
+      </button>
+      <button
+        onClick={() => {
+          setHasStarted(false);
+          onReset();
+        }}
+        className="py-3 px-4 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-slate-200 transition-all border border-slate-600"
+      >
+        RESET
+      </button>
+    </div>
+  );
 
   return (
     <>
@@ -147,6 +181,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                   'Train against your custom script'}
             </p>
 
+            {/* Controls moved here for Training */}
+            {renderControls()}
+
             {/* Edit Script Button (Training) */}
             {settings.opponentType === 'CUSTOM' && (
               <button
@@ -188,6 +225,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Controls moved here for Arcade (Between P1 and P2) */}
+            {renderControls()}
 
             {/* Player 2 Selector */}
             <div className="space-y-1">
@@ -329,32 +369,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="space-y-3">
 
           {/* --- Play/Pause and Reset --- */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setSettings(s => ({ ...s, isRunning: !s.isRunning }))}
-              className={`py-3 px-4 rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2 ${settings.isRunning ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-            >
-              {settings.isRunning ? (
-                <>
-                  {/* Pause icon */}
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
-                  PAUSE
-                </>
-              ) : (
-                <>
-                  {/* Play icon */}
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                  RESUME
-                </>
-              )}
-            </button>
-            <button
-              onClick={onReset}
-              className="py-3 px-4 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-slate-200 transition-all border border-slate-600"
-            >
-              RESET
-            </button>
-          </div>
+          {/* --- Play/Pause and Reset --- */}
+          {/* Moved to renderControls() and placed in mode configs */}
 
           {/* --- Export/Import Weights --- */}
           {/* Allows saving and loading trained AI */}
