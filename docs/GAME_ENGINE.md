@@ -71,7 +71,8 @@ Fighters can be controlled by different systems depending on the game mode and s
 | **Human** | Red (`#ef4444`) | Keyboard/gamepad input in Arcade mode | `InputManager.ts` |
 | **Neural AI** | Blue (`#3b82f6`) | Trained neural network decisions | `NeuralNetwork.ts` |
 | **Scripted** | Orange (`#f97316`) | Default rule-based logic | `ScriptedFighter.ts` |
-| **Custom** | Purple (`#a855f7`) | User-written JavaScript | `CustomScriptRunner.ts` |
+| **Custom A** | Purple (`#a855f7`) | User Script Slot 1 | `CustomScriptRunner.ts` |
+| **Custom B** | Pink (`#d946ef`) | User Script Slot 2 | `CustomScriptRunner.ts` |
 
 ### Control Priority
 
