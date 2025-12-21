@@ -904,7 +904,7 @@ const App = () => {
           <div className="lg:col-span-2 space-y-4">
             <header className="flex justify-between items-center mb-4">
               <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
+                <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
                   NeuroEvolution: Stickman Fighters
                 </h1>
                 <p className="text-slate-400 text-sm">
@@ -1061,8 +1061,8 @@ const App = () => {
               )}
             </div>
 
-            {/* Controls Helper */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-900/50 border border-slate-800 rounded-xl text-xs font-mono text-slate-500">
+            {/* Controls Helper - hidden on mobile (touch controls shown instead) */}
+            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-900/50 border border-slate-800 rounded-xl text-xs font-mono text-slate-500">
               <div className="flex flex-col gap-1">
                 <span className="text-slate-300 font-bold">MOVE</span>
                 <span>WASD / ARROWS</span>
@@ -1081,8 +1081,8 @@ const App = () => {
               </div>
             </div>
 
-            {/* Mobile Touch Controls */}
-            <TouchControls inputManager={inputManager} />
+            {/* Mobile Touch Controls - only in Arcade mode */}
+            {settings.gameMode === 'ARCADE' && <TouchControls inputManager={inputManager} />}
           </div>
 
           {/* Right Column: Dashboards & Stats */}

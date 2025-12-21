@@ -434,9 +434,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </p>
               </div>
 
-              {/* --- Controls Reference --- */}
-              {/* Quick reference for game controls */}
-              <div className="mt-4 p-3 bg-slate-900/50 rounded border border-slate-800 text-[10px] text-slate-400 font-mono">
+              {/* --- Controls Reference (hidden on mobile) --- */}
+              <div className="hidden sm:block mt-4 p-3 bg-slate-900/50 rounded border border-slate-800 text-[10px] text-slate-400 font-mono">
                 <p className="font-bold text-teal-500 mb-1">🎮 CONTROLS</p>
                 <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                   <span>MOVE: Arrows / D-Pad</span>

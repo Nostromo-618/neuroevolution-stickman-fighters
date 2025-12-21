@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2025-12-21
+
+### Changed - Mobile Responsive Improvements
+Optimized mobile view for better usability on small screens:
+
+- **Smaller title on mobile**: Title scales from `xl` on mobile to `3xl` on desktop
+- **Hidden keyboard controls legend**: The MOVE/PUNCH/KICK/BLOCK keyboard reference is hidden on mobile (touch buttons shown instead)
+- **Hidden Dashboard controls panel**: The controls reference in the Dashboard is hidden on mobile
+
 ## [1.3.0] - 2025-12-21
 
 ### Changed - UI Simplification & Script Selector
