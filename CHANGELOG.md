@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2025-12-21
+
+### Fixed
+- **Mobile Controls Crash**: Resolved "Cannot read properties of undefined" error when using touch controls by properly passing `inputManager` ref.
+
+### Changed
+- **Dashboard UI Optimization**: Relocated "Pause/Start" and "Reset" controls higher up in the dashboard (between Player selectors) for better mobile accessibility and convenience.
+- **Improved Control Labels**: The play button now dynamically transitions from **"START"** to **"PAUSE"** and **"RESUME"** to better reflect the current game state.
+
 ## [1.2.0] - 2025-12-21
 
 ### Added
