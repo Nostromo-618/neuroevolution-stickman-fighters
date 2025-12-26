@@ -952,7 +952,7 @@ const App = () => {
                       <>
                         {/* Even rounds: P1 on left, P2 on right (normal) */}
                         <div className="flex flex-col items-start">
-                          <span className="text-red-500 font-bold">P1</span>
+                          <span className="text-red-500 font-bold text-xs">P1</span>
                           <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
                             <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
                           </div>
@@ -962,12 +962,19 @@ const App = () => {
                         </div>
 
                         <div className="flex flex-col items-center">
-                          <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
-                          <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
+                          {settings.gameMode === 'TRAINING' ? (
+                            <>
+                              <span className="text-slate-400 font-bold text-[10px] tracking-widest uppercase mb-0.5">ROUND {currentMatchIndex.current + 1}</span>
+                              <span className="text-teal-400 font-bold tracking-widest text-sm">GEN {gameState.generation}</span>
+                            </>
+                          ) : (
+                            <span className="text-white mt-2 font-bold opacity-90 tracking-widest">VS</span>
+                          )}
+                          <span className="text-yellow-400 font-mono text-sm mt-1">{gameState.timeRemaining.toFixed(0)}</span>
                         </div>
 
                         <div className="flex flex-col items-end">
-                          <span className="text-blue-500 font-bold">P2</span>
+                          <span className="text-blue-500 font-bold text-xs">P2</span>
                           <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
                             <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
                           </div>

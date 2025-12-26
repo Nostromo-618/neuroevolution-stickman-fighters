@@ -96,7 +96,7 @@ const GRAVITY = 0.8;
 const FRICTION = 0.85;
 const GROUND_Y = 380;
 const INPUT_NODES = 9;
-const HIDDEN_NODES = 16;  // Increased from 10 for better learning capacity
+const HIDDEN_NODES = 24;  // Adjusted to 24 for balanced performance
 const OUTPUT_NODES = 8;
 
 // Fighter Actions (numeric constants instead of enum for simplicity in worker)
@@ -315,7 +315,7 @@ class WorkerFighter {
       } else if (activeInput.action2 && this.energy > 15) {
         this.state = KICK;
         this.vx *= 0.2;
-        this.cooldown = 40;
+        this.cooldown = 20;   // Speed matched to punch (20 frames)
         this.energy -= 15;
       }
     }
@@ -328,7 +328,7 @@ class WorkerFighter {
         w: 46,
         h: 20
       };
-    } else if (this.state === KICK && this.cooldown < 30 && this.cooldown > 15) {
+    } else if (this.state === KICK && this.cooldown < 15 && this.cooldown > 5) {
       this.hitbox = {
         x: this.direction === 1 ? this.x + this.width : this.x - 66,
         y: this.y + 40,

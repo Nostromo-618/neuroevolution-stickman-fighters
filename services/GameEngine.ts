@@ -32,7 +32,7 @@ export const ENERGY_COST_MOVE = 0.1;     // Cost per frame of horizontal movemen
 export const ENERGY_COST_JUMP = 10;      // One-time cost to jump
 export const ENERGY_COST_CROUCH = 0.5;   // Cost per frame while crouching
 export const ENERGY_COST_BLOCK = 0.5;    // Cost per frame while blocking
-export const ENERGY_COST_PUNCH = 25;     // One-time cost to punch
+export const ENERGY_COST_PUNCH = 10;     // One-time cost to punch
 export const ENERGY_COST_KICK = 50;      // One-time cost to kick
 export const ENERGY_PENALTY_HIT = 1;     // Extra energy lost when hit while blocking/crouching
 
@@ -272,7 +272,7 @@ export class Fighter {
 
     // === STATE MANAGEMENT ===
     // Animation lock: can't change state during attack recovery
-    const isAnimationLocked = this.cooldown > 15;
+    const isAnimationLocked = this.cooldown > 5;
 
     if (!isAnimationLocked) {
       // --- MOVEMENT (costs energy to prevent erratic behavior) ---
@@ -321,14 +321,14 @@ export class Fighter {
       if (activeInput.action1 && this.energy >= ENERGY_COST_PUNCH) {
         this.state = FighterAction.PUNCH;
         this.vx *= 0.2;       // Stop moving significantly
-        this.cooldown = 30;   // 30 frames of animation
+        this.cooldown = 20;   // 20 frames of animation (was 30)
         this.energy -= ENERGY_COST_PUNCH;
       }
       // KICK: Strong attack, more damage, slower recovery
       else if (activeInput.action2 && this.energy >= ENERGY_COST_KICK) {
         this.state = FighterAction.KICK;
         this.vx *= 0.2;
-        this.cooldown = 40;   // Longer animation
+        this.cooldown = 20;   // 20 frames animation (Matched to Punch)
         this.energy -= ENERGY_COST_KICK;
       }
     }
@@ -336,16 +336,16 @@ export class Fighter {
     // === HITBOX ACTIVATION ===
     // Hitboxes are only active during specific frames of the attack animation
     // This creates attack "windows" where the hit can land
-    // Punch: Hitbox active frames 15-25 (of 30 total)
-    // Kick: Hitbox active frames 15-30 (of 40 total)
-    if (this.state === FighterAction.PUNCH && this.cooldown < 25 && this.cooldown > 15) {
+    // Punch: Hitbox active frames 5-15 (of 20 total)
+    // Kick: Hitbox active frames 15-25 (of 30 total)
+    if (this.state === FighterAction.PUNCH && this.cooldown < 15 && this.cooldown > 5) {
       this.hitbox = {
         x: this.direction === 1 ? this.x + this.width : this.x - 46,
         y: this.y + 20,
         w: 46,   // Punch reach
         h: 20
       };
-    } else if (this.state === FighterAction.KICK && this.cooldown < 30 && this.cooldown > 15) {
+    } else if (this.state === FighterAction.KICK && this.cooldown < 15 && this.cooldown > 5) {
       this.hitbox = {
         x: this.direction === 1 ? this.x + this.width : this.x - 66,
         y: this.y + 40,  // Kicks aim lower

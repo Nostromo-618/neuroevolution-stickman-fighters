@@ -76,8 +76,10 @@ export const INPUT_NODES = 9;
  * enough capacity to learn complex fighting behaviors while keeping
  * computation fast. Increased from 10 for better pattern recognition.
  * More neurons = more complex behaviors but slower training.
+ * 
+ * UPDATE: Adjusted to 24 neurons for balanced performance.
  */
-export const HIDDEN_NODES = 16;
+export const HIDDEN_NODES = 24;
 
 /**
  * OUTPUT_NODES: Number of output neurons (one per FighterAction)

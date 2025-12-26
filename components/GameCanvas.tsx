@@ -100,87 +100,124 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
     // =====================================================================
 
     // --- SKY GRADIENT ---
-    // Creates a dark blue gradient from top to bottom
+    // Deep space/cyber theme
     const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-    gradient.addColorStop(0, '#0f172a');  // Dark top
-    gradient.addColorStop(1, '#1e293b');  // Slightly lighter bottom
+    gradient.addColorStop(0, '#020617');  // Almost black blue
+    gradient.addColorStop(1, '#1e1b4b');  // Deep indigo
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // --- MOON ---
-    // Glowing moon in the upper right corner
-    ctx.fillStyle = '#f8fafc';
-    ctx.shadowBlur = 40;         // Glow effect radius
-    ctx.shadowColor = '#e2e8f0'; // Glow color
-    ctx.beginPath();
-    ctx.arc(CANVAS_WIDTH - 100, 80, 50, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;  // Reset shadow for other drawings
+    // --- STAR FIELD ---
+    // Static procedural stars based on position
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 50; i++) {
+      const x = (i * 137.5) % CANVAS_WIDTH; // Golden angle for pseudo-random distribution
+      const y = (i * 293.3) % (CANVAS_HEIGHT * 0.6);
+      const size = (i % 3 === 0) ? 1.5 : 0.8;
+      const opacity = 0.3 + (Math.sin(i + frameRef.current * 0.02) * 0.2); // Twinkle
 
-    // --- DISTANT FOREST (Background trees) ---
-    // Creates a silhouette of distant trees with sine wave variation
-    ctx.fillStyle = '#1e3a8a';  // Dark blue
-    for (let i = 0; i < CANVAS_WIDTH; i += 40) {
-      const h = 50 + Math.sin(i * 0.05) * 20;  // Vary height with sine
-      ctx.fillRect(i, CANVAS_HEIGHT - 120 - h, 20, h + 50);
+      ctx.globalAlpha = opacity;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
+
+    // --- MOON REMOVED ---
+    // (Moon rendering code deleted as requested)
+
+    // --- DIGITAL SKYLINE (Background) ---
+    // Far layer - darker
+    ctx.fillStyle = '#111827'; // Very dark grey (almost black)
+    for (let i = 0; i < CANVAS_WIDTH; i += 60) {
+      const h = 80 + Math.sin(i * 0.02) * 40 + (i % 100);
+      ctx.fillRect(i, CANVAS_HEIGHT - 100 - h, 40, h + 100);
+
+      // Windows
+      ctx.fillStyle = '#374151'; // Dark grey windows
+      if (i % 3 === 0) {
+        for (let w = 0; w < h; w += 20) {
+          if ((i + w) % 5 !== 0) ctx.fillRect(i + 10, CANVAS_HEIGHT - 100 - h + w + 10, 5, 8);
+        }
+      }
+      ctx.fillStyle = '#111827'; // Restore building color
     }
 
-    // --- CLOSE TREES (Foreground) ---
-    // Individual triangular trees with more detail
-    ctx.fillStyle = '#064e3b';  // Dark green
-    [50, 250, 450, 650].forEach(x => {
-      ctx.beginPath();
-      ctx.moveTo(x, CANVAS_HEIGHT - 80);       // Base left
-      ctx.lineTo(x + 30, CANVAS_HEIGHT - 400); // Tip
-      ctx.lineTo(x + 60, CANVAS_HEIGHT - 80);  // Base right
-      ctx.fill();
-    });
+    // --- DIGITAL SKYLINE (Foreground) ---
+    // Near layer - lighter, more detailed
+    ctx.fillStyle = '#1f2937'; // Dark grey
+    for (let i = 30; i < CANVAS_WIDTH; i += 80) {
+      const h = 40 + Math.cos(i * 0.03) * 30 + (i % 70);
+      ctx.fillRect(i, CANVAS_HEIGHT - 80 - h, 50, h + 80);
+
+      // "Cyber" rim light on buildings
+      ctx.strokeStyle = '#4b5563'; // Grey rim light
+      ctx.lineWidth = 1;
+      ctx.strokeRect(i, CANVAS_HEIGHT - 80 - h, 50, h + 80);
+    }
 
     // --- GROUND ---
-    // Two layers: dark base and lighter grass top
-    ctx.fillStyle = '#022c22';  // Dark ground
+    // Digital grid floor
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, CANVAS_HEIGHT - 70, CANVAS_WIDTH, 70);
-    ctx.fillStyle = '#14532d';  // Grass highlight
-    ctx.fillRect(0, CANVAS_HEIGHT - 75, CANVAS_WIDTH, 10);
+
+    // Grid lines
+    ctx.strokeStyle = '#15803d'; // Dark green grid
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    // Perspective lines
+    for (let i = -CANVAS_WIDTH; i < CANVAS_WIDTH * 2; i += 60) {
+      ctx.moveTo(i, CANVAS_HEIGHT - 70);
+      ctx.lineTo((i - CANVAS_WIDTH / 2) * 4 + CANVAS_WIDTH / 2, CANVAS_HEIGHT);
+    }
+    // Horizontal lines
+    for (let y = CANVAS_HEIGHT - 70; y < CANVAS_HEIGHT; y += 15) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(CANVAS_WIDTH, y);
+    }
+    ctx.stroke();
+
+    // Top border of ground
+    ctx.fillStyle = '#22c55e'; // Bright green border
+    ctx.fillRect(0, CANVAS_HEIGHT - 70, CANVAS_WIDTH, 3);
+
 
     // =====================================================================
     // STICKMAN RENDERING FUNCTION
     // =====================================================================
 
-    /**
-     * Draws a single stickman fighter
-     * 
-     * SKELETON STRUCTURE:
-     * - Head at top center
-     * - Shoulder point (torso top)
-     * - Hip point (torso bottom)
-     * - Each limb defined by joint positions
-     * 
-     * ANIMATION SYSTEM:
-     * Each state defines offsets for joints relative to anchor points.
-     * The offsets are multiplied by direction (-1 or 1) for mirroring.
-     * 
-     * @param f - The Fighter object to render
-     */
     const drawStickman = (f: Fighter) => {
       const { x, y, width, height, color, direction, state, health } = f;
       const isDead = health <= 0;
 
       // Calculate anchor points
-      const cx = x + width / 2;           // Center X
-      const bottomY = y + height;         // Bottom of bounding box
-      const topY = y;                     // Top of bounding box
-      let shoulderY = topY + 25;          // Shoulder Y position
-      const hipY = bottomY - 45;          // Hip Y position
+      const cx = x + width / 2;
+      const bottomY = y + height;
+      const topY = y;
+      let shoulderY = topY + 25;
+      const hipY = bottomY - 45;
+
+      // Styles
+      const mainColor = color;
+      const jointColor = '#fff';
+
+      // Shadow removed as requested
+      // ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      // ctx.beginPath();
+      // ctx.ellipse(cx, bottomY - 5, 30, 8, 0, 0, Math.PI * 2);
+      // ctx.fill();
 
       // Set drawing style
-      ctx.strokeStyle = color;
+      ctx.strokeStyle = mainColor;
       ctx.lineWidth = 6;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
+      // Add Glow removed as requested
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+
       // --- POSE VARIABLES ---
-      // These define joint positions relative to anchor points
       let headOffset = { x: 0, y: 0 };
       let torsoAngle = 0;
 
@@ -192,53 +229,36 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
       let lLeg = { knee: { x: -5, y: 20 }, foot: { x: -10, y: 45 } };
       let rLeg = { knee: { x: 10, y: 20 }, foot: { x: 15, y: 45 } };
 
-      // Direction multiplier for mirroring
       const dir = direction;
 
-      // ===================================================================
-      // DEATH POSE
-      // ===================================================================
-
+      // ... keeping logic for pose states largely same but formatted ...
       if (isDead) {
-        // Draw fighter lying flat on the ground
         ctx.beginPath();
-        // Head (offset to side)
         ctx.arc(cx - 30 * dir, bottomY - 10, 10, 0, Math.PI * 2);
-        // Body (horizontal)
         ctx.moveTo(cx - 20 * dir, bottomY - 5);
         ctx.lineTo(cx + 10 * dir, bottomY - 5);
-        // Limbs spread
         ctx.moveTo(cx - 10 * dir, bottomY - 5);
         ctx.lineTo(cx - 10 * dir, bottomY - 25);
         ctx.moveTo(cx + 10 * dir, bottomY - 5);
         ctx.lineTo(cx + 30 * dir, bottomY - 5);
         ctx.stroke();
+        ctx.shadowBlur = 0;
         return;
       }
 
-      // ===================================================================
-      // STATE-BASED POSES
-      // ===================================================================
-
       switch (state) {
         case FighterAction.IDLE:
-          // Subtle breathing animation using sine wave
           headOffset.y = Math.sin(frameRef.current * 0.1) * 2;
-          // Fighting stance: guard up
           lArm = { elbow: { x: 10 * dir, y: 20 }, hand: { x: 20 * dir, y: -10 } };
           rArm = { elbow: { x: 15 * dir, y: 20 }, hand: { x: 25 * dir, y: -5 } };
-          // Wide stance
           lLeg = { knee: { x: -5 * dir, y: 20 }, foot: { x: -15 * dir, y: 45 } };
           rLeg = { knee: { x: 10 * dir, y: 20 }, foot: { x: 20 * dir, y: 45 } };
           break;
 
         case FighterAction.MOVE_LEFT:
         case FighterAction.MOVE_RIGHT:
-          // Run cycle animation
-          const runTime = frameRef.current * 0.5;  // Animation speed
-          const stride = 20;                        // Step distance
-
-          // Legs alternate in sine wave pattern
+          const runTime = frameRef.current * 0.5;
+          const stride = 20;
           lLeg = {
             knee: { x: Math.sin(runTime) * stride * dir, y: 20 - Math.abs(Math.cos(runTime)) * 5 },
             foot: { x: Math.sin(runTime) * stride * 1.5 * dir, y: 45 }
@@ -247,80 +267,74 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
             knee: { x: Math.sin(runTime + Math.PI) * stride * dir, y: 20 - Math.abs(Math.cos(runTime + Math.PI)) * 5 },
             foot: { x: Math.sin(runTime + Math.PI) * stride * 1.5 * dir, y: 45 }
           };
-
-          // Arms swing opposite to legs
           lArm = { elbow: { x: Math.sin(runTime + Math.PI) * 15 * dir, y: 20 }, hand: { x: Math.sin(runTime + Math.PI) * 25 * dir, y: 10 } };
           rArm = { elbow: { x: Math.sin(runTime) * 15 * dir, y: 20 }, hand: { x: Math.sin(runTime) * 25 * dir, y: 10 } };
           break;
 
         case FighterAction.PUNCH:
-          // Slight torso rotation toward punch
           torsoAngle = 10 * dir * (Math.PI / 180);
-          // Extended punching arm
           rArm = { elbow: { x: 20 * dir, y: 0 }, hand: { x: 45 * dir, y: -5 } };
-          // Guard arm
           lArm = { elbow: { x: 5 * dir, y: 20 }, hand: { x: 15 * dir, y: -15 } };
-          // Lunge stance
           lLeg = { knee: { x: -15 * dir, y: 25 }, foot: { x: -30 * dir, y: 45 } };
           rLeg = { knee: { x: 15 * dir, y: 20 }, foot: { x: 20 * dir, y: 45 } };
           break;
 
         case FighterAction.KICK:
-          // Torso leans back
           torsoAngle = -15 * dir * (Math.PI / 180);
-          // High kick leg
           rLeg = { knee: { x: 20 * dir, y: 0 }, foot: { x: 50 * dir, y: -20 } };
-          // Planted supporting leg
           lLeg = { knee: { x: -5 * dir, y: 20 }, foot: { x: -5 * dir, y: 45 } };
-          // Arms for balance
           lArm = { elbow: { x: -15 * dir, y: 10 }, hand: { x: -25 * dir, y: 0 } };
           rArm = { elbow: { x: 10 * dir, y: 20 }, hand: { x: 15 * dir, y: 20 } };
           break;
 
         case FighterAction.BLOCK:
-          // Arms raised in protective stance
           lArm = { elbow: { x: 15 * dir, y: 10 }, hand: { x: 20 * dir, y: -20 } };
           rArm = { elbow: { x: 15 * dir, y: 10 }, hand: { x: 20 * dir, y: -20 } };
-          headOffset.y = 5; // Head tucked down
+          headOffset.y = 5;
           break;
 
         case FighterAction.JUMP:
-          // Legs tucked while airborne
           lLeg = { knee: { x: -10 * dir, y: 10 }, foot: { x: -10 * dir, y: 25 } };
           rLeg = { knee: { x: 10 * dir, y: 15 }, foot: { x: 10 * dir, y: 30 } };
           break;
 
         case FighterAction.CROUCH:
-          // Lower the body
           shoulderY += 20;
-          // Deep leg bend
           lLeg = { knee: { x: -20 * dir, y: 10 }, foot: { x: -20 * dir, y: 25 } };
           rLeg = { knee: { x: 20 * dir, y: 10 }, foot: { x: 20 * dir, y: 25 } };
           break;
       }
 
-      // ===================================================================
-      // DRAW HEAD
-      // ===================================================================
+      // --- DRAW SKELETON ---
 
+      // Function to draw simple joint circle
+      const drawJoint = (jx: number, jy: number) => {
+        const oldStyle = ctx.fillStyle;
+        ctx.fillStyle = jointColor;
+        ctx.beginPath();
+        ctx.arc(jx, jy, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = oldStyle;
+      };
+
+      // HEAD
       ctx.beginPath();
-      ctx.fillStyle = '#f1f5f9';  // Light color for head
-      ctx.arc(cx + headOffset.x + (torsoAngle * 20), topY + 15 + headOffset.y, 12, 0, Math.PI * 2);
+      ctx.fillStyle = '#f1f5f9';
+      const headX = cx + headOffset.x + (torsoAngle * 20);
+      const headY = topY + 15 + headOffset.y;
+      ctx.arc(headX, headY, 12, 0, Math.PI * 2);
       ctx.fill();
 
-      // Headband (colored stripe)
-      ctx.strokeStyle = color;
+      // Headband
+      ctx.strokeStyle = mainColor;
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(cx + headOffset.x + (torsoAngle * 20) - 10, topY + 10 + headOffset.y);
-      ctx.lineTo(cx + headOffset.x + (torsoAngle * 20) + 10, topY + 10 + headOffset.y);
+      ctx.moveTo(headX - 10, headY - 5);
+      ctx.lineTo(headX + 10, headY - 5);
       ctx.stroke();
 
-      // ===================================================================
-      // DRAW TORSO
-      // ===================================================================
-
-      ctx.strokeStyle = color;
+      // TORSO
+      ctx.strokeStyle = mainColor;
       ctx.lineWidth = 8;
       ctx.beginPath();
       const torsoTopX = cx + (torsoAngle * 10);
@@ -331,53 +345,42 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
       ctx.lineTo(torsoBotX, torsoBotY);
       ctx.stroke();
 
-      // ===================================================================
-      // DRAW LIMBS
-      // ===================================================================
-
+      // LIMBS with joints
       ctx.lineWidth = 6;
-
-      /**
-       * Helper function to draw a two-segment limb
-       * 
-       * @param originX - X anchor point (shoulder or hip)
-       * @param originY - Y anchor point
-       * @param config - Joint configuration with knee/elbow and foot/hand
-       */
       const drawLimb = (originX: number, originY: number, config: any) => {
         ctx.beginPath();
         ctx.moveTo(originX, originY);
-        // Draw to midpoint (knee or elbow)
-        const kX = originX + config.knee?.x || originX + config.elbow?.x;
-        const kY = originY + config.knee?.y || originY + config.elbow?.y;
+        // Knee/Elbow
+        const kX = originX + (config.knee?.x || config.elbow?.x);
+        const kY = originY + (config.knee?.y || config.elbow?.y);
         ctx.lineTo(kX, kY);
-        // Draw to endpoint (foot or hand)
-        ctx.lineTo(originX + (config.foot?.x || config.hand?.x), originY + (config.foot?.y || config.hand?.y));
+        // Foot/Hand
+        const eX = originX + (config.foot?.x || config.hand?.x);
+        const eY = originY + (config.foot?.y || config.hand?.y);
+        ctx.lineTo(eX, eY);
         ctx.stroke();
+
+        // Draw joints atop
+        drawJoint(originX, originY); // Shoulder/Hip
+        drawJoint(kX, kY); // Elbow/Knee
+        // drawJoint(eX, eY); // Hand/Foot (optional, maybe too cluttered)
       };
 
-      // --- DEPTH ORDERING ---
-      // Draw back limbs first, then torso, then front limbs
-      // This creates proper layering (front limbs appear in front)
-
       if (dir === 1) {
-        // Facing right: left limbs are in back
         drawLimb(torsoBotX, torsoBotY, lLeg);
         drawLimb(torsoTopX, torsoTopY, lArm);
       } else {
-        // Facing left: right limbs are in back
         drawLimb(torsoBotX, torsoBotY, rLeg);
         drawLimb(torsoTopX, torsoTopY, rArm);
       }
 
-      // Redraw torso to cover back limb connection points
+      // Re-draw torso to cover back entries
       ctx.lineWidth = 8;
       ctx.beginPath();
       ctx.moveTo(torsoTopX, torsoTopY);
       ctx.lineTo(torsoBotX, torsoBotY);
       ctx.stroke();
 
-      // Draw front limbs
       if (dir === 1) {
         drawLimb(torsoBotX, torsoBotY, rLeg);
         drawLimb(torsoTopX, torsoTopY, rArm);
@@ -386,98 +389,60 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
         drawLimb(torsoTopX, torsoTopY, lArm);
       }
 
-      // ===================================================================
-      // DRAW HUD ELEMENTS
-      // ===================================================================
+      ctx.shadowBlur = 0; // Reset glow for HUD
 
-      // Health bar (above fighter)
+      // --- HUD ---
       const hpPercent = health / 100;
-      ctx.fillStyle = '#ef4444';  // Red background
-      ctx.fillRect(x, y - 30, 50, 6);
-      ctx.fillStyle = '#22c55e';  // Green fill
-      ctx.fillRect(x, y - 30, 50 * hpPercent, 6);
 
-      // Energy bar (below health bar)
-      ctx.fillStyle = '#eab308';  // Yellow/gold
-      ctx.fillRect(x, y - 22, 50 * (f.energy / 100), 3);
+      // Container
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.8)'; // Semi-transparent dark bg
+      ctx.fillRect(x - 5, y - 35, 60, 10);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#475569';
+      ctx.strokeRect(x - 5, y - 35, 60, 10);
+
+      // HP Fill
+      ctx.fillStyle = hpPercent > 0.5 ? '#22c55e' : (hpPercent > 0.2 ? '#eab308' : '#ef4444');
+      ctx.fillRect(x - 4, y - 34, 58 * hpPercent, 8);
+
+      // Energy (Thin line below)
+      ctx.fillStyle = '#eab308'; // Yellow energy
+      ctx.fillRect(x - 5, y - 23, 60 * (f.energy / 100), 2);
     };
 
     // =====================================================================
-    // RENDER BOTH FIGHTERS
+    // RENDER ENTITIES
     // =====================================================================
 
-    // Determine side swapping for training visualization
     const swapSides = isTraining && roundNumber % 2 === 1;
 
     if (swapSides) {
-      // Swapped: Draw player2 first (left side), then player1 (right side)
       drawStickman(player2);
       drawStickman(player1);
     } else {
-      // Normal: Draw player1 first (left side), then player2 (right side)
       drawStickman(player1);
       drawStickman(player2);
     }
 
     // =====================================================================
-    // SIDE INDICATORS (Training mode only)
+    // FOREGROUND UI
     // =====================================================================
 
-    if (isTraining) {
-      // Draw side indicators to show which fighter is on which side
-      const indicatorSize = 30;
-      const indicatorY = 50;
+    // (HUD is handled by React overlay in App.tsx to preventing double-drawing)
 
-      // Left side indicator (blue)
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.7)';  // Blue-500 with transparency
-      ctx.beginPath();
-      ctx.arc(indicatorSize, indicatorY, indicatorSize, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Right side indicator (red)
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';  // Red-500 with transparency
-      ctx.beginPath();
-      ctx.arc(CANVAS_WIDTH - indicatorSize, indicatorY, indicatorSize, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Add text labels
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // Determine which fighter is on which side based on swapping
-      const leftFighter = swapSides ? 'P2' : 'P1';
-      const rightFighter = swapSides ? 'P1' : 'P2';
-
-      ctx.fillText(leftFighter, indicatorSize, indicatorY);
-      ctx.fillText(rightFighter, CANVAS_WIDTH - indicatorSize, indicatorY);
-
-      // Add round number
-      ctx.font = '14px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(`Round: ${roundNumber + 1}`, CANVAS_WIDTH / 2, 30);
-    }
-
-    // =====================================================================
-    // ATTACK VISUAL EFFECTS
-    // =====================================================================
-
-    // Draw a glow effect around active hitboxes
-    // This helps visualize when attacks are active
-
+    // Hit effects
     if ((player1.state === FighterAction.PUNCH || player1.state === FighterAction.KICK) && player1.hitbox) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.beginPath();
       const h = player1.hitbox;
-      ctx.arc(h.x + h.w / 2, h.y + h.h / 2, 20, 0, Math.PI * 2);
+      ctx.arc(h.x + h.w / 2, h.y + h.h / 2, 15, 0, Math.PI * 2);
       ctx.fill();
     }
     if ((player2.state === FighterAction.PUNCH || player2.state === FighterAction.KICK) && player2.hitbox) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.beginPath();
       const h = player2.hitbox;
-      ctx.arc(h.x + h.w / 2, h.y + h.h / 2, 20, 0, Math.PI * 2);
+      ctx.arc(h.x + h.w / 2, h.y + h.h / 2, 15, 0, Math.PI * 2);
       ctx.fill();
     }
 
