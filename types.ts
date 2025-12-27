@@ -52,17 +52,17 @@ export enum FighterAction {
  * Represents the "brain" of an AI fighter. This is a simple feedforward
  * neural network with one hidden layer:
  * 
- *   INPUT (9 nodes) → HIDDEN (16 nodes) → OUTPUT (8 nodes)
+ *   INPUT (9 nodes) → HIDDEN (13 nodes) → OUTPUT (8 nodes)
  * 
  * The weights determine how signals flow through the network:
- * - inputWeights: Connections from input layer to hidden layer [9x16 matrix]
- * - outputWeights: Connections from hidden layer to output [16x8 matrix]
- * - biases: Offset values added at each neuron [16 hidden + 8 output = 24 total]
+ * - inputWeights: Connections from input layer to hidden layer [9x13 matrix]
+ * - outputWeights: Connections from hidden layer to output [13x8 matrix]
+ * - biases: Offset values added at each neuron [13 hidden + 8 output = 21 total]
  * 
  * During evolution, these weights are mutated and crossed over to create
  * new variations, allowing the AI to "learn" through natural selection.
  */
-export interface NeuralNetwork {
+export interface NeuralNetworkData {
   inputWeights: number[][];   // 9 inputs × 16 hidden neurons
   outputWeights: number[][];  // 16 hidden × 8 output neurons
   biases: number[];           // 24 bias values (16 hidden + 8 output)
@@ -86,7 +86,7 @@ export interface NeuralNetwork {
  */
 export interface Genome {
   id: string;              // Unique identifier (e.g., "gen5-3" = generation 5, individual 3)
-  network: NeuralNetwork;  // The AI's neural network
+  network: NeuralNetworkData;  // The AI's neural network
   fitness: number;         // Accumulated fitness score (higher = better)
   matchesWon: number;      // Number of matches won by this genome
 }
@@ -131,11 +131,10 @@ export type GameMode = 'TRAINING' | 'ARCADE';
  * OpponentType - Who the player/AI fights against in TRAINING mode
  * 
  * - 'AI': Neural network controlled opponent (the trained or random NN)
- * - 'SCRIPTED': Default scripted logic (see services/ScriptedFighter.ts)
  * - 'CUSTOM_A': User-written custom Script A
  * - 'CUSTOM_B': User-written custom Script B
  */
-export type OpponentType = 'AI' | 'SCRIPTED' | 'CUSTOM_A' | 'CUSTOM_B';
+export type OpponentType = 'AI' | 'CUSTOM_A' | 'CUSTOM_B';
 
 /**
  * TrainingSettings Interface
@@ -150,10 +149,10 @@ export interface TrainingSettings {
   fps: number;
   simulationSpeed: number;           // Physics steps per frame (1 = normal, >1 = fast forward)
   gameMode: GameMode;                // 'TRAINING' or 'ARCADE'
-  opponentType: 'AI' | 'SCRIPTED' | 'CUSTOM'; // For Training Mode: Who does the AI fight against?
+  opponentType: 'AI' | 'CUSTOM_A' | 'CUSTOM_B'; // For Training Mode: Who does the AI fight against?
   // Arcade Mode Settings
-  player1Type: 'HUMAN' | 'CUSTOM_A' | 'CUSTOM_B';
-  player2Type: 'AI' | 'SCRIPTED' | 'CUSTOM_A' | 'CUSTOM_B';
+  player1Type: 'HUMAN' | 'AI' | 'CUSTOM_A' | 'CUSTOM_B';
+  player2Type: 'AI' | 'CUSTOM_A' | 'CUSTOM_B';
   isRunning: boolean;                // Is the evolution/game loop running?
   backgroundTraining: boolean;       // Continue training in background while playing arcade?
 }

@@ -47,7 +47,9 @@
  * =============================================================================
  */
 
-import { NeuralNetwork } from '../types';
+import { NeuralNetworkData } from '../types';
+
+import { NN_ARCH } from './Config';
 
 // =============================================================================
 // NETWORK ARCHITECTURE CONSTANTS
@@ -67,19 +69,14 @@ import { NeuralNetwork } from '../types';
  * 8. oppCooldown   - Opponent's action cooldown (normalized)
  * 9. oppEnergy     - Opponent's energy level (0 to 1)
  */
-export const INPUT_NODES = 9;
+export const INPUT_NODES = NN_ARCH.INPUT_NODES;
 
 /**
  * HIDDEN_NODES: Number of neurons in the hidden layer
  * 
- * The hidden layer is where "reasoning" happens. 16 neurons provide
- * enough capacity to learn complex fighting behaviors while keeping
- * computation fast. Increased from 10 for better pattern recognition.
- * More neurons = more complex behaviors but slower training.
- * 
- * UPDATE: Adjusted to 24 neurons for balanced performance.
+ * The hidden layer is where "reasoning" happens.
  */
-export const HIDDEN_NODES = 24;
+export const HIDDEN_NODES = NN_ARCH.HIDDEN_NODES;
 
 /**
  * OUTPUT_NODES: Number of output neurons (one per FighterAction)
@@ -87,10 +84,8 @@ export const HIDDEN_NODES = 24;
  * Each output corresponds to a possible action:
  * 0: IDLE, 1: MOVE_LEFT, 2: MOVE_RIGHT, 3: JUMP,
  * 4: CROUCH, 5: PUNCH, 6: KICK, 7: BLOCK
- * 
- * Outputs are 0-1 values (via sigmoid). If > 0.5, action is triggered.
  */
-export const OUTPUT_NODES = 8;
+export const OUTPUT_NODES = NN_ARCH.OUTPUT_NODES;
 
 // =============================================================================
 // NETWORK CREATION
@@ -111,7 +106,7 @@ export const OUTPUT_NODES = 8;
  * 
  * @returns A new NeuralNetwork with random weights and biases
  */
-export const createRandomNetwork = (): NeuralNetwork => {
+export const createRandomNetwork = (): NeuralNetworkData => {
   // Input → Hidden weights (9 inputs × 16 hidden = 144 weights)
   const inputWeights = Array(INPUT_NODES).fill(0).map(() =>
     Array(HIDDEN_NODES).fill(0).map(() => Math.random() * 2 - 1)
@@ -151,7 +146,7 @@ export const createRandomNetwork = (): NeuralNetwork => {
  * @param t - Input value
  * @returns Output between 0 and 1
  */
-const sigmoid = (t: number) => 1 / (1 + Math.exp(-t));
+export const sigmoid = (t: number) => 1 / (1 + Math.exp(-t));
 
 /**
  * ReLU (Rectified Linear Unit) Activation Function
@@ -172,7 +167,7 @@ const sigmoid = (t: number) => 1 / (1 + Math.exp(-t));
  * @param t - Input value
  * @returns 0 if negative, otherwise returns input unchanged
  */
-const relu = (t: number) => Math.max(0, t);
+export const relu = (t: number) => Math.max(0, t);
 
 // =============================================================================
 // FORWARD PROPAGATION (PREDICTION)
@@ -203,7 +198,7 @@ const relu = (t: number) => Math.max(0, t);
  * @param inputs - Array of 9 normalized input values
  * @returns Array of 8 output values (0-1 each)
  */
-export const predict = (network: NeuralNetwork, inputs: number[]): number[] => {
+export const predict = (network: NeuralNetworkData, inputs: number[]): number[] => {
   // --- STEP 1: Input → Hidden Layer ---
   const hiddenOutputs: number[] = [];
   for (let h = 0; h < HIDDEN_NODES; h++) {
@@ -259,7 +254,7 @@ export const predict = (network: NeuralNetwork, inputs: number[]): number[] => {
  * @param rate - Probability of mutating each weight (0-1)
  * @returns A new mutated network (original is not modified)
  */
-export const mutateNetwork = (network: NeuralNetwork, rate: number): NeuralNetwork => {
+export const mutateNetwork = (network: NeuralNetworkData, rate: number): NeuralNetworkData => {
   // Helper function to potentially mutate a single weight
   const mutateValue = (val: number) => {
     if (Math.random() < rate) {
@@ -313,7 +308,7 @@ export const mutateNetwork = (network: NeuralNetwork, rate: number): NeuralNetwo
  * @param b - Parent B network
  * @returns A new child network with mixed weights
  */
-export const crossoverNetworks = (a: NeuralNetwork, b: NeuralNetwork): NeuralNetwork => {
+export const crossoverNetworks = (a: NeuralNetworkData, b: NeuralNetworkData): NeuralNetworkData => {
   // Helper to randomly pick from parent A or B
   const mix = (w1: number, w2: number) => Math.random() > 0.5 ? w1 : w2;
 
@@ -351,7 +346,7 @@ export const crossoverNetworks = (a: NeuralNetwork, b: NeuralNetwork): NeuralNet
  * @returns JSON string representation
  */
 export const exportGenome = (
-  genome: { id: string; network: NeuralNetwork; fitness: number; matchesWon: number },
+  genome: { id: string; network: NeuralNetworkData; fitness: number; matchesWon: number },
   generation: number = 1
 ): string => {
   return JSON.stringify({
@@ -379,7 +374,7 @@ export type ImportResult = {
   success: true;
   genome: {
     id: string;
-    network: NeuralNetwork;
+    network: NeuralNetworkData;
     fitness: number;
     matchesWon: number;
   };

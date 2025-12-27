@@ -97,7 +97,6 @@ neuroevolution-stickman-fighters/
 │   ├── NeuralNetwork.ts    # Neural network implementation
 │   ├── GameEngine.ts       # Fighter physics and combat
 │   ├── InputManager.ts     # Keyboard/gamepad input handling
-│   ├── ScriptedFighter.ts  # Default scripted opponent logic
 │   ├── CustomScriptRunner.ts # User script compilation & execution
 │   ├── CustomScriptWorker.js # Web Worker for secure script isolation
 │   ├── TrainingWorker.ts   # Web Worker for parallel training

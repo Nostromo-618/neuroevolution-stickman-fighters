@@ -1,0 +1,51 @@
+/**
+ * =============================================================================
+ * ABSTRACT NEURAL NETWORK CLASS
+ * =============================================================================
+ * 
+ * Defines the contract for all neural network implementations.
+ * Enables polymorphism for different network architectures (FeedForward, RNN, etc).
+ * 
+ * NASA Rule #3 Compliance:
+ * - Subclasses should prioritize object pooling and stable shapes.
+ */
+
+export abstract class NeuralNetwork {
+    /**
+     * Unique identifier for this network/genome
+     */
+    readonly id: string;
+
+    constructor(id: string) {
+        this.id = id;
+    }
+
+    /**
+     * Propagate inputs through the network to produce outputs.
+     * @param inputs Array of normalized input values
+     * @returns Array of output values (0-1)
+     */
+    abstract predict(inputs: number[]): number[];
+
+    /**
+     * Mutate the network weights/biases in place.
+     * @param rate Mutation rate (probability per gene)
+     */
+    abstract mutate(rate: number): void;
+
+    /**
+     * Create a deep copy of this network.
+     * @returns A new independent instance required for population reproduction
+     */
+    abstract clone(): NeuralNetwork;
+
+    /**
+     * Serialize the network structure to a plain object/JSON.
+     */
+    abstract toJSON(): any;
+
+    /**
+     * Load network weights from a serialized object.
+     */
+    abstract fromJSON(data: any): void;
+}

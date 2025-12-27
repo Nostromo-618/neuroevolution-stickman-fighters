@@ -70,7 +70,6 @@ Fighters can be controlled by different systems depending on the game mode and s
 |------|-------|-------------|------|
 | **Human** | Red (`#ef4444`) | Keyboard/gamepad input in Arcade mode | `InputManager.ts` |
 | **Neural AI** | Blue (`#3b82f6`) | Trained neural network decisions | `NeuralNetwork.ts` |
-| **Scripted** | Orange (`#f97316`) | Default rule-based logic | `ScriptedFighter.ts` |
 | **Custom A** | Purple (`#a855f7`) | User Script Slot 1 | `CustomScriptRunner.ts` |
 | **Custom B** | Pink (`#d946ef`) | User Script Slot 2 | `CustomScriptRunner.ts` |
 
@@ -82,9 +81,6 @@ In `Fighter.update()`, the decision process is:
 if (isCustom && scriptWorker) {
   // User's custom script (Web Worker)
   activeInput = processCustom(opponent);
-} else if (isScripted) {
-  // Default scripted logic
-  activeInput = processScripted(opponent);
 } else if (isAi && genome) {
   // Neural network
   activeInput = processAi(opponent);

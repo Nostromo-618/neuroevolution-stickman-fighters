@@ -56,6 +56,7 @@ import TouchControls from './components/TouchControls';
 import pkg from './package.json';
 import DisclaimerModal from './components/DisclaimerModal';
 import GoodbyeScreen from './components/GoodbyeScreen';
+import NeuralNetworkVisualizer from './components/NeuralNetworkVisualizer';
 
 // =============================================================================
 // MAIN APPLICATION COMPONENT
@@ -66,8 +67,10 @@ const App = () => {
   const [settings, setSettings] = useState<TrainingSettings>({
     populationSize: 48,  // Increased from 24 for better genetic diversity
     mutationRate: 0.1,
+    hiddenLayers: [13],
+    fps: 60,
     simulationSpeed: 1,
-    gameMode: 'TRAINING',
+    gameMode: 'ARCADE',
     isRunning: false, // Start paused
     backgroundTraining: false, // Background training off by default
     opponentType: 'AI', // Default to AI opponent
@@ -236,16 +239,10 @@ const App = () => {
       if (type === 'AI') {
         const bestGenome = getBestGenome();
         const genomeToUse = bestGenome || { id: 'cpu', network: createRandomNetwork(), fitness: 0, matchesWon: 0 };
-        const f = new Fighter(x, '#3b82f6', true, genomeToUse);
+        const f = new Fighter(x, defaultColor, true, genomeToUse);
         return f;
       }
 
-      // 3. SCRIPTED BOT
-      if (type === 'SCRIPTED') {
-        const f = new Fighter(x, '#f97316', false);
-        f.isScripted = true;
-        return f;
-      }
 
       // 4. CUSTOM SCRIPT A
       if (type === 'CUSTOM_A') {
@@ -255,7 +252,7 @@ const App = () => {
           f.isCustom = true;
           f.scriptWorker = worker;
         } else {
-          f.isScripted = true; // Fallback silently - user was notified on compile
+          f.isCustom = true; // Fallback silently - user was notified on compile
         }
         return f;
       }
@@ -268,7 +265,7 @@ const App = () => {
           f.isCustom = true;
           f.scriptWorker = worker;
         } else {
-          f.isScripted = true; // Fallback silently - user was notified on compile
+          f.isCustom = true; // Fallback silently - user was notified on compile
         }
         return f;
       }
@@ -280,15 +277,14 @@ const App = () => {
     // If Training Mode
     if (settingsRef.current.gameMode === 'TRAINING') {
       const popSize = populationRef.current.length;
-      const useScripted = settingsRef.current.opponentType === 'SCRIPTED';
       const useCustomA = settingsRef.current.opponentType === 'CUSTOM_A';
       const useCustomB = settingsRef.current.opponentType === 'CUSTOM_B';
       const useCustom = useCustomA || useCustomB;
 
-      // When training vs SCRIPTED or CUSTOM:
-      // - Each genome fights one match against the scripted/custom opponent
+      // When training vs CUSTOM:
+      // - Each genome fights one match against the custom opponent
       // - This helps the NN learn to beat a specific strategy
-      const totalMatches = (useScripted || useCustom) ? popSize : Math.ceil(popSize / 2);
+      const totalMatches = useCustom ? popSize : Math.ceil(popSize / 2);
 
       if (currentMatchIndex.current >= totalMatches) {
         evolve();
@@ -299,49 +295,51 @@ const App = () => {
       const spawnOffset1 = Math.random() * 100 - 50; // -50 to +50
       const spawnOffset2 = Math.random() * 100 - 50;
 
-      if (useScripted || useCustom) {
-        // TRAINING VS SCRIPTED/CUSTOM: Single NN genome vs Scripted/Custom opponent
+      if (useCustom) {
+        // TRAINING VS CUSTOM: Single NN genome vs Custom opponent
         const genomeIdx = currentMatchIndex.current;
         const genome = populationRef.current[genomeIdx];
 
         // 50% chance to swap sides for variety
         const swapSides = Math.random() > 0.5;
 
-        // Color: purple for Script A, teal for Script B, orange for scripted
-        const opponentColor = useCustomA ? '#a855f7' : useCustomB ? '#14b8a6' : '#f97316';
+        // Color: purple for Script A, teal for Script B
+        const opponentColor = useCustomA ? '#a855f7' : '#14b8a6';
 
         // Get pre-compiled script worker (A or B based on selection)
         const scriptWorker = useCustomA
           ? customScriptWorkerARef.current
-          : useCustomB
-            ? customScriptWorkerBRef.current
-            : null;
+          : customScriptWorkerBRef.current;
 
         if (swapSides) {
-          // NN on right, Scripted/Custom on left
+          // NN on right, Custom on left
           const f1 = new Fighter(280 + spawnOffset1, opponentColor, false);
           if (useCustom && scriptWorker && scriptWorker.isReady()) {
             f1.isCustom = true;
             f1.scriptWorker = scriptWorker;
           } else {
-            f1.isScripted = true;
+            // Fallback if worker not ready - treat as basic dummy or error?
+            // Since we removed isScripted, we can just leave it as basic non-AI fighter (dummy)
+            // or maybe we should default to basic AI?
+            // For now, let's just leave it as basic fighter (it will stand still)
           }
           const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, genome); // NN (Blue)
           f2.direction = -1;
           activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: genomeIdx };
         } else {
-          // NN on left, Scripted/Custom on right
+          // NN on left, Custom on right
           const f1 = new Fighter(280 + spawnOffset1, '#3b82f6', true, genome); // NN (Blue)
           const f2 = new Fighter(470 + spawnOffset2, opponentColor, false);
           if (useCustom && scriptWorker && scriptWorker.isReady()) {
             f2.isCustom = true;
             f2.scriptWorker = scriptWorker;
           } else {
-            f2.isScripted = true;
+            // Fallback
           }
           f2.direction = -1;
           activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: genomeIdx, p2GenomeIdx: -1 };
         }
+
       } else {
         // TRAINING VS AI: NN vs NN (original behavior)
         const p1Idx = currentMatchIndex.current * 2;
@@ -908,7 +906,7 @@ const App = () => {
                   NeuroEvolution: Stickman Fighters
                 </h1>
                 <p className="text-slate-400 text-sm">
-                  {settings.gameMode === 'TRAINING' ? 'Training Neural Networks...' : 'Arcade Mode: You vs AI'}
+                  {settings.gameMode === 'TRAINING' ? 'Evolution in progress...' : 'Single Match Mode'}
                 </p>
               </div>
             </header>
@@ -917,129 +915,89 @@ const App = () => {
               {/* HUD */}
               <div className="absolute top-4 left-4 right-4 flex justify-between text-xl font-bold font-mono z-10 drop-shadow-md pointer-events-none">
                 {/* Determine side swapping for training mode */}
-                {settings.gameMode === 'TRAINING' && activeMatchRef.current ? (
-                  <>
-                    {/* Swapped sides in training mode */}
-                    {currentMatchIndex.current % 2 === 1 ? (
-                      <>
-                        {/* Odd rounds: P2 on left, P1 on right */}
-                        <div className="flex flex-col items-start">
-                          <span className="text-blue-500 font-bold">P2</span>
-                          <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                            <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
-                          </div>
-                          <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                            <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
-                          </div>
-                        </div>
+                {/* Unified HUD Logic */}
+                {(() => {
+                  if (!activeMatchRef.current) return null;
 
-                        <div className="flex flex-col items-center">
-                          <span className="text-white mt-2 font-bold opacity-90 tracking-widest">{settings.gameMode === 'TRAINING' ? `GEN ${gameState.generation}` : 'VS'}</span>
-                          <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-                        </div>
+                  const p1 = activeMatchRef.current.p1; // Left side fighter
+                  const p2 = activeMatchRef.current.p2; // Right side fighter
 
-                        <div className="flex flex-col items-end">
-                          <span className="text-red-500 font-bold">P1</span>
-                          <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                            <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
-                          </div>
-                          <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                            <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* Even rounds: P1 on left, P2 on right (normal) */}
-                        <div className="flex flex-col items-start">
-                          <span className="text-red-500 font-bold text-xs">P1</span>
-                          <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                            <div className="h-full bg-red-500 transition-all duration-75" style={{ width: `${gameState.player1Health}%` }}></div>
-                          </div>
-                          <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                            <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                          </div>
-                        </div>
+                  // Helper to determine label and visual style
+                  const getFighterInfo = (f: Fighter, defaultLabel: string) => {
+                    if (f.isCustom) {
+                      // Distinguish Script A vs B based on color
+                      if (f.color === '#a855f7') return { label: 'SCRIPT A', color: 'text-purple-400', bar: 'bg-purple-400' };
+                      if (f.color === '#14b8a6') return { label: 'SCRIPT B', color: 'text-teal-400', bar: 'bg-teal-400' };
+                      return { label: 'CUSTOM', color: 'text-purple-400', bar: 'bg-purple-400' };
+                    }
 
-                        <div className="flex flex-col items-center">
-                          {settings.gameMode === 'TRAINING' ? (
-                            <>
-                              <span className="text-slate-400 font-bold text-[10px] tracking-widest uppercase mb-0.5">ROUND {currentMatchIndex.current + 1}</span>
-                              <span className="text-teal-400 font-bold tracking-widest text-sm">GEN {gameState.generation}</span>
-                            </>
-                          ) : (
-                            <span className="text-white mt-2 font-bold opacity-90 tracking-widest">VS</span>
-                          )}
-                          <span className="text-yellow-400 font-mono text-sm mt-1">{gameState.timeRemaining.toFixed(0)}</span>
-                        </div>
+                    if (f.isAi) {
+                      if (settings.gameMode === 'TRAINING') {
+                        // In training, show Generation if available, or just AI
+                        return { label: `GEN ${gameState.generation}`, color: 'text-blue-400', bar: 'bg-blue-500' };
+                      }
+                      return { label: 'AI', color: 'text-blue-500', bar: 'bg-blue-500' };
+                    }
+                    // Human
+                    return { label: 'YOU', color: 'text-red-500', bar: 'bg-red-500' };
+                  };
 
-                        <div className="flex flex-col items-end">
-                          <span className="text-blue-500 font-bold text-xs">P2</span>
-                          <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                            <div className="h-full bg-blue-500 transition-all duration-75" style={{ width: `${gameState.player2Health}%` }}></div>
-                          </div>
-                          <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                            <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {/* Normal ARCADE HUD */}
-                    {(() => {
-                      // Helper to get label and color for each player type
-                      const getP1Info = () => {
-                        switch (settings.player1Type) {
-                          case 'HUMAN': return { label: 'HUMAN', color: 'text-red-500', barColor: 'bg-red-500' };
-                          case 'CUSTOM_A': return { label: 'SCRIPT A', color: 'text-purple-400', barColor: 'bg-purple-400' };
-                          case 'CUSTOM_B': return { label: 'SCRIPT B', color: 'text-teal-400', barColor: 'bg-teal-400' };
-                          default: return { label: 'P1', color: 'text-red-500', barColor: 'bg-red-500' };
-                        }
-                      };
-                      const getP2Info = () => {
-                        switch (settings.player2Type) {
-                          case 'AI': return { label: 'AI', color: 'text-blue-500', barColor: 'bg-blue-500' };
-                          case 'SCRIPTED': return { label: 'BOT', color: 'text-orange-400', barColor: 'bg-orange-400' };
-                          case 'CUSTOM_A': return { label: 'SCRIPT A', color: 'text-purple-400', barColor: 'bg-purple-400' };
-                          case 'CUSTOM_B': return { label: 'SCRIPT B', color: 'text-teal-400', barColor: 'bg-teal-400' };
-                          default: return { label: 'P2', color: 'text-blue-500', barColor: 'bg-blue-500' };
-                        }
-                      };
-                      const p1 = getP1Info();
-                      const p2 = getP2Info();
-                      return (
-                        <>
-                          <div className="flex flex-col items-start">
-                            <span className={`${p1.color} font-bold text-xs`}>{p1.label}</span>
-                            <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                              <div className={`h-full ${p1.barColor} transition-all duration-75`} style={{ width: `${gameState.player1Health}%` }}></div>
-                            </div>
-                            <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                              <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                            </div>
-                          </div>
+                  // Override colors/labels for simple P1/P2 distinction if both are basic AIs in training
+                  // But the user requested "Script A" labeling, so we prioritize the detailed check above.
+                  // For basic AI vs AI training, we'll just distinguish by P1/P2 color if needed, or keep generic.
+                  // Default behavior for AI vs AI:
+                  let leftInfo = getFighterInfo(p1, 'P1');
+                  let rightInfo = getFighterInfo(p2, 'P2');
 
-                          <div className="flex flex-col items-center">
-                            <span className="text-white mt-2 font-bold opacity-90 tracking-widest">VS</span>
+                  // Specific override for AI vs AI training to behave like P1 (Red) vs P2 (Blue)
+                  if (settings.gameMode === 'TRAINING' && !p1.isCustom && !p2.isCustom) {
+                    leftInfo = { label: 'P1', color: 'text-red-500', bar: 'bg-red-500' };
+                    rightInfo = { label: 'P2', color: 'text-blue-500', bar: 'bg-blue-500' };
+                  }
+
+                  return (
+                    <>
+                      {/* Left Fighter (P1 in GameState) */}
+                      <div className="flex flex-col items-start">
+                        <span className={`${leftInfo.color} font-bold text-xs tracking-wider animate-pulse`}>{leftInfo.label}</span>
+                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                          <div className={`h-full ${leftInfo.bar} transition-all duration-75`} style={{ width: `${gameState.player1Health}%` }}></div>
+                        </div>
+                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
+                        </div>
+                      </div>
+
+
+
+                      {/* Center Info */}
+                      <div className="flex flex-col items-center pt-2">
+                        {settings.gameMode === 'TRAINING' ? (
+                          <>
+                            <span className="text-slate-500 font-bold text-[10px] tracking-widest uppercase">ROUND {currentMatchIndex.current + 1}</span>
+                            <span className="text-slate-300 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-white font-bold opacity-60 tracking-widest text-xs">VS</span>
                             <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-                          </div>
+                          </>
+                        )}
+                      </div>
 
-                          <div className="flex flex-col items-end">
-                            <span className={`${p2.color} font-bold text-xs`}>{p2.label}</span>
-                            <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                              <div className={`h-full ${p2.barColor} transition-all duration-75`} style={{ width: `${gameState.player2Health}%` }}></div>
-                            </div>
-                            <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                              <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
-                            </div>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </>
-                )}
+                      {/* Right Fighter (P2 in GameState) */}
+                      <div className="flex flex-col items-end">
+                        <span className={`${rightInfo.color} font-bold text-xs tracking-wider animate-pulse`}>{rightInfo.label}</span>
+                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+                          <div className={`h-full ${rightInfo.bar} transition-all duration-75`} style={{ width: `${gameState.player2Health}%` }}></div>
+                        </div>
+                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {activeMatchRef.current ? (
@@ -1090,6 +1048,20 @@ const App = () => {
 
             {/* Mobile Touch Controls - only in Arcade mode */}
             {settings.gameMode === 'ARCADE' && <TouchControls inputManager={inputManager} />}
+
+            {/* Neural Network Visualization (Desktop Only) - Moved here per user request */}
+            {gameState.matchActive && activeMatchRef.current && (
+              <NeuralNetworkVisualizer
+                className="hidden md:block w-full"
+                width={800} // Higher res canvas for the larger space
+                height={250}
+                fighter={
+                  settings.gameMode === 'TRAINING'
+                    ? activeMatchRef.current.p1 // In training, show P1 (left side)
+                    : activeMatchRef.current.p2 // In Arcade, show P2 (the AI)
+                }
+              />
+            )}
           </div>
 
           {/* Right Column: Dashboards & Stats */}

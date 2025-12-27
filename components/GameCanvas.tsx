@@ -159,7 +159,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
     // --- GROUND ---
     // Digital grid floor
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, CANVAS_HEIGHT - 70, CANVAS_WIDTH, 70);
+    ctx.fillRect(0, CANVAS_HEIGHT - 35, CANVAS_WIDTH, 35);
 
     // Grid lines
     ctx.strokeStyle = '#15803d'; // Dark green grid
@@ -167,11 +167,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
     ctx.beginPath();
     // Perspective lines
     for (let i = -CANVAS_WIDTH; i < CANVAS_WIDTH * 2; i += 60) {
-      ctx.moveTo(i, CANVAS_HEIGHT - 70);
+      ctx.moveTo(i, CANVAS_HEIGHT - 35);
       ctx.lineTo((i - CANVAS_WIDTH / 2) * 4 + CANVAS_WIDTH / 2, CANVAS_HEIGHT);
     }
     // Horizontal lines
-    for (let y = CANVAS_HEIGHT - 70; y < CANVAS_HEIGHT; y += 15) {
+    for (let y = CANVAS_HEIGHT - 35; y < CANVAS_HEIGHT; y += 15) {
       ctx.moveTo(0, y);
       ctx.lineTo(CANVAS_WIDTH, y);
     }
@@ -179,7 +179,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
 
     // Top border of ground
     ctx.fillStyle = '#22c55e'; // Bright green border
-    ctx.fillRect(0, CANVAS_HEIGHT - 70, CANVAS_WIDTH, 3);
+    ctx.fillRect(0, CANVAS_HEIGHT - 35, CANVAS_WIDTH, 3);
 
 
     // =====================================================================
@@ -257,18 +257,52 @@ const GameCanvas: React.FC<GameCanvasProps> = ({ player1, player2, isTraining = 
 
         case FighterAction.MOVE_LEFT:
         case FighterAction.MOVE_RIGHT:
-          const runTime = frameRef.current * 0.5;
+          // Improved Gait Cycle
+          // Slower, weighted speed
+          const wSpeed = 0.25;
+          const t = frameRef.current * wSpeed;
           const stride = 20;
-          lLeg = {
-            knee: { x: Math.sin(runTime) * stride * dir, y: 20 - Math.abs(Math.cos(runTime)) * 5 },
-            foot: { x: Math.sin(runTime) * stride * 1.5 * dir, y: 45 }
+
+          // Body Bob: Highest when legs cross (t=0, PI), Lowest when legs split (t=PI/2, 3PI/2)
+          // cos(2t) is 1 at 0, -1 at PI/2.
+          headOffset.y = Math.abs(Math.cos(t)) * 3;
+
+          // Enhanced Leg Function
+          const getLeg = (phaseOffset: number) => {
+            const localT = t + phaseOffset;
+            const sinT = Math.sin(localT);
+            const cosT = Math.cos(localT); // derivative, velocity direction
+
+            // X Position (Standard swing, tweaked magnitude)
+            const x = sinT * stride;
+
+            // Y Position (Lift Logic)
+            // Lift foot ONLY during forward swing (when cosT > 0)
+            // Peak lift happens at peak forward velocity (cosT = 1)
+            const liftParams = Math.max(0, cosT);
+            const footLift = liftParams * 12; // Foot clears ground by 12px
+            const kneeLift = liftParams * 8;  // Knee raises too
+
+            return {
+              knee: { x: x * dir, y: 20 - kneeLift },
+              foot: { x: (x * 1.6) * dir, y: 45 - footLift }
+            };
           };
-          rLeg = {
-            knee: { x: Math.sin(runTime + Math.PI) * stride * dir, y: 20 - Math.abs(Math.cos(runTime + Math.PI)) * 5 },
-            foot: { x: Math.sin(runTime + Math.PI) * stride * 1.5 * dir, y: 45 }
+
+          // Right leg leads at 0, Left at PI (opposition)
+          rLeg = getLeg(0);
+          lLeg = getLeg(Math.PI);
+
+          // Arms swing opposite to legs
+          // Simple sine swing is fine for arms
+          lArm = {
+            elbow: { x: Math.sin(t) * 12 * dir, y: 20 },
+            hand: { x: Math.sin(t) * 22 * dir, y: 15 }
           };
-          lArm = { elbow: { x: Math.sin(runTime + Math.PI) * 15 * dir, y: 20 }, hand: { x: Math.sin(runTime + Math.PI) * 25 * dir, y: 10 } };
-          rArm = { elbow: { x: Math.sin(runTime) * 15 * dir, y: 20 }, hand: { x: Math.sin(runTime) * 25 * dir, y: 10 } };
+          rArm = {
+            elbow: { x: Math.sin(t + Math.PI) * 12 * dir, y: 20 },
+            hand: { x: Math.sin(t + Math.PI) * 22 * dir, y: 15 }
+          };
           break;
 
         case FighterAction.PUNCH:

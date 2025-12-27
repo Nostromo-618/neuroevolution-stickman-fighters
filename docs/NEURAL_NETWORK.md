@@ -354,31 +354,38 @@ export const createRandomNetwork = (): NeuralNetwork => {
 ### Forward Propagation
 
 ```typescript
-// File: services/NeuralNetwork.ts
+// File: classes/FeedForwardNetwork.ts
 
-export const predict = (network: NeuralNetwork, inputs: number[]): number[] => {
-  // Hidden layer: Input → Hidden
-  const hidden = [];
-  for (let h = 0; h < 16; h++) {
-    let sum = network.biases[h];
-    for (let i = 0; i < 9; i++) {
-      sum += inputs[i] * network.inputWeights[i][h];
+export class FeedForwardNetwork extends NeuralNetwork {
+  // Pre-allocated buffers for memory safety (NASA Rule #3)
+  private hiddenBuffer: Float32Array;
+  private outputBuffer: Float32Array;
+
+  // ... constructor ...
+
+  public predict(inputs: number[]): number[] {
+    // 1. HIDDEN LAYER
+    for (let h = 0; h < this.hiddenNodes; h++) {
+      let sum = this.biases[h];
+      for (let i = 0; i < this.inputNodes; i++) {
+        sum += inputs[i] * this.inputWeights[i][h];
+      }
+      this.hiddenBuffer[h] = Math.max(0, sum); // ReLU
     }
-    hidden.push(Math.max(0, sum));  // ReLU
-  }
 
-  // Output layer: Hidden → Output
-  const outputs = [];
-  for (let o = 0; o < 8; o++) {
-    let sum = network.biases[16 + o];
-    for (let h = 0; h < 16; h++) {
-      sum += hidden[h] * network.outputWeights[h][o];
+    // 2. OUTPUT LAYER
+    for (let o = 0; o < this.outputNodes; o++) {
+      let sum = this.biases[this.hiddenNodes + o];
+      for (let h = 0; h < this.hiddenNodes; h++) {
+        sum += this.hiddenBuffer[h] * this.outputWeights[h][o];
+      }
+      this.outputBuffer[o] = 1 / (1 + Math.exp(-sum)); // Sigmoid
     }
-    outputs.push(1 / (1 + Math.exp(-sum)));  // Sigmoid
-  }
 
-  return outputs;
-};
+    // Return slice to prevent external mutation of internal buffer
+    return Array.from(this.outputBuffer);
+  }
+}
 ```
 
 ### Evolution Step

@@ -94,9 +94,9 @@ const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 450;
 const GRAVITY = 0.8;
 const FRICTION = 0.85;
-const GROUND_Y = 380;
+const GROUND_Y = 415;
 const INPUT_NODES = 9;
-const HIDDEN_NODES = 24;  // Adjusted to 24 for balanced performance
+const HIDDEN_NODES = 13;  // Adjusted to 13 for balanced performance
 const OUTPUT_NODES = 8;
 
 // Fighter Actions (numeric constants instead of enum for simplicity in worker)
@@ -170,8 +170,8 @@ class WorkerFighter {
   y: number;
   vx: number = 0;
   vy: number = 0;
-  width: number = 50;
-  height: number = 100;
+  width: number = 55;
+  height: number = 110;
   genome: WorkerGenome;
 
   health: number = 100;

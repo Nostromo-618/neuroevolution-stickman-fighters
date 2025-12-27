@@ -14,57 +14,22 @@
 
 import { FighterAction, Genome, InputState } from '../types';
 import { predict } from './NeuralNetwork';
-import { getScriptedAction, FighterState } from './ScriptedFighter';
 import { ScriptWorkerManager, FighterState as CustomFighterState } from './CustomScriptRunner';
+import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
 
 // =============================================================================
 // GAMEPLAY CONSTANTS
 // =============================================================================
 
-/** 
- * ENERGY_CONSTANTS
- * Centralized settings for fighter energy mechanics.
- */
-export const ENERGY_MAX = 100;           // Maximum energy capacity
-export const ENERGY_REGEN_IDLE = 0.5;    // Regen rate when standing still
-export const ENERGY_REGEN_ACTIVE = 0.2;  // Regen rate when moving/attacking
-export const ENERGY_COST_MOVE = 0.1;     // Cost per frame of horizontal movement
-export const ENERGY_COST_JUMP = 10;      // One-time cost to jump
-export const ENERGY_COST_CROUCH = 0.5;   // Cost per frame while crouching
-export const ENERGY_COST_BLOCK = 0.5;    // Cost per frame while blocking
-export const ENERGY_COST_PUNCH = 10;     // One-time cost to punch
-export const ENERGY_COST_KICK = 50;      // One-time cost to kick
-export const ENERGY_PENALTY_HIT = 1;     // Extra energy lost when hit while blocking/crouching
+import { ENERGY, WORLD } from './Config';
 
-// =============================================================================
-// WORLD CONSTANTS
-// =============================================================================
+const GRAVITY = WORLD.GRAVITY;
+const FRICTION = WORLD.FRICTION;
+const GROUND_Y = WORLD.GROUND_Y;
+const CANVAS_WIDTH = WORLD.CANVAS_WIDTH;
+const CANVAS_HEIGHT = WORLD.CANVAS_HEIGHT;
 
-/** Canvas width in pixels - defines the arena width */
-export const CANVAS_WIDTH = 800;
-
-/** Canvas height in pixels - defines the arena height */
-export const CANVAS_HEIGHT = 450;
-
-/** 
- * Gravity acceleration (pixels per frame²)
- * Applied every frame to vertical velocity
- * Creates natural jumping arcs
- */
-const GRAVITY = 0.8;
-
-/** 
- * Friction coefficient (velocity multiplier per frame)
- * Values < 1 slow down horizontal movement
- * 0.85 = fighter loses 15% speed each frame
- */
-const FRICTION = 0.85;
-
-/** 
- * Y-coordinate of the ground level
- * Fighters cannot fall below this point
- */
-const GROUND_Y = 380;
+export { CANVAS_WIDTH, CANVAS_HEIGHT };
 
 // =============================================================================
 // FIGHTER CLASS
@@ -86,20 +51,21 @@ export class Fighter {
   y: number;              // Vertical position (top edge)
   vx: number = 0;         // Horizontal velocity (pixels/frame)
   vy: number = 0;         // Vertical velocity (pixels/frame)
-  width: number = 50;     // Fighter hitbox width
-  height: number = 100;   // Fighter hitbox height
+  public lastInputs: number[] = []; // Stores the last inputs fed to the NN for visualization
+  width: number = 55;     // Fighter hitbox width
+  height: number = 110;   // Fighter hitbox height
 
   // --- Identity ---
   color: string;          // Display color (CSS color string)
   isAi: boolean;          // True if controlled by neural network
-  isScripted: boolean;    // True if controlled by ScriptedFighter module
+
   isCustom: boolean;      // True if controlled by user custom script
   scriptWorker: ScriptWorkerManager | null = null; // Web Worker for secure custom script execution
   genome?: Genome;        // AI brain (only set for AI fighters)
 
   // --- Combat Stats ---
   health: number = 100;   // Current health (0 = dead)
-  energy: number = ENERGY_MAX;   // Energy for actions (regenerates over time)
+  energy: number = ENERGY.MAX;   // Energy for actions (regenerates over time)
   state: FighterAction = FighterAction.IDLE;  // Current action/animation state
   direction: -1 | 1 = 1;  // Facing direction: 1 = right, -1 = left
 
@@ -131,7 +97,7 @@ export class Fighter {
     this.y = GROUND_Y - this.height;  // Start on the ground
     this.color = color;
     this.isAi = isAi;
-    this.isScripted = false;  // Default to false; set to true externally for scripted fighters
+
     this.isCustom = false;    // Default to false; set to true externally for custom fighters
     this.genome = genome;
   }
@@ -154,213 +120,186 @@ export class Fighter {
    */
   update(input: InputState, opponent: Fighter) {
     // === DEATH PHYSICS ===
-    // Dead fighters ragdoll to the ground
-    if (this.health <= 0) {
-      this.y += this.vy;
-      this.vy += GRAVITY;
-      if (this.y > GROUND_Y - 40) {
-        this.y = GROUND_Y - 40;  // Lying down height
-        this.vx *= 0.5;          // Slide friction
-        this.vy = 0;
-      } else {
-        this.x += this.vx;      // Fly when knocked in air
-      }
-      return;  // Skip all other logic when dead
-    }
+    if (this.handleDeathState()) return;
 
     // === AI/SCRIPTED DECISION MAKING ===
-    // Determine input based on control type: Human, Neural Network AI, or Scripted
     let activeInput = input;
 
-    // CUSTOM SCRIPT FIGHTER: Use user-defined custom script for decisions
-    // This takes highest priority. Uses Web Worker for secure isolated execution.
     if (this.isCustom && this.scriptWorker) {
       activeInput = this.processCustom(opponent);
     }
-    // SCRIPTED FIGHTER: Use the ScriptedFighter module for decisions
-    // This takes priority over isAi since a fighter can't be both
-    else if (this.isScripted) {
-      activeInput = this.processScripted(opponent);
-    }
-    // NEURAL NETWORK AI: Use the neural network for decisions
     else if (this.isAi && this.genome) {
       activeInput = this.processAi(opponent);
-
-      // =================================================================
-      // FITNESS SHAPING (Training Mode Only)
-      // =================================================================
-      // 
-      // WHY FITNESS SHAPING?
-      // Pure win/loss evolution is slow. We guide learning by rewarding
-      // behaviors that correlate with winning:
-      // - Getting closer to opponent
-      // - Facing the opponent
-      // - Attacking when in range
-      // - Staying mobile
-      // - Controlling center of arena
-      // 
-      // These are "distortions" that speed up learning but may bias
-      // the AI toward certain strategies. See docs/GAME_ENGINE.md for
-      // a full analysis of each distortion.
-      // =================================================================
-
-      if (opponent.health > 0) {  // Only shape fitness when opponent alive
-        const dist = Math.abs(this.x - opponent.x);
-
-        // 1. PROXIMITY REWARD ("The Magnet")
-        // Encourages AI to approach opponent rather than run away
-        // Without this, AI often learns to avoid damage by avoiding combat
-        if (dist < 400) {
-          this.genome.fitness += 0.005;  // Slight reward for being in range
-        }
-        if (dist < 200) {
-          this.genome.fitness += 0.02;   // More reward for medium range
-        }
-        if (dist < 80) {
-          this.genome.fitness += 0.05;   // Best reward for close combat
-        }
-
-        // 2. FACING REWARD
-        // Encourages AI to face opponent (also prevents backstabs)
-        const dx = opponent.x - this.x;
-        const correctFacing = (dx > 0 && this.direction === 1) || (dx < 0 && this.direction === -1);
-        if (correctFacing) {
-          this.genome.fitness += 0.02;
-        }
-
-        // 3. AGGRESSION REWARD
-        // Encourages attacking when close enough to hit
-        if (dist < 100 && (this.state === FighterAction.PUNCH || this.state === FighterAction.KICK)) {
-          this.genome.fitness += 0.1;
-        }
-
-        // 4. TIME PENALTY
-        // Small constant penalty to discourage stalling
-        this.genome.fitness -= 0.005;
-
-        // 5. EDGE/CORNER PENALTY
-        // Discourage camping at arena edges (bad tactical position)
-        const edgeThreshold = 60;
-        if (this.x < edgeThreshold || this.x > CANVAS_WIDTH - this.width - edgeThreshold) {
-          this.genome.fitness -= 0.04;
-        }
-
-        // 6. CENTER CONTROL BONUS
-        // Reward being in the middle of the arena (dominant position)
-        const centerX = CANVAS_WIDTH / 2;
-        const distFromCenter = Math.abs(this.x + this.width / 2 - centerX);
-        if (distFromCenter < 150) {
-          this.genome.fitness += 0.015;
-        }
-
-        // 7. MOVEMENT REWARD
-        // Reward actual movement to prevent standing still
-        if (Math.abs(this.vx) > 0.5) {
-          this.genome.fitness += 0.008;
-        }
-      }
+      this.applyFitnessShaping(opponent);
     }
 
-    // === COOLDOWN MANAGEMENT ===
+    // === UPDATE LOOP ===
+    this.updateEnergyAndCooldowns();
+    this.handleMovementAndStates(activeInput);
+    this.handleAttacks(activeInput);
+    this.updateHitboxes();
+    this.updatePhysicsBounding();
+  }
+
+  // ===========================================================================
+  // PRIVATE HELPER METHODS (Decomposed from update loop)
+  // ===========================================================================
+
+  /** Handles death physics (ragdoll). Returns true if dead. */
+  private handleDeathState(): boolean {
+    if (this.health > 0) return false;
+
+    this.y += this.vy;
+    this.vy += GRAVITY;
+    if (this.y > GROUND_Y - 40) {
+      this.y = GROUND_Y - 40;  // Lying down height
+      this.vx *= 0.5;          // Slide friction
+      this.vy = 0;
+    } else {
+      this.x += this.vx;      // Fly when knocked in air
+    }
+    return true;
+  }
+
+  /** Applies fitness rewards/penalties during training */
+  private applyFitnessShaping(opponent: Fighter): void {
+    if (!this.genome || opponent.health <= 0) return;
+
+    const dist = Math.abs(this.x - opponent.x);
+
+    // 1. PROXIMITY REWARD
+    if (dist < 400) this.genome.fitness += 0.005;
+    if (dist < 200) this.genome.fitness += 0.02;
+    if (dist < 80) this.genome.fitness += 0.05;
+
+    // 2. FACING REWARD
+    const dx = opponent.x - this.x;
+    const correctFacing = (dx > 0 && this.direction === 1) || (dx < 0 && this.direction === -1);
+    if (correctFacing) this.genome.fitness += 0.02;
+
+    // 3. AGGRESSION REWARD
+    if (dist < 100 && (this.state === FighterAction.PUNCH || this.state === FighterAction.KICK)) {
+      this.genome.fitness += 0.1;
+    }
+
+    // 4. TIME PENALTY
+    this.genome.fitness -= 0.005;
+
+    // 5. EDGE/CORNER PENALTY
+    const edgeThreshold = 60;
+    if (this.x < edgeThreshold || this.x > CANVAS_WIDTH - this.width - edgeThreshold) {
+      this.genome.fitness -= 0.04;
+    }
+
+    // 6. CENTER CONTROL BONUS
+    const centerX = CANVAS_WIDTH / 2;
+    const distFromCenter = Math.abs(this.x + this.width / 2 - centerX);
+    if (distFromCenter < 150) {
+      this.genome.fitness += 0.015;
+    }
+
+    // 7. MOVEMENT REWARD
+    if (Math.abs(this.vx) > 0.5) {
+      this.genome.fitness += 0.008;
+    }
+  }
+
+  /** Updates energy regeneration and action cooldowns */
+  private updateEnergyAndCooldowns(): void {
     if (this.cooldown > 0) this.cooldown--;
 
-    // === ENERGY REGENERATION ===
-    // Energy regens faster when idle (encourages strategic pauses)
     const isIdle = Math.abs(this.vx) < 0.5 && this.state === FighterAction.IDLE;
-    const regenRate = isIdle ? ENERGY_REGEN_IDLE : ENERGY_REGEN_ACTIVE;
-    if (this.energy < ENERGY_MAX) this.energy += regenRate;
+    const regenRate = isIdle ? ENERGY.REGEN_IDLE : ENERGY.REGEN_ACTIVE;
+    if (this.energy < ENERGY.MAX) this.energy += regenRate;
+  }
 
-    // === STATE MANAGEMENT ===
-    // Animation lock: can't change state during attack recovery
+  /** Handles movement logic and state transitions (Jump, Crouch, Block, Move) */
+  private handleMovementAndStates(activeInput: InputState): void {
     const isAnimationLocked = this.cooldown > 5;
+    if (isAnimationLocked) return;
 
-    if (!isAnimationLocked) {
-      // --- MOVEMENT (costs energy to prevent erratic behavior) ---
-      if (activeInput.left && this.energy >= ENERGY_COST_MOVE) {
-        this.vx -= 1.5;
-        this.energy -= ENERGY_COST_MOVE;
-        this.direction = -1;
-        this.state = FighterAction.MOVE_LEFT;
-      } else if (activeInput.right && this.energy >= ENERGY_COST_MOVE) {
-        this.vx += 1.5;
-        this.energy -= ENERGY_COST_MOVE;
-        this.direction = 1;
-        this.state = FighterAction.MOVE_RIGHT;
-      } else {
-        this.state = FighterAction.IDLE;
-      }
-
-      // --- JUMP (costs energy) ---
-      if (activeInput.up && this.y >= GROUND_Y - this.height - 1 && this.energy >= ENERGY_COST_JUMP) {
-        this.vy = -18;
-        this.energy -= ENERGY_COST_JUMP;
-        this.state = FighterAction.JUMP;
-      }
-
-      // --- CROUCH (costs energy, blocks 75% kicks and 50% punches) ---
-      if (activeInput.down && this.y >= GROUND_Y - this.height - 1 && this.energy >= ENERGY_COST_CROUCH) {
-        this.state = FighterAction.CROUCH;
-        this.energy -= ENERGY_COST_CROUCH;
-        this.vx *= 0.5;  // Slow down while crouching
-      }
-
-      // --- BLOCK (costs energy, blocks 75% punches and 50% kicks) ---
-      if (activeInput.action3 && this.energy >= ENERGY_COST_BLOCK) {
-        this.state = FighterAction.BLOCK;
-        this.energy -= ENERGY_COST_BLOCK;
-        this.vx *= 0.3;  // Significant slowdown while blocking
-      }
+    // MOVEMENT
+    if (activeInput.left && this.energy >= ENERGY.COST_MOVE) {
+      this.vx -= 1.5;
+      this.energy -= ENERGY.COST_MOVE;
+      this.direction = -1;
+      this.state = FighterAction.MOVE_LEFT;
+    } else if (activeInput.right && this.energy >= ENERGY.COST_MOVE) {
+      this.vx += 1.5;
+      this.energy -= ENERGY.COST_MOVE;
+      this.direction = 1;
+      this.state = FighterAction.MOVE_RIGHT;
+    } else {
+      this.state = FighterAction.IDLE;
     }
 
-    // === ATTACK ACTIONS ===
-    this.hitbox = null;  // Clear hitbox by default
-
-    // Attacks can only be initiated when not in cooldown
-    if (this.cooldown === 0) {
-      // PUNCH: Quick attack, less damage, faster recovery
-      if (activeInput.action1 && this.energy >= ENERGY_COST_PUNCH) {
-        this.state = FighterAction.PUNCH;
-        this.vx *= 0.2;       // Stop moving significantly
-        this.cooldown = 20;   // 20 frames of animation (was 30)
-        this.energy -= ENERGY_COST_PUNCH;
-      }
-      // KICK: Strong attack, more damage, slower recovery
-      else if (activeInput.action2 && this.energy >= ENERGY_COST_KICK) {
-        this.state = FighterAction.KICK;
-        this.vx *= 0.2;
-        this.cooldown = 20;   // 20 frames animation (Matched to Punch)
-        this.energy -= ENERGY_COST_KICK;
-      }
+    // JUMP
+    if (activeInput.up && this.y >= GROUND_Y - this.height - 1 && this.energy >= ENERGY.COST_JUMP) {
+      this.vy = -18;
+      this.energy -= ENERGY.COST_JUMP;
+      this.state = FighterAction.JUMP;
     }
 
-    // === HITBOX ACTIVATION ===
-    // Hitboxes are only active during specific frames of the attack animation
-    // This creates attack "windows" where the hit can land
-    // Punch: Hitbox active frames 5-15 (of 20 total)
-    // Kick: Hitbox active frames 15-25 (of 30 total)
+    // CROUCH
+    if (activeInput.down && this.y >= GROUND_Y - this.height - 1 && this.energy >= ENERGY.COST_CROUCH) {
+      this.state = FighterAction.CROUCH;
+      this.energy -= ENERGY.COST_CROUCH;
+      this.vx *= 0.5;
+    }
+
+    // BLOCK
+    if (activeInput.action3 && this.energy >= ENERGY.COST_BLOCK) {
+      this.state = FighterAction.BLOCK;
+      this.energy -= ENERGY.COST_BLOCK;
+      this.vx *= 0.3;
+    }
+  }
+
+  /** Handles attack initiation (Punch, Kick) */
+  private handleAttacks(activeInput: InputState): void {
+    if (this.cooldown > 0) return;
+
+    if (activeInput.action1 && this.energy >= ENERGY.COST_PUNCH) {
+      this.state = FighterAction.PUNCH;
+      this.vx *= 0.2;
+      this.cooldown = 20;
+      this.energy -= ENERGY.COST_PUNCH;
+    } else if (activeInput.action2 && this.energy >= ENERGY.COST_KICK) {
+      this.state = FighterAction.KICK;
+      this.vx *= 0.2;
+      this.cooldown = 20;
+      this.energy -= ENERGY.COST_KICK;
+    }
+  }
+
+  /** Updates active hitbox based on current animation state */
+  private updateHitboxes(): void {
+    this.hitbox = null;
+
     if (this.state === FighterAction.PUNCH && this.cooldown < 15 && this.cooldown > 5) {
       this.hitbox = {
         x: this.direction === 1 ? this.x + this.width : this.x - 46,
         y: this.y + 20,
-        w: 46,   // Punch reach
+        w: 46,
         h: 20
       };
     } else if (this.state === FighterAction.KICK && this.cooldown < 15 && this.cooldown > 5) {
       this.hitbox = {
         x: this.direction === 1 ? this.x + this.width : this.x - 66,
-        y: this.y + 40,  // Kicks aim lower
-        w: 66,   // Kick has longer reach
+        y: this.y + 40,
+        w: 66,
         h: 30
       };
     }
+  }
 
-    // === PHYSICS INTEGRATION ===
-    this.x += this.vx;       // Apply horizontal velocity
-    this.y += this.vy;       // Apply vertical velocity
-    this.vy += GRAVITY;      // Apply gravity to vertical velocity
-    this.vx *= FRICTION;     // Apply friction to horizontal velocity
+  /** Applies physics integration and enforces boundaries */
+  private updatePhysicsBounding(): void {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += GRAVITY;
+    this.vx *= FRICTION;
 
-    // === BOUNDARY ENFORCEMENT ===
     // Ground collision
     if (this.y > GROUND_Y - this.height) {
       this.y = GROUND_Y - this.height;
@@ -404,16 +343,27 @@ export class Fighter {
     const selfH = this.health / 100;                         // Own health (0 to 1)
     const oppH = opponent.health / 100;                      // Opponent health (0 to 1)
     const oppAction = opponent.state / 7;                    // Opponent action (0 to 1)
-    const selfE = this.energy / ENERGY_MAX;                  // Own energy (0 to 1)
+    const selfE = this.energy / ENERGY.MAX;                  // Own energy (0 to 1)
     const facing = this.direction;                           // Facing direction (-1 or 1)
     const oppCooldown = opponent.cooldown / 40;              // Opponent cooldown (0 to 1)
-    const oppEnergy = opponent.energy / ENERGY_MAX;          // Opponent energy (0 to 1)
+    const oppEnergy = opponent.energy / ENERGY.MAX;          // Opponent energy (0 to 1)
 
     // 9 inputs total
     const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy];
+    this.lastInputs = inputs; // Store inputs for visualization
+
+
 
     // === RUN NEURAL NETWORK ===
-    const outputs = predict(this.genome.network, inputs);
+    let outputs: number[];
+
+    // Check if we can use the optimized Class method (Rule #3 - No allocation)
+    if (this.genome.network instanceof FeedForwardNetwork) {
+      outputs = this.genome.network.predict(inputs);
+    } else {
+      // Fallback for legacy/worker data
+      outputs = predict(this.genome.network, inputs);
+    }
 
     // === INTERPRET OUTPUTS ===
     // Threshold-based activation: output > 0.5 means "do this action"
@@ -429,62 +379,7 @@ export class Fighter {
     };
   }
 
-  /**
-   * Scripted Decision Making via ScriptedFighter Module
-   * 
-   * Similar to processAi, but instead of using a neural network,
-   * this method calls the user-defined scripted logic.
-   * 
-   * The ScriptedFighter module receives a FighterState object with
-   * all relevant information about both fighters, and returns an
-   * InputState with the desired actions.
-   * 
-   * This is great for:
-   * - Testing specific behaviors against the neural network
-   * - Creating benchmark opponents
-   * - Learning how fighting game AI works
-   * 
-   * @param opponent - The other fighter
-   * @returns InputState object with boolean action flags
-   */
-  processScripted(opponent: Fighter): InputState {
-    // === BUILD FIGHTER STATE FOR SCRIPTED MODULE ===
-    // The ScriptedFighter module uses its own FighterState interface
-    // that contains all the information needed for decision-making
 
-    const selfState: FighterState = {
-      x: this.x,
-      y: this.y,
-      vx: this.vx,
-      vy: this.vy,
-      health: this.health,
-      energy: this.energy,
-      state: this.state,
-      direction: this.direction,
-      cooldown: this.cooldown,
-      width: this.width,
-      height: this.height
-    };
-
-    const opponentState: FighterState = {
-      x: opponent.x,
-      y: opponent.y,
-      vx: opponent.vx,
-      vy: opponent.vy,
-      health: opponent.health,
-      energy: opponent.energy,
-      state: opponent.state,
-      direction: opponent.direction,
-      cooldown: opponent.cooldown,
-      width: opponent.width,
-      height: opponent.height
-    };
-
-    // === CALL SCRIPTED LOGIC ===
-    // The getScriptedAction function lives in services/ScriptedFighter.ts
-    // Users can modify that file to change the fighter's behavior
-    return getScriptedAction(selfState, opponentState);
-  }
 
   /**
    * Custom Script Decision Making via User-Defined JavaScript
@@ -582,7 +477,7 @@ export class Fighter {
         // Removed backstab multiplier as requested
         if (opponent.state === FighterAction.BLOCK) {
           damage *= 0.5;  // Blocked: 50% damage reduction for punches, 75% for kicks
-          opponent.energy -= ENERGY_PENALTY_HIT;  // Blocking costs extra energy when hit
+          opponent.energy -= ENERGY.PENALTY_HIT;  // Blocking costs extra energy when hit
         } else if (opponent.state === FighterAction.CROUCH) {
           // Crouching blocks 75% of kicks and 50% of punches
           if (this.state === FighterAction.KICK) {
@@ -590,7 +485,7 @@ export class Fighter {
           } else {
             damage *= 0.5;   // 50% reduction for punches
           }
-          opponent.energy -= ENERGY_PENALTY_HIT;  // Crouching costs extra energy when hit
+          opponent.energy -= ENERGY.PENALTY_HIT;  // Crouching costs extra energy when hit
         }
 
         // Apply damage (clamped to 0)
