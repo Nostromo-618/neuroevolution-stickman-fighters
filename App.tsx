@@ -56,8 +56,9 @@ import { Fighter, CANVAS_WIDTH, CANVAS_HEIGHT } from './services/GameEngine';
 import { createRandomNetwork, mutateNetwork, crossoverNetworks } from './services/NeuralNetwork';
 import { loadScript } from './services/CustomScriptRunner';
 import { Genome, TrainingSettings, GameState, OpponentType } from './types';
-import GameCanvas from './components/GameCanvas';
-import GameHUD from './components/GameHUD';
+import GameArena from './components/GameArena';
+import ControlsHelper from './components/ControlsHelper';
+import ImportModal from './components/ImportModal';
 import Dashboard from './components/Dashboard';
 import Toast, { useToast } from './components/Toast';
 import { WorkerPool } from './services/WorkerPool';
@@ -283,59 +284,14 @@ const App = () => {
               </div>
             </header>
 
-            <div className="relative group">
-              <GameHUD
-                activeMatch={activeMatchRef.current}
-                gameState={gameState}
-                settings={settings}
-                currentMatchIndex={currentMatchIndex.current}
-              />
+            <GameArena
+              activeMatch={activeMatchRef.current}
+              gameState={gameState}
+              settings={settings}
+              currentMatchIndex={currentMatchIndex.current}
+            />
 
-              {activeMatchRef.current ? (
-                <GameCanvas
-                  player1={activeMatchRef.current.p1}
-                  player2={activeMatchRef.current.p2}
-                  isTraining={settings.gameMode === 'TRAINING'}
-                  roundNumber={currentMatchIndex.current}
-                />
-              ) : (
-                <div className="w-full h-[450px] flex items-center justify-center bg-slate-900 rounded-xl border border-slate-700">
-                  <span className="text-slate-400 font-mono">Initializing Arena...</span>
-                </div>
-              )}
-
-              {/* Game Over Overlays */}
-              {!gameState.matchActive && gameState.roundStatus === 'FIGHTING' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl">
-                  <div className="text-center">
-                    <h2 className="text-5xl font-black text-white italic tracking-tighter mb-2">
-                      {gameState.winner === 'Player 1' ? 'VICTORY' : 'DEFEAT'}
-                    </h2>
-                    <p className="text-slate-400 font-mono">RESTARTING MATCH...</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Controls Helper - hidden on mobile (touch controls shown instead) */}
-            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-900/50 border border-slate-800 rounded-xl text-xs font-mono text-slate-500">
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-300 font-bold">MOVE</span>
-                <span>WASD / ARROWS</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-300 font-bold">PUNCH</span>
-                <span>J / SPACE / Z</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-300 font-bold">KICK</span>
-                <span>K / X</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-slate-300 font-bold">BLOCK</span>
-                <span>L / C / SHIFT</span>
-              </div>
-            </div>
+            <ControlsHelper />
 
             {/* Mobile Touch Controls - only in Arcade mode */}
             {settings.gameMode === 'ARCADE' && <TouchControls inputManager={inputManager} />}
@@ -370,35 +326,11 @@ const App = () => {
               onScriptRecompile={recompileCustomScript}
             />
 
-            {pendingImport && (
-              <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                <div className="bg-slate-900 border border-teal-500/30 p-8 rounded-2xl max-w-md w-full shadow-2xl shadow-teal-500/10">
-                  <h3 className="text-2xl font-bold text-teal-400 mb-2">Import Weights</h3>
-                  <div className="bg-slate-800/50 rounded-lg p-3 mb-4 text-sm font-mono">
-                    <span className="text-slate-400">Generation:</span> <span className="text-teal-300">{pendingImport.generation}</span>
-                    <span className="mx-2 text-slate-600">|</span>
-                    <span className="text-slate-400">Fitness:</span> <span className="text-teal-300">{pendingImport.genome.fitness.toFixed(0)}</span>
-                  </div>
-                  <p className="text-slate-400 mb-6 leading-relaxed text-sm">
-                    This will inject the weights into training and continue from Generation {pendingImport.generation}.
-                  </p>
-                  <div className="space-y-3">
-                    <button
-                      onClick={handleImportChoice}
-                      className="w-full py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl transition-all active:scale-95"
-                    >
-                      Continue Training (Gen {pendingImport.generation})
-                    </button>
-                    <button
-                      onClick={() => setPendingImport(null)}
-                      className="w-full py-2 text-slate-500 hover:text-slate-300 text-sm transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <ImportModal
+              pendingImport={pendingImport}
+              onConfirm={handleImportChoice}
+              onCancel={() => setPendingImport(null)}
+            />
 
             <footer className="pt-4 border-t border-slate-800 flex justify-between items-center text-[10px] text-slate-600 uppercase tracking-widest font-bold">
               <span>{pkg.name} v{pkg.version}</span>
