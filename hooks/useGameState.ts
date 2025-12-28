@@ -16,7 +16,8 @@ export const useGameState = (): UseGameStateReturn => {
         timeRemaining: 90, generation: 1, bestFitness: 0,
         matchActive: false,
         winner: null,
-        roundStatus: 'WAITING'
+        roundStatus: 'WAITING',
+        matchesUntilEvolution: 3
     });
 
     const gameStateRef = useRef(gameState);

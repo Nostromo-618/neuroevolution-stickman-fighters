@@ -104,3 +104,20 @@ export const loadPopulation = (): Genome[] | null => {
         return null;
     }
 };
+
+// --- CLEAR GENOME STORAGE ---
+
+/**
+ * Clears all genome-related data from localStorage.
+ * This includes settings, best genome, and population.
+ * Does NOT clear custom scripts or disclaimer acceptance.
+ */
+export const clearGenomeStorage = (): void => {
+    try {
+        localStorage.removeItem(KEYS.SETTINGS);
+        localStorage.removeItem(KEYS.BEST_GENOME);
+        localStorage.removeItem(KEYS.POPULATION);
+    } catch (e) {
+        console.warn('Failed to clear genome storage:', e);
+    }
+};

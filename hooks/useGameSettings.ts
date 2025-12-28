@@ -14,11 +14,11 @@ export const useGameSettings = (): UseGameSettingsReturn => {
         hiddenLayers: [13],
         fps: 60,
         simulationSpeed: 1,
-        gameMode: 'ARCADE',
+        gameMode: 'TRAINING',
         isRunning: false,
         backgroundTraining: false,
         opponentType: 'AI',
-        player1Type: 'HUMAN',
+        player1Type: 'AI',
         player2Type: 'AI'
     });
 

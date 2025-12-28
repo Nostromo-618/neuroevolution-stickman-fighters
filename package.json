@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:mobile": "playwright test --project=mobile-iphone-se --project=mobile-iphone-12 --project=mobile-iphone-14-pro-max",
+    "test:desktop": "playwright test --project=desktop-1920x1080 --project=desktop-1280x720"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -15,6 +20,7 @@
     "recharts": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/node": "latest",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

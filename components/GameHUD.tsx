@@ -28,14 +28,16 @@ function getFighterInfo(f: Fighter, gameMode: GameMode, generation: number): { l
     return { label: 'CUSTOM', color: 'text-purple-400', bar: 'bg-purple-400' };
   }
 
-  if (f.isAi) {
-    if (gameMode === 'TRAINING') {
-      return { label: `GEN ${generation}`, color: 'text-blue-400', bar: 'bg-blue-500' };
-    }
-    return { label: 'AI', color: 'text-blue-500', bar: 'bg-blue-500' };
+  // Human fighters (not AI, not custom)
+  if (!f.isAi) {
+    return { label: 'HUMAN', color: 'text-green-500', bar: 'bg-green-500' };
   }
-  
-  return { label: 'YOU', color: 'text-red-500', bar: 'bg-red-500' };
+
+  // AI fighters
+  if (gameMode === 'TRAINING') {
+    return { label: `GEN ${generation}`, color: 'text-blue-400', bar: 'bg-blue-500' };
+  }
+  return { label: 'AI', color: 'text-blue-500', bar: 'bg-blue-500' };
 }
 
 const GameHUD: React.FC<GameHUDProps> = ({ activeMatch, gameState, settings, currentMatchIndex }) => {
@@ -47,8 +49,8 @@ const GameHUD: React.FC<GameHUDProps> = ({ activeMatch, gameState, settings, cur
   let leftInfo = getFighterInfo(p1, settings.gameMode, gameState.generation);
   let rightInfo = getFighterInfo(p2, settings.gameMode, gameState.generation);
 
-  // Override for AI vs AI training to show P1/P2
-  if (settings.gameMode === 'TRAINING' && !p1.isCustom && !p2.isCustom) {
+  // Override for AI vs AI training to show P1/P2 (only when both are AI)
+  if (settings.gameMode === 'TRAINING' && p1.isAi && p2.isAi && !p1.isCustom && !p2.isCustom) {
     leftInfo = { label: 'P1', color: 'text-red-500', bar: 'bg-red-500' };
     rightInfo = { label: 'P2', color: 'text-blue-500', bar: 'bg-blue-500' };
   }
@@ -72,6 +74,9 @@ const GameHUD: React.FC<GameHUDProps> = ({ activeMatch, gameState, settings, cur
           <>
             <span className="text-slate-500 font-bold text-[10px] tracking-widest uppercase">ROUND {currentMatchIndex + 1}</span>
             <span className="text-slate-300 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
+            <span className="text-teal-400 font-bold text-[9px] tracking-wider uppercase mt-1">
+              {gameState.matchesUntilEvolution} {gameState.matchesUntilEvolution === 1 ? 'MATCH' : 'MATCHES'} TO EVOLVE
+            </span>
           </>
         ) : (
           <>

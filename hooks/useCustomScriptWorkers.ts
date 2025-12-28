@@ -34,11 +34,11 @@ export const useCustomScriptWorkers = (settings: TrainingSettings, addToast: any
         };
 
         const needsA =
-            (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM_A') ||
+            (settings.gameMode === 'TRAINING' && settings.player1Type === 'CUSTOM_A') ||
             (settings.gameMode === 'ARCADE' && (settings.player1Type === 'CUSTOM_A' || settings.player2Type === 'CUSTOM_A'));
 
         const needsB =
-            (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM_B') ||
+            (settings.gameMode === 'TRAINING' && settings.player1Type === 'CUSTOM_B') ||
             (settings.gameMode === 'ARCADE' && (settings.player1Type === 'CUSTOM_B' || settings.player2Type === 'CUSTOM_B'));
 
         if (needsA) compileWorker('slot1', customScriptWorkerARef);

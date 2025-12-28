@@ -67,6 +67,7 @@ import pkg from './package.json';
 import DisclaimerModal from './components/DisclaimerModal';
 import GoodbyeScreen from './components/GoodbyeScreen';
 import NeuralNetworkVisualizer from './components/NeuralNetworkVisualizer';
+import { clearGenomeStorage } from './services/PersistenceManager';
 
 // =============================================================================
 // MAIN APPLICATION COMPONENT
@@ -156,7 +157,54 @@ const App = () => {
     initPopulation(settings, clearBest);
     currentMatchIndex.current = 0;
     activeMatchRef.current = null;
-  }, [settings, initPopulation]);
+    if (settings.gameMode === 'TRAINING') {
+      // Calculate evolution interval based on opponent type
+      const isHumanOpponent = settings.player1Type === 'HUMAN';
+      const isAIOpponent = settings.player1Type === 'AI';
+      const popSize = populationRef.current.length;
+      const evolutionInterval = isHumanOpponent 
+        ? 3 
+        : (isAIOpponent ? Math.floor(popSize / 2) : popSize);
+      setGameState(prev => ({ ...prev, matchesUntilEvolution: evolutionInterval }));
+    }
+  }, [settings, initPopulation, setGameState]);
+
+  // Reset current match only (does not reset population or best genome)
+  const resetMatch = useCallback(() => {
+    setSettings(prev => ({ ...prev, isRunning: false })); // Completely stop the match
+    activeMatchRef.current = null;
+    resetMatchTimer();
+    // Calculate matches remaining based on current match index and opponent type
+    let matchesRemaining = 3;
+    if (settings.gameMode === 'TRAINING') {
+      const isHumanOpponent = settings.player1Type === 'HUMAN';
+      const isAIOpponent = settings.player1Type === 'AI';
+      const popSize = populationRef.current.length;
+      const EVOLUTION_INTERVAL = isHumanOpponent 
+        ? 3 
+        : (isAIOpponent ? Math.floor(popSize / 2) : popSize);
+      matchesRemaining = EVOLUTION_INTERVAL - (currentMatchIndex.current % EVOLUTION_INTERVAL);
+    }
+    setGameState(prev => ({
+      ...prev,
+      player1Health: 100,
+      player2Health: 100,
+      player1Energy: 100,
+      player2Energy: 100,
+      timeRemaining: 90,
+      matchActive: false,
+      winner: null,
+      roundStatus: 'WAITING',
+      matchesUntilEvolution: matchesRemaining
+    }));
+  }, [setSettings, resetMatchTimer, setGameState, settings.gameMode, currentMatchIndex]);
+
+  // Reset genome and clear localStorage
+  const resetGenomeAndStorage = useCallback(() => {
+    resetPopulation(true);
+    clearGenomeStorage();
+    addToast('info', 'Genome reset: Population and storage cleared');
+  }, [resetPopulation, addToast]);
 
   const evolve = useCallback(() => {
     const pop = populationRef.current;
@@ -169,7 +217,16 @@ const App = () => {
     }
 
     setFitnessHistory(prev => [...prev.slice(-20), { gen: gameStateRef.current.generation, fitness: best.fitness }]);
-    setGameState(prev => ({ ...prev, bestFitness: best.fitness, generation: prev.generation + 1 }));
+    
+    // Calculate next evolution interval based on opponent type
+    const isHumanOpponent = settingsRef.current.player1Type === 'HUMAN';
+    const isAIOpponent = settingsRef.current.player1Type === 'AI';
+    const popSize = populationRef.current.length;
+    const nextEvolutionInterval = isHumanOpponent 
+      ? 3 
+      : (isAIOpponent ? Math.floor(popSize / 2) : popSize);
+    
+    setGameState(prev => ({ ...prev, bestFitness: best.fitness, generation: prev.generation + 1, matchesUntilEvolution: nextEvolutionInterval }));
 
     const currentGen = gameStateRef.current.generation;
     const newPop: Genome[] = [
@@ -244,10 +301,106 @@ const App = () => {
     }
   }, [settings.populationSize, resetPopulation]);
 
+  // Track previous player types to detect actual changes (not just initial mount)
+  const prevPlayerTypesRef = useRef<{ p1: string; p2: string } | null>(null);
+
+  // Immediately update fighters when player types change (if match hasn't started)
+  useEffect(() => {
+    const currentP1 = settings.player1Type;
+    const currentP2 = settings.player2Type;
+    const prev = prevPlayerTypesRef.current;
+
+    // Skip on initial mount (no previous values)
+    if (prev === null) {
+      prevPlayerTypesRef.current = { p1: currentP1, p2: currentP2 };
+      return;
+    }
+
+    // Only update if player types actually changed AND match isn't running
+    const playerTypesChanged = prev.p1 !== currentP1 || prev.p2 !== currentP2;
+    if (playerTypesChanged && !settingsRef.current.isRunning && activeMatchRef.current !== null) {
+      // Pre-set the ref state to prevent DEFEAT overlay (matchActive=false AND roundStatus='FIGHTING')
+      // This must happen BEFORE startMatch() to avoid race conditions
+      if (gameStateRef.current) {
+        gameStateRef.current.roundStatus = 'WAITING';
+      }
+      
+      // Directly call startMatch to recreate fighters with new types/colors
+      startMatch();
+      
+      // Immediately override matchActive to false since match isn't running (preview mode)
+      // Update both ref and state synchronously to ensure consistency
+      if (gameStateRef.current) {
+        gameStateRef.current.matchActive = false;
+        gameStateRef.current.roundStatus = 'WAITING';
+      }
+      setGameState(prev => ({
+        ...prev,
+        matchActive: false, // Keep as false since match isn't running
+        player1Health: 100,
+        player2Health: 100,
+        player1Energy: 100,
+        player2Energy: 100,
+        timeRemaining: 90,
+        winner: null,
+        roundStatus: 'WAITING' // Must be WAITING, not FIGHTING, to avoid DEFEAT overlay
+      }));
+    }
+
+    // Update ref for next comparison
+    prevPlayerTypesRef.current = { p1: currentP1, p2: currentP2 };
+  }, [settings.player1Type, settings.player2Type, settingsRef, gameStateRef, startMatch, setGameState, activeMatchRef]);
+
+  // Ensure matchActive and roundStatus are correct when match starts (isRunning becomes true)
+  useEffect(() => {
+    if (settings.isRunning && activeMatchRef.current && !gameState.matchActive) {
+      // Match was started, ensure matchActive and roundStatus reflect this
+      const isTraining = settings.gameMode === 'TRAINING';
+      if (gameStateRef.current) {
+        gameStateRef.current.matchActive = true;
+        // In training mode, round should be FIGHTING immediately (no countdown)
+        if (isTraining) {
+          gameStateRef.current.roundStatus = 'FIGHTING';
+        }
+      }
+      setGameState(prev => ({
+        ...prev,
+        matchActive: true,
+        // In training mode, round should be FIGHTING immediately (no countdown)
+        ...(isTraining && { roundStatus: 'FIGHTING' })
+      }));
+    }
+  }, [settings.isRunning, settings.gameMode, gameState.matchActive, gameStateRef, setGameState, activeMatchRef]);
+
   // Handle Mode Switching reset
   const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
-    setSettings(prev => ({ ...prev, gameMode: mode, isRunning: false }));
-    setGameState(prev => ({ ...prev, winner: null, matchActive: false }));
+    setSettings(prev => ({
+      ...prev,
+      gameMode: mode,
+      isRunning: false,
+      // Set defaults when switching to Training mode
+      ...(mode === 'TRAINING' && {
+        player1Type: prev.player1Type || 'AI',
+        player2Type: 'AI' // Player 2 is always AI in Training mode
+      })
+    }));
+    // Calculate evolution interval for training mode
+    let evolutionInterval = 3;
+    if (mode === 'TRAINING') {
+      const isHumanOpponent = settings.player1Type === 'HUMAN';
+      const isAIOpponent = settings.player1Type === 'AI';
+      const popSize = populationRef.current.length;
+      evolutionInterval = isHumanOpponent 
+        ? 3 
+        : (isAIOpponent ? Math.floor(popSize / 2) : popSize);
+    }
+    
+    setGameState(prev => ({ 
+      ...prev, 
+      winner: null, 
+      matchActive: false,
+      ...(mode === 'TRAINING' && { matchesUntilEvolution: evolutionInterval })
+    }));
     activeMatchRef.current = null; // Will trigger startMatch in loop
     if (mode === 'TRAINING') {
       currentMatchIndex.current = 0;
@@ -275,11 +428,11 @@ const App = () => {
           <div className="lg:col-span-2 space-y-4">
             <header className="flex justify-between items-center mb-4">
               <div>
-                <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
+                <h3 className="text-lg sm:text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
                   NeuroEvolution: Stickman Fighters
-                </h1>
+                </h3>
                 <p className="text-slate-400 text-sm">
-                  {settings.gameMode === 'TRAINING' ? 'Evolution in progress...' : 'Single Match Mode'}
+                  {settings.gameMode === 'TRAINING' ? 'Training Mode' : 'Single Match Mode'}
                 </p>
               </div>
             </header>
@@ -304,7 +457,7 @@ const App = () => {
                 height={250}
                 fighter={
                   settings.gameMode === 'TRAINING'
-                    ? activeMatchRef.current.p1 // In training, show P1 (left side)
+                    ? activeMatchRef.current.p2 // In training, show P2 (the AI being trained)
                     : activeMatchRef.current.p2 // In Arcade, show P2 (the AI)
                 }
               />
@@ -319,7 +472,9 @@ const App = () => {
               fitnessHistory={fitnessHistory}
               currentGen={gameState.generation}
               bestFitness={gameState.bestFitness}
-              onReset={() => resetPopulation(true)}
+              gameState={gameState}
+              onResetMatch={resetMatch}
+              onResetGenome={resetGenomeAndStorage}
               onModeChange={handleModeChange}
               onExportWeights={handleExportWeights}
               onImportWeights={handleImportWeights}

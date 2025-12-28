@@ -18,7 +18,7 @@ export class MatchSetup {
     ): Fighter {
         // 1. HUMAN
         if (type === 'HUMAN') {
-            return new Fighter(x, defaultColor, false);
+            return new Fighter(x, '#22c55e', false); // Always green for human
         }
 
         // 2. AI (Neural Network)

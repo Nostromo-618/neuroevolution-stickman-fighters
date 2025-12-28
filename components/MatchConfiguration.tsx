@@ -7,11 +7,12 @@
  */
 
 import React from 'react';
-import { TrainingSettings, GameMode } from '../types';
+import { TrainingSettings, GameMode, GameState } from '../types';
 
 interface MatchConfigurationProps {
   settings: TrainingSettings;
   setSettings: React.Dispatch<React.SetStateAction<TrainingSettings>>;
+  gameState: GameState;
   onOpenScriptEditor: () => void;
   onOpenInfo: () => void;
 }
@@ -19,17 +20,25 @@ interface MatchConfigurationProps {
 const MatchConfiguration: React.FC<MatchConfigurationProps> = ({
   settings,
   setSettings,
+  gameState,
   onOpenScriptEditor,
   onOpenInfo
 }) => {
   const isTrainingActive = settings.gameMode === 'TRAINING';
+  // Disable opponent changes when match is running in Training mode (not just active, but actually running)
+  const isMatchRunning = isTrainingActive && settings.isRunning;
 
   const toggleTrainingMode = () => {
     const newMode = settings.gameMode === 'ARCADE' ? 'TRAINING' : 'ARCADE';
     setSettings(prev => ({
       ...prev,
       gameMode: newMode,
-      isRunning: false
+      isRunning: false,
+      // Set defaults when switching to Training mode
+      ...(newMode === 'TRAINING' && {
+        player1Type: prev.player1Type || 'AI',
+        player2Type: 'AI' // Player 2 is always AI in Training mode
+      })
     }));
   };
 
@@ -53,7 +62,7 @@ const MatchConfiguration: React.FC<MatchConfigurationProps> = ({
         {/* Visual Training Toggle */}
         <div className="flex items-center gap-2">
           <span className={`text-[10px] font-bold ${isTrainingActive ? 'text-blue-400' : 'text-slate-500'}`}>
-            {isTrainingActive ? 'EVOLVING' : 'SINGLE MATCH'}
+            {isTrainingActive ? 'TRAINING' : 'SINGLE MATCH'}
           </span>
           <button
             onClick={toggleTrainingMode}
@@ -68,19 +77,29 @@ const MatchConfiguration: React.FC<MatchConfigurationProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className={`grid gap-4 ${isTrainingActive ? 'grid-cols-1' : 'grid-cols-2'}`}>
         {/* Player 1 Selector */}
         <div className="space-y-1">
           <h2 className="text-[10px] font-bold text-red-400 uppercase tracking-widest flex justify-between">
             <span>Player 1 (Left)</span>
             {settings.player1Type !== 'HUMAN' && <span className="text-[8px] bg-red-900/50 px-1 rounded text-red-200">AUTO</span>}
           </h2>
-          <div className="flex flex-col gap-1 bg-slate-900 p-1 rounded-lg">
+          <div className={`flex flex-col gap-1 p-1 rounded-lg ${isMatchRunning ? 'bg-slate-900/50 opacity-50' : 'bg-slate-900'}`}>
             {(['HUMAN', 'AI', 'CUSTOM_A', 'CUSTOM_B'] as const).map(type => (
               <button
                 key={type}
-                onClick={() => setSettings(s => ({ ...s, player1Type: type }))}
-                className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player1Type === type ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                onClick={() => {
+                  if (!isMatchRunning) {
+                    setSettings(s => ({ 
+                      ...s, 
+                      player1Type: type,
+                      // When switching to HUMAN, set simulation speed to 1x
+                      ...(type === 'HUMAN' && { simulationSpeed: 1 })
+                    }));
+                  }
+                }}
+                disabled={isMatchRunning}
+                className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${isMatchRunning ? 'cursor-not-allowed opacity-50' : ''} ${settings.player1Type === type ? 'bg-red-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
                 {type === 'CUSTOM_A' ? 'SCRIPT A' : type === 'CUSTOM_B' ? 'SCRIPT B' : type}
               </button>
@@ -88,24 +107,41 @@ const MatchConfiguration: React.FC<MatchConfigurationProps> = ({
           </div>
         </div>
 
-        {/* Player 2 Selector */}
-        <div className="space-y-1">
-          <h2 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest flex justify-between">
-            <span>Player 2 (Right)</span>
-            <span className="text-[8px] bg-blue-900/50 px-1 rounded text-blue-200">AUTO</span>
-          </h2>
-          <div className="flex flex-col gap-1 bg-slate-900 p-1 rounded-lg">
-            {(['AI', 'CUSTOM_A', 'CUSTOM_B'] as const).map(type => (
-              <button
-                key={type}
-                onClick={() => setSettings(s => ({ ...s, player2Type: type }))}
-                className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === type ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-              >
-                {type === 'CUSTOM_A' ? 'SCRIPT A' : type === 'CUSTOM_B' ? 'SCRIPT B' : type}
-              </button>
-            ))}
+        {/* Player 2 Selector - Only shown in ARCADE mode */}
+        {!isTrainingActive && (
+          <div className="space-y-1">
+            <h2 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest flex justify-between">
+              <span>Player 2 (Right)</span>
+              <span className="text-[8px] bg-blue-900/50 px-1 rounded text-blue-200">AUTO</span>
+            </h2>
+            <div className="flex flex-col gap-1 bg-slate-900 p-1 rounded-lg">
+              {(['AI', 'CUSTOM_A', 'CUSTOM_B'] as const).map(type => (
+                <button
+                  key={type}
+                  onClick={() => setSettings(s => ({ ...s, player2Type: type }))}
+                  className={`py-1.5 rounded-md text-[10px] font-bold transition-all ${settings.player2Type === type ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                >
+                  {type === 'CUSTOM_A' ? 'SCRIPT A' : type === 'CUSTOM_B' ? 'SCRIPT B' : type}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Player 2 Info - Only shown in TRAINING mode */}
+        {isTrainingActive && (
+          <div className="space-y-1">
+            <h2 className="text-[10px] font-bold text-blue-400 uppercase tracking-widest flex justify-between">
+              <span>Player 2 (Right)</span>
+              <span className="text-[8px] bg-blue-900/50 px-1 rounded text-blue-200">AI</span>
+            </h2>
+            <div className="flex flex-col gap-1 bg-slate-900/50 p-1 rounded-lg border border-slate-700">
+              <div className="py-1.5 rounded-md text-[10px] font-bold text-slate-500 text-center">
+                Always AI (Training)
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Script Button (only if scripts selected) */}

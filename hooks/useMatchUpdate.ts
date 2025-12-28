@@ -50,7 +50,9 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
             if (!currentGameState.matchActive || matchEnded) break;
 
             const dummyInput = { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
-            let p1Input = (currentSettings.gameMode === 'ARCADE' && ctx.inputManager.current)
+            // Check if Player 1 is human (not AI, not custom) to get input
+            const isP1Human = !match.p1.isAi && !match.p1.isCustom;
+            let p1Input = (isP1Human && ctx.inputManager.current)
                 ? ctx.inputManager.current.getState()
                 : dummyInput;
 
@@ -84,6 +86,8 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
             p2.checkHit(p1);
 
             if (currentGameState.roundStatus === 'FIGHTING') {
+                // Decrement timer by 1/60 per physics step (60 steps = 1 second)
+                // This works correctly with simulation speed since we run multiple loops per frame
                 ctx.matchTimerRef.current -= 1 / 60;
             }
 

@@ -18,7 +18,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { TrainingSettings, GameMode } from '../types';
+import { TrainingSettings, GameMode, GameState } from '../types';
 import ScriptEditor from './ScriptEditor';
 import InfoModal from './InfoModal';
 import MatchConfiguration from './MatchConfiguration';
@@ -36,7 +36,9 @@ interface DashboardProps {
   fitnessHistory: { gen: number; fitness: number }[];            // Fitness data for chart
   currentGen: number;                                             // Current generation number
   bestFitness: number;                                            // Best fitness achieved
-  onReset: () => void;                                            // Reset population callback
+  gameState: GameState;                                          // Current game state (for matchActive check)
+  onResetMatch: () => void;                                       // Reset current match callback
+  onResetGenome: () => void;                                      // Reset genome and storage callback
   onModeChange: (mode: GameMode) => void;                         // Keeping prop for compatibility but effectively unused
   onExportWeights: () => void;                                    // Export weights callback
   onImportWeights: () => void;                                    // Import weights callback
@@ -53,7 +55,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   fitnessHistory,
   currentGen,
   bestFitness,
-  onReset,
+  gameState,
+  onResetMatch,
+  onResetGenome,
   onModeChange,
   onExportWeights,
   onImportWeights,
@@ -92,6 +96,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <MatchConfiguration
           settings={settings}
           setSettings={setSettings}
+          gameState={gameState}
           onOpenScriptEditor={() => setScriptEditorOpen(true)}
           onOpenInfo={() => setInfoModalOpen(true)}
         />
@@ -120,7 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             )}
           </button>
           <button
-            onClick={onReset}
+            onClick={onResetMatch}
             className="py-3 px-4 bg-slate-700 hover:bg-slate-600 rounded-lg font-bold text-slate-200 transition-all border border-slate-600"
           >
             RESET
@@ -131,8 +136,10 @@ const Dashboard: React.FC<DashboardProps> = ({
           settings={settings}
           setSettings={setSettings}
           bestFitness={bestFitness}
+          gameState={gameState}
           onExportWeights={onExportWeights}
           onImportWeights={onImportWeights}
+          onResetGenome={onResetGenome}
         />
 
         <FitnessChart
@@ -145,7 +152,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         {/* Usage Hint */}
         {isTrainingActive && (
           <p className="text-[10px] text-slate-500 text-center italic">
-            Visualizing evolution... Uncheck "EVOLVING" to play manually.
+            Visualizing evolution... Uncheck "TRAINING" to play manually.
           </p>
         )}
 

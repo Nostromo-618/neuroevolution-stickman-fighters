@@ -1,3 +1,10 @@
+---
+alwaysApply: true
+---
+---
+trigger: always_on
+---
+
 # Project Coding Standard - Stability & Safety Rules
 
 This project adheres to a strict set of 10 stability and safety rules, adapted from NASA JPL's "Power of 10" standards for modern TypeScript/React applications.
@@ -20,7 +27,7 @@ This project adheres to a strict set of 10 stability and safety rules, adapted f
 * **React Optimization:** Use `React.memo`, `useMemo`, and `useCallback` strategically in the hot-path (canvas/controls), but strictly ensure dependency arrays are exhaustive.
 
 ## 4. Function & Component Granularity
-* **One Page Rule:** No function or React component should exceed 120 lines of logic.
+* **One Page Rule:** No function or React component should exceed 60 lines of logic.
 * **Single Responsibility:** If a component grows large, separate "View" (JSX) from "Logic" (Hooks). Extract logic into a custom `useFeature` hook.
 * **Hook Composition:** Extract complex state logic into dedicated, testable hooks that return data/methods, not JSX.
 
