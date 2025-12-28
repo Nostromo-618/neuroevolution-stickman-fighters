@@ -16,6 +16,7 @@ import { FighterAction, Genome, InputState } from '../types';
 import { predict } from './NeuralNetwork';
 import { ScriptWorkerManager, FighterState as CustomFighterState } from './CustomScriptRunner';
 import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
+import { applyFitnessShaping } from './FitnessShaping';
 
 // =============================================================================
 // GAMEPLAY CONSTANTS
@@ -130,7 +131,7 @@ export class Fighter {
     }
     else if (this.isAi && this.genome) {
       activeInput = this.processAi(opponent);
-      this.applyFitnessShaping(opponent);
+      applyFitnessShaping(this, opponent, this.genome);
     }
 
     // === UPDATE LOOP ===
@@ -161,48 +162,6 @@ export class Fighter {
     return true;
   }
 
-  /** Applies fitness rewards/penalties during training */
-  private applyFitnessShaping(opponent: Fighter): void {
-    if (!this.genome || opponent.health <= 0) return;
-
-    const dist = Math.abs(this.x - opponent.x);
-
-    // 1. PROXIMITY REWARD
-    if (dist < 400) this.genome.fitness += 0.005;
-    if (dist < 200) this.genome.fitness += 0.02;
-    if (dist < 80) this.genome.fitness += 0.05;
-
-    // 2. FACING REWARD
-    const dx = opponent.x - this.x;
-    const correctFacing = (dx > 0 && this.direction === 1) || (dx < 0 && this.direction === -1);
-    if (correctFacing) this.genome.fitness += 0.02;
-
-    // 3. AGGRESSION REWARD
-    if (dist < 100 && (this.state === FighterAction.PUNCH || this.state === FighterAction.KICK)) {
-      this.genome.fitness += 0.1;
-    }
-
-    // 4. TIME PENALTY
-    this.genome.fitness -= 0.005;
-
-    // 5. EDGE/CORNER PENALTY
-    const edgeThreshold = 60;
-    if (this.x < edgeThreshold || this.x > CANVAS_WIDTH - this.width - edgeThreshold) {
-      this.genome.fitness -= 0.04;
-    }
-
-    // 6. CENTER CONTROL BONUS
-    const centerX = CANVAS_WIDTH / 2;
-    const distFromCenter = Math.abs(this.x + this.width / 2 - centerX);
-    if (distFromCenter < 150) {
-      this.genome.fitness += 0.015;
-    }
-
-    // 7. MOVEMENT REWARD
-    if (Math.abs(this.vx) > 0.5) {
-      this.genome.fitness += 0.008;
-    }
-  }
 
   /** Updates energy regeneration and action cooldowns */
   private updateEnergyAndCooldowns(): void {
