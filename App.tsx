@@ -50,6 +50,7 @@ import { useCustomScriptWorkers } from './hooks/useCustomScriptWorkers';
 import { useBackgroundTraining } from './hooks/useBackgroundTraining';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useGenomeImportExport } from './hooks/useGenomeImportExport';
+import { useDisclaimer } from './hooks/useDisclaimer';
 import { InputManager } from './services/InputManager';
 import { Fighter, CANVAS_WIDTH, CANVAS_HEIGHT } from './services/GameEngine';
 import { createRandomNetwork, mutateNetwork, crossoverNetworks } from './services/NeuralNetwork';
@@ -83,10 +84,16 @@ const App = () => {
     resetMatchTimer
   } = useGameState();
 
-  const [disclaimerStatus, setDisclaimerStatus] = useState<'PENDING' | 'ACCEPTED' | 'DECLINED'>('PENDING');
-
   // Toast notifications (must be before hooks that use addToast)
   const { toasts, addToast, removeToast } = useToast();
+
+  /* Disclaimer managed by hook */
+  const {
+    disclaimerStatus,
+    handleAcceptDisclaimer,
+    handleDeclineDisclaimer,
+    handleReturnToDisclaimer
+  } = useDisclaimer();
 
   /* Population managed by hook */
   const {
@@ -216,12 +223,6 @@ const App = () => {
   // useGameLoop handles update cycle, requestRef, and cleanup
 
   useEffect(() => {
-    // Check disclaimer acceptance
-    const accepted = localStorage.getItem('neurofight_disclaimer_accepted');
-    if (accepted === 'true') {
-      setDisclaimerStatus('ACCEPTED');
-    }
-
     // Initialize InputManager here to avoid side effects in render
     inputManager.current = new InputManager();
 
@@ -234,19 +235,6 @@ const App = () => {
       inputManager.current?.destroy();
     };
   }, []); // Only run once on mount
-
-  const handleAcceptDisclaimer = () => {
-    localStorage.setItem('neurofight_disclaimer_accepted', 'true');
-    setDisclaimerStatus('ACCEPTED');
-  };
-
-  const handleDeclineDisclaimer = () => {
-    setDisclaimerStatus('DECLINED');
-  };
-
-  const handleReturnToDisclaimer = () => {
-    setDisclaimerStatus('PENDING');
-  };
 
   // Restart match when population size changes (but keep best genome)
   useEffect(() => {
