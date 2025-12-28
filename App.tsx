@@ -49,9 +49,10 @@ import { usePopulation } from './hooks/usePopulation';
 import { useCustomScriptWorkers } from './hooks/useCustomScriptWorkers';
 import { useBackgroundTraining } from './hooks/useBackgroundTraining';
 import { useGameLoop } from './hooks/useGameLoop';
+import { useGenomeImportExport } from './hooks/useGenomeImportExport';
 import { InputManager } from './services/InputManager';
 import { Fighter, CANVAS_WIDTH, CANVAS_HEIGHT } from './services/GameEngine';
-import { createRandomNetwork, mutateNetwork, crossoverNetworks, exportGenome, importGenome, ImportResult } from './services/NeuralNetwork';
+import { createRandomNetwork, mutateNetwork, crossoverNetworks } from './services/NeuralNetwork';
 import { loadScript } from './services/CustomScriptRunner';
 import { Genome, TrainingSettings, GameState, OpponentType } from './types';
 import GameCanvas from './components/GameCanvas';
@@ -84,6 +85,9 @@ const App = () => {
 
   const [disclaimerStatus, setDisclaimerStatus] = useState<'PENDING' | 'ACCEPTED' | 'DECLINED'>('PENDING');
 
+  // Toast notifications (must be before hooks that use addToast)
+  const { toasts, addToast, removeToast } = useToast();
+
   /* Population managed by hook */
   const {
     populationRef,
@@ -94,10 +98,22 @@ const App = () => {
     getBestGenome
   } = usePopulation();
 
-  const [pendingImport, setPendingImport] = useState<{ genome: Genome; generation: number } | null>(null);
-
-  // Toast notifications
-  const { toasts, addToast, removeToast } = useToast();
+  /* Genome import/export managed by hook */
+  const {
+    pendingImport,
+    handleExportWeights,
+    handleImportWeights,
+    handleImportChoice,
+    setPendingImport
+  } = useGenomeImportExport({
+    getBestGenome,
+    gameState,
+    bestTrainedGenomeRef,
+    populationRef,
+    setGameState,
+    gameStateRef,
+    addToast
+  });
 
   // --- Refs for Game Loop & State Access ---
   // populationRef & bestTrainedGenomeRef managed by usePopulation
@@ -252,86 +268,6 @@ const App = () => {
     }
   };
 
-  // --- Handlers ---
-  const handleExportWeights = () => {
-    const bestGenome = getBestGenome();
-    if (!bestGenome) {
-      addToast('error', 'No trained AI available. Train the AI first!');
-      return;
-    }
-
-    // Pass current generation to export for continuation support
-    const json = exportGenome(bestGenome, gameState.generation);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `neurofight-weights-gen${gameState.generation}-fitness${bestGenome.fitness.toFixed(0)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    addToast('success', `Weights exported (Gen ${gameState.generation})!`);
-  };
-
-  const handleImportWeights = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        const result = importGenome(text);
-
-        if (result.success === false) {
-          addToast('error', result.error);
-          return;
-        }
-
-        // Show inline UI for user choice with generation info
-        setPendingImport({ genome: result.genome, generation: result.generation });
-        addToast('info', `Loaded: Gen ${result.generation}, Fitness ${result.genome.fitness.toFixed(0)}`);
-      };
-      reader.readAsText(file);
-    };
-    input.click();
-  };
-
-  const handleImportChoice = () => {
-    if (!pendingImport) return;
-
-    const { genome, generation } = pendingImport;
-
-    // Store imported genome as best for ARCADE mode
-    const arcadeGenome = { ...genome, id: `imported-${Date.now()}` };
-    bestTrainedGenomeRef.current = arcadeGenome;
-
-    // Seed the first 25% of population with copies of imported genome
-    // This helps preserve good genes through crossover
-    const pop = populationRef.current;
-    if (pop.length > 0) {
-      const seedCount = Math.max(2, Math.floor(pop.length / 4));
-      for (let i = 0; i < seedCount && i < pop.length; i++) {
-        pop[i] = {
-          ...genome,
-          fitness: 0,
-          matchesWon: 0,
-          id: `imported-${Date.now()}-${i}`
-        };
-      }
-    }
-
-    // Restore generation number so training continues from where it left off
-    setGameState(prev => ({ ...prev, generation: generation }));
-    gameStateRef.current.generation = generation;
-
-    addToast('success', `Imported! Continuing from Gen ${generation}`);
-    setPendingImport(null);
-  };
 
   if (disclaimerStatus === 'DECLINED') {
     return <GoodbyeScreen onReturn={handleReturnToDisclaimer} />;
