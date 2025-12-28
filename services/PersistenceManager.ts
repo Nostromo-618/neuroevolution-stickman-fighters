@@ -7,7 +7,7 @@
  * Ensures user progress (settings, trained AI) is preserved across sessions.
  */
 
-import { TrainingSettings } from '../App';
+import { TrainingSettings } from '../types';
 import { Genome } from '../types';
 import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
 
@@ -45,7 +45,7 @@ export const loadSettings = (): Partial<TrainingSettings> | null => {
 const serializeGenome = (genome: Genome): any => {
     return {
         ...genome,
-        network: genome.network.toJSON() // Use class-specific serialization
+        network: genome.network // Use class-specific serialization
     };
 };
 

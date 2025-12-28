@@ -43,10 +43,16 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { useGameSettings } from './hooks/useGameSettings';
+import { useGameState } from './hooks/useGameState';
+import { usePopulation } from './hooks/usePopulation';
+import { useCustomScriptWorkers } from './hooks/useCustomScriptWorkers';
+import { useBackgroundTraining } from './hooks/useBackgroundTraining';
+import { useGameLoop } from './hooks/useGameLoop';
 import { InputManager } from './services/InputManager';
 import { Fighter, CANVAS_WIDTH, CANVAS_HEIGHT } from './services/GameEngine';
 import { createRandomNetwork, mutateNetwork, crossoverNetworks, exportGenome, importGenome, ImportResult } from './services/NeuralNetwork';
-import { loadScript, compileScript, ScriptWorkerManager } from './services/CustomScriptRunner';
+import { loadScript } from './services/CustomScriptRunner';
 import { Genome, TrainingSettings, GameState, OpponentType } from './types';
 import GameCanvas from './components/GameCanvas';
 import Dashboard from './components/Dashboard';
@@ -64,374 +70,75 @@ import NeuralNetworkVisualizer from './components/NeuralNetworkVisualizer';
 
 const App = () => {
   // --- State ---
-  const [settings, setSettings] = useState<TrainingSettings>({
-    populationSize: 48,  // Increased from 24 for better genetic diversity
-    mutationRate: 0.1,
-    hiddenLayers: [13],
-    fps: 60,
-    simulationSpeed: 1,
-    gameMode: 'ARCADE',
-    isRunning: false, // Start paused
-    backgroundTraining: false, // Background training off by default
-    opponentType: 'AI', // Default to AI opponent
-    player1Type: 'HUMAN',
-    player2Type: 'AI'
-  });
+  const { settings, setSettings, settingsRef } = useGameSettings();
 
-  const [gameState, setGameState] = useState<GameState>({
-    player1Health: 100, player2Health: 100,
-    player1Energy: 100, player2Energy: 100,
-    timeRemaining: 90, generation: 1, bestFitness: 0,
-    matchActive: false,
-    winner: null,
-    roundStatus: 'WAITING'
-  });
+  /* Game State managed by hook */
+  const {
+    gameState,
+    setGameState,
+    gameStateRef,
+    matchTimerRef,
+    resetMatchTimer
+  } = useGameState();
 
   const [disclaimerStatus, setDisclaimerStatus] = useState<'PENDING' | 'ACCEPTED' | 'DECLINED'>('PENDING');
 
-  const [fitnessHistory, setFitnessHistory] = useState<{ gen: number, fitness: number }[]>([]);
+  /* Population managed by hook */
+  const {
+    populationRef,
+    bestTrainedGenomeRef,
+    fitnessHistory,
+    setFitnessHistory,
+    initPopulation,
+    getBestGenome
+  } = usePopulation();
+
   const [pendingImport, setPendingImport] = useState<{ genome: Genome; generation: number } | null>(null);
 
   // Toast notifications
   const { toasts, addToast, removeToast } = useToast();
 
   // --- Refs for Game Loop & State Access ---
-  const populationRef = useRef<Genome[]>([]);
-  const bestTrainedGenomeRef = useRef<Genome | null>(null);
+  // populationRef & bestTrainedGenomeRef managed by usePopulation
   const activeMatchRef = useRef<{ p1: Fighter, p2: Fighter, p1GenomeIdx: number, p2GenomeIdx: number } | null>(null);
   const currentMatchIndex = useRef(0);
   const inputManager = useRef<InputManager | null>(null);
-  const requestRef = useRef<number | null>(null);
+  // requestRef is now managed by useGameLoop
 
   // We use a separate ref for timer logic to ensure accuracy during high-speed simulation steps
   // without waiting for React state updates.
-  const matchTimerRef = useRef(90);
+  // matchTimerRef managed by useGameState
 
   // Background training refs
-  const workerPoolRef = useRef<WorkerPool | null>(null);
-  const isWorkerTrainingRef = useRef<boolean>(false);
+  // workerPoolRef and isWorkerTrainingRef are now managed by useBackgroundTraining
 
   // Custom script worker for secure isolated execution
   // We now have two workers to support Custom vs Custom matches
-  const customScriptWorkerARef = useRef<ScriptWorkerManager | null>(null);
-  const customScriptWorkerBRef = useRef<ScriptWorkerManager | null>(null);
+  const { customScriptWorkerARef, customScriptWorkerBRef, recompileCustomScript } = useCustomScriptWorkers(settings, addToast);
 
-  const settingsRef = useRef(settings);
-  const gameStateRef = useRef(gameState);
-
-  useEffect(() => { settingsRef.current = settings; }, [settings]);
-  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+  // const settingsRef = useRef(settings); // MOVED to useGameSettings
+  // gameStateRef managed by useGameState
+  // useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
   // Store addToast in a ref to avoid dependency issues
   const addToastRef = useRef(addToast);
   useEffect(() => { addToastRef.current = addToast; }, [addToast]);
 
-  // Pre-compile custom script workers based on selection
-  useEffect(() => {
-    const compileWorker = async (slot: 'slot1' | 'slot2', workerRef: React.MutableRefObject<ScriptWorkerManager | null>) => {
-      // loadScript always returns code (default template if nothing saved)
-      const scriptCode = loadScript(slot);
+  // initPopulation & getBestGenome managed by usePopulation
 
-      if (!workerRef.current) {
-        workerRef.current = new ScriptWorkerManager();
-      }
-
-      if (!workerRef.current.isReady()) {
-        const result = await workerRef.current.compile(scriptCode);
-        const name = slot === 'slot1' ? 'Script A' : 'Script B';
-        if (!result.success) {
-          addToastRef.current('error', `${name} error: ${result.error}`);
-        }
-        // Success is silent - no need to spam the user with "compiled successfully"
-      }
-    };
-
-    // Check if we need Worker A (Slot 1)
-    const needsA =
-      (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM_A') ||
-      (settings.gameMode === 'ARCADE' && (settings.player1Type === 'CUSTOM_A' || settings.player2Type === 'CUSTOM_A'));
-
-    // Check if we need Worker B (Slot 2)
-    const needsB =
-      (settings.gameMode === 'TRAINING' && settings.opponentType === 'CUSTOM_B') ||
-      (settings.gameMode === 'ARCADE' && (settings.player1Type === 'CUSTOM_B' || settings.player2Type === 'CUSTOM_B'));
-
-    if (needsA) compileWorker('slot1', customScriptWorkerARef);
-    if (needsB) compileWorker('slot2', customScriptWorkerBRef);
-
-  }, [settings.gameMode, settings.opponentType, settings.player1Type, settings.player2Type]);
-
-  // Function to recompile custom script (called after saving from editor)
-  const recompileCustomScript = useCallback(async () => {
-    // Force recompile logic by clearing ready state or just calling compile again
-    // We'll just define a helper here similar to above but forced
-
-    // We don't know exactly which slot was saved, so we recheck both if they are active
-    const recompileSlot = async (slot: 'slot1' | 'slot2', workerRef: React.MutableRefObject<ScriptWorkerManager | null>) => {
-      const scriptCode = loadScript(slot);
-      if (!scriptCode) return;
-
-      if (!workerRef.current) {
-        workerRef.current = new ScriptWorkerManager();
-      }
-
-      const result = await workerRef.current.compile(scriptCode);
-      const name = slot === 'slot1' ? 'Script A' : 'Script B';
-
-      if (result.success) {
-        addToastRef.current('success', `✏️ ${name} recompiled!`);
-      } else {
-        addToastRef.current('error', `${name} error: ${result.error}.`);
-      }
-    };
-
-    // Always try to recompile active workers when saved
-    if (customScriptWorkerARef.current) recompileSlot('slot1', customScriptWorkerARef);
-    if (customScriptWorkerBRef.current) recompileSlot('slot2', customScriptWorkerBRef);
-
-  }, []);
-
-  // --- Initialization ---
-  const initPopulation = useCallback((clearBest: boolean = true) => {
-    const pop: Genome[] = [];
-    for (let i = 0; i < settings.populationSize; i++) {
-      pop.push({
-        id: `gen1-${i}`,
-        network: createRandomNetwork(),
-        fitness: 0,
-        matchesWon: 0
-      });
-    }
-    populationRef.current = pop;
-    if (clearBest) {
-      bestTrainedGenomeRef.current = null; // Only clear when explicitly requested
-    }
+  // Wrapper to init population with current settings
+  const resetPopulation = useCallback((clearBest: boolean = true) => {
+    initPopulation(settings, clearBest);
     currentMatchIndex.current = 0;
-    activeMatchRef.current = null; // Reset match so loop spawns a new one
-  }, [settings.populationSize]);
+    activeMatchRef.current = null;
+  }, [settings, initPopulation]);
 
-  const getBestGenome = useCallback((): Genome | null => {
-    // Return the best trained genome if available
-    if (bestTrainedGenomeRef.current) return bestTrainedGenomeRef.current;
-    // Fallback to current population if no best trained yet
-    if (populationRef.current.length === 0) return null;
-    const sorted = [...populationRef.current].sort((a, b) => b.fitness - a.fitness);
-    return sorted[0];
-  }, []);
-
-  const startMatch = useCallback(() => {
-    matchTimerRef.current = 90; // Reset timer (90 seconds for longer matches)
-
-    // Helper to create a fighter based on type
-    const createFighter = (
-      type: 'HUMAN' | 'AI' | 'SCRIPTED' | 'CUSTOM_A' | 'CUSTOM_B',
-      x: number,
-      defaultColor: string,
-      isP2: boolean
-    ): Fighter => {
-      // 1. HUMAN
-      if (type === 'HUMAN') {
-        const f = new Fighter(x, defaultColor, false);
-        return f;
-      }
-
-      // 2. AI (Neural Network)
-      if (type === 'AI') {
-        const bestGenome = getBestGenome();
-        const genomeToUse = bestGenome || { id: 'cpu', network: createRandomNetwork(), fitness: 0, matchesWon: 0 };
-        const f = new Fighter(x, defaultColor, true, genomeToUse);
-        return f;
-      }
-
-
-      // 4. CUSTOM SCRIPT A
-      if (type === 'CUSTOM_A') {
-        const f = new Fighter(x, '#a855f7', false);
-        const worker = customScriptWorkerARef.current;
-        if (worker && worker.isReady()) {
-          f.isCustom = true;
-          f.scriptWorker = worker;
-        } else {
-          f.isCustom = true; // Fallback silently - user was notified on compile
-        }
-        return f;
-      }
-
-      // 5. CUSTOM SCRIPT B
-      if (type === 'CUSTOM_B') {
-        const f = new Fighter(x, '#14b8a6', false); // Teal - distinct from Script A purple
-        const worker = customScriptWorkerBRef.current;
-        if (worker && worker.isReady()) {
-          f.isCustom = true;
-          f.scriptWorker = worker;
-        } else {
-          f.isCustom = true; // Fallback silently - user was notified on compile
-        }
-        return f;
-      }
-
-      // Fallback
-      return new Fighter(x, defaultColor, false);
-    };
-
-    // If Training Mode
-    if (settingsRef.current.gameMode === 'TRAINING') {
-      const popSize = populationRef.current.length;
-      const useCustomA = settingsRef.current.opponentType === 'CUSTOM_A';
-      const useCustomB = settingsRef.current.opponentType === 'CUSTOM_B';
-      const useCustom = useCustomA || useCustomB;
-
-      // When training vs CUSTOM:
-      // - Each genome fights one match against the custom opponent
-      // - This helps the NN learn to beat a specific strategy
-      const totalMatches = useCustom ? popSize : Math.ceil(popSize / 2);
-
-      if (currentMatchIndex.current >= totalMatches) {
-        evolve();
-        return;
-      }
-
-      // Randomize spawn positions to encourage diverse behaviors
-      const spawnOffset1 = Math.random() * 100 - 50; // -50 to +50
-      const spawnOffset2 = Math.random() * 100 - 50;
-
-      if (useCustom) {
-        // TRAINING VS CUSTOM: Single NN genome vs Custom opponent
-        const genomeIdx = currentMatchIndex.current;
-        const genome = populationRef.current[genomeIdx];
-
-        // 50% chance to swap sides for variety
-        const swapSides = Math.random() > 0.5;
-
-        // Color: purple for Script A, teal for Script B
-        const opponentColor = useCustomA ? '#a855f7' : '#14b8a6';
-
-        // Get pre-compiled script worker (A or B based on selection)
-        const scriptWorker = useCustomA
-          ? customScriptWorkerARef.current
-          : customScriptWorkerBRef.current;
-
-        if (swapSides) {
-          // NN on right, Custom on left
-          const f1 = new Fighter(280 + spawnOffset1, opponentColor, false);
-          if (useCustom && scriptWorker && scriptWorker.isReady()) {
-            f1.isCustom = true;
-            f1.scriptWorker = scriptWorker;
-          } else {
-            // Fallback if worker not ready - treat as basic dummy or error?
-            // Since we removed isScripted, we can just leave it as basic non-AI fighter (dummy)
-            // or maybe we should default to basic AI?
-            // For now, let's just leave it as basic fighter (it will stand still)
-          }
-          const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, genome); // NN (Blue)
-          f2.direction = -1;
-          activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: genomeIdx };
-        } else {
-          // NN on left, Custom on right
-          const f1 = new Fighter(280 + spawnOffset1, '#3b82f6', true, genome); // NN (Blue)
-          const f2 = new Fighter(470 + spawnOffset2, opponentColor, false);
-          if (useCustom && scriptWorker && scriptWorker.isReady()) {
-            f2.isCustom = true;
-            f2.scriptWorker = scriptWorker;
-          } else {
-            // Fallback
-          }
-          f2.direction = -1;
-          activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: genomeIdx, p2GenomeIdx: -1 };
-        }
-
-      } else {
-        // TRAINING VS AI: NN vs NN (original behavior)
-        const p1Idx = currentMatchIndex.current * 2;
-        let p2Idx = p1Idx + 1;
-
-        // Handle odd population: last genome fights a random opponent
-        if (p2Idx >= popSize) {
-          p2Idx = Math.floor(Math.random() * p1Idx); // Pick random from already-paired genomes
-        }
-
-        const g1 = populationRef.current[p1Idx];
-        const g2 = populationRef.current[p2Idx];
-
-        // CRITICAL: Randomly swap which genome plays which side (50% chance)
-        // This ensures AI learns to fight from BOTH sides of the arena
-        const swapSides = Math.random() > 0.5;
-        const leftGenome = swapSides ? g2 : g1;
-        const rightGenome = swapSides ? g1 : g2;
-
-        const f1 = new Fighter(280 + spawnOffset1, '#ef4444', true, leftGenome);
-        const f2 = new Fighter(470 + spawnOffset2, '#3b82f6', true, rightGenome);
-        f2.direction = -1;
-
-        activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: p1Idx, p2GenomeIdx: p2Idx };
-      }
-    }
-    // If Arcade Mode (Human vs Best AI, Scripted, or Custom)
-    else {
-      const p1Type = settingsRef.current.player1Type;
-      const p2Type = settingsRef.current.player2Type;
-
-      // Randomize spawn positions slightly for variety
-      const spawnOffset = Math.random() * 60 - 30; // -30 to +30
-
-      // Create Fighters
-      const f1 = createFighter(p1Type, 280 + spawnOffset, '#ef4444', false);
-      const f2 = createFighter(p2Type, 470 - spawnOffset, '#3b82f6', true);
-      f2.direction = -1;
-
-      activeMatchRef.current = { p1: f1, p2: f2, p1GenomeIdx: -1, p2GenomeIdx: -1 };
-    }
-
-    const isArcade = settingsRef.current.gameMode === 'ARCADE';
-
-    setGameState(prev => ({
-      ...prev,
-      matchActive: true,
-      timeRemaining: 90,
-      winner: null,
-      roundStatus: isArcade ? 'WAITING' : 'FIGHTING'
-    }));
-
-    // Sync ref immediately to prevent "twitch" on first frame
-    gameStateRef.current.roundStatus = isArcade ? 'WAITING' : 'FIGHTING';
-
-    // Schedule fight start ONLY for Arcade mode
-    if (isArcade) {
-      setTimeout(() => {
-        if (activeMatchRef.current) {
-          // Sync ref immediately
-          if (gameStateRef.current) gameStateRef.current.roundStatus = 'FIGHTING';
-          setGameState(prev => ({ ...prev, roundStatus: 'FIGHTING' }));
-        }
-      }, 1500);
-    }
-  }, [getBestGenome]); // Removed addToast, should be stable now or use addToastRef
-
-  // Immediate update when switching fighters in Arcade Mode
-  useEffect(() => {
-    // Only update if in Arcade mode and not currently mid-fight (waiting or paused)
-    // or if we just want to swap the visual sprites immediately
-    if (settings.gameMode === 'ARCADE' && gameState.roundStatus === 'WAITING') {
-      startMatch();
-    }
-  }, [
-    settings.gameMode,
-    settings.player1Type,
-    settings.player2Type,
-    settings.opponentType, // For Training mode if we want immediate feedback there too
-    startMatch,
-    // gameState.roundStatus // REMOVE THIS to avoid loop if startMatch resets it to WAITING
-  ]);
-
-  const evolve = () => {
+  const evolve = useCallback(() => {
     const pop = populationRef.current;
-
-    // Sort by fitness
     pop.sort((a, b) => b.fitness - a.fitness);
-
     const best = pop[0];
 
-    // Store the best genome ever seen (with its fitness intact)
+    // Store best
     if (!bestTrainedGenomeRef.current || best.fitness > bestTrainedGenomeRef.current.fitness) {
       bestTrainedGenomeRef.current = JSON.parse(JSON.stringify(best));
     }
@@ -439,29 +146,20 @@ const App = () => {
     setFitnessHistory(prev => [...prev.slice(-20), { gen: gameStateRef.current.generation, fitness: best.fitness }]);
     setGameState(prev => ({ ...prev, bestFitness: best.fitness, generation: prev.generation + 1 }));
 
-    // Elitism: Keep best 2
     const currentGen = gameStateRef.current.generation;
     const newPop: Genome[] = [
       { ...pop[0], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-0` },
       { ...pop[1], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-1` }
     ];
 
-    // Fill rest with adaptive mutation rate
-    // Starts higher (30%) and decays faster to 5% minimum over ~30 generations
-    // This encourages more exploration early, then refinement later
     const adaptiveRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
-
-    // Selection pool: top 25% of population (stronger selection pressure)
     const selectionPoolSize = Math.max(2, Math.floor(pop.length / 4));
 
     while (newPop.length < settingsRef.current.populationSize) {
-      // Tournament Selection from top 25% (stronger pressure than 50%)
       const parentA = pop[Math.floor(Math.random() * selectionPoolSize)];
       const parentB = pop[Math.floor(Math.random() * selectionPoolSize)];
-
       let childNet = crossoverNetworks(parentA.network, parentB.network);
       childNet = mutateNetwork(childNet, adaptiveRate);
-
       newPop.push({
         id: `gen${currentGen + 1}-${newPop.length}`,
         network: childNet,
@@ -473,283 +171,32 @@ const App = () => {
     populationRef.current = newPop;
     currentMatchIndex.current = 0;
 
-    // Trigger next match immediately
-    startMatch();
-  };
+    // startMatch is called by the loop automatically when activeMatchRef is null
+  }, [populationRef, bestTrainedGenomeRef, setFitnessHistory, gameStateRef, setGameState, settingsRef]);
 
-  // --- Background Training with Web Workers ---
-  // Runs full generations in parallel using multiple CPU cores
-  const runWorkerTrainingGeneration = useCallback(async () => {
-    // Prevent concurrent runs
-    if (isWorkerTrainingRef.current) return;
-    isWorkerTrainingRef.current = true;
+  /* Game Loop managed by hook */
+  const { update, startMatch, requestRef } = useGameLoop({
+    settings,
+    settingsRef,
+    gameStateRef,
+    setGameState,
+    activeMatchRef,
+    currentMatchIndex,
+    populationRef,
+    getBestGenome,
+    matchTimerRef,
+    inputManager,
+    customScriptWorkerARef,
+    customScriptWorkerBRef,
+    evolve,
+    addToast
+  });
 
-    const pop = populationRef.current;
-    if (pop.length === 0) {
-      isWorkerTrainingRef.current = false;
-      return;
-    }
 
-    // Initialize worker pool if not exists
-    if (!workerPoolRef.current) {
-      workerPoolRef.current = new WorkerPool();
-      // Give workers a moment to initialize
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
 
-    const pool = workerPoolRef.current;
 
-    try {
-      // Create jobs for all matches in this generation
-      const jobs = WorkerPool.createJobsFromPopulation(pop);
 
-      // Run all matches in parallel across workers
-      const results = await pool.runMatches(jobs);
-
-      // Apply results back to population
-      WorkerPool.applyResults(pop, jobs, results);
-
-      // Evolve the population
-      pop.sort((a, b) => b.fitness - a.fitness);
-
-      const best = pop[0];
-
-      // Update best trained genome if this one is better
-      if (!bestTrainedGenomeRef.current || best.fitness > bestTrainedGenomeRef.current.fitness) {
-        bestTrainedGenomeRef.current = JSON.parse(JSON.stringify(best));
-      }
-
-      const currentGen = gameStateRef.current.generation;
-
-      // Update UI state
-      setFitnessHistory(prev => [...prev.slice(-20), { gen: currentGen, fitness: best.fitness }]);
-      setGameState(prev => ({ ...prev, bestFitness: best.fitness, generation: prev.generation + 1 }));
-
-      // Create new generation
-      const popSize = pop.length;
-      const newPop: Genome[] = [
-        { ...pop[0], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-0` },
-        { ...pop[1], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-1` }
-      ];
-
-      const adaptiveRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
-      const selectionPoolSize = Math.max(2, Math.floor(pop.length / 4));
-
-      while (newPop.length < popSize) {
-        const parentA = pop[Math.floor(Math.random() * selectionPoolSize)];
-        const parentB = pop[Math.floor(Math.random() * selectionPoolSize)];
-        let childNet = crossoverNetworks(parentA.network, parentB.network);
-        childNet = mutateNetwork(childNet, adaptiveRate);
-        newPop.push({
-          id: `gen${currentGen + 1}-${newPop.length}`,
-          network: childNet,
-          fitness: 0,
-          matchesWon: 0
-        });
-      }
-
-      populationRef.current = newPop;
-      currentMatchIndex.current = 0;
-
-    } catch (error) {
-      console.error('Worker training error:', error);
-    }
-
-    isWorkerTrainingRef.current = false;
-  }, []);
-
-  // Start/stop background training based on settings
-  useEffect(() => {
-    if (settings.backgroundTraining && settings.gameMode === 'ARCADE') {
-      // Start background training with Web Workers
-      // Run generations continuously
-      const runContinuousTraining = async () => {
-        while (settingsRef.current.backgroundTraining && settingsRef.current.gameMode === 'ARCADE') {
-          await runWorkerTrainingGeneration();
-          // Small delay between generations to prevent UI blocking
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
-      };
-
-      runContinuousTraining();
-
-    } else {
-      // Stop background training - the async loop will check settingsRef and exit
-      // Terminate workers when turning off background training
-      if (workerPoolRef.current && !settings.backgroundTraining) {
-        // Don't terminate, just let loops exit - we may need workers again
-      }
-    }
-
-    return () => {
-      // Cleanup workers on unmount
-      if (workerPoolRef.current) {
-        workerPoolRef.current.terminate();
-        workerPoolRef.current = null;
-      }
-    };
-  }, [settings.backgroundTraining, settings.gameMode, runWorkerTrainingGeneration]);
-
-  // --- Game Loop ---
-  const update = () => {
-    // 1. Ensure a match exists to render
-    if (!activeMatchRef.current && populationRef.current.length > 0) {
-      startMatch();
-      requestRef.current = requestAnimationFrame(update);
-      return;
-    }
-
-    const currentSettings = settingsRef.current;
-    const currentGameState = gameStateRef.current;
-
-    // 2. If Paused, skip physics but keep loop alive
-    if (!currentSettings.isRunning || !activeMatchRef.current) {
-      requestRef.current = requestAnimationFrame(update);
-      return;
-    }
-
-    // 3. Game Physics Logic
-    const match = activeMatchRef.current;
-    if (match) {
-      const { p1, p2 } = match;
-      const loops = currentSettings.gameMode === 'ARCADE' ? 1 : currentSettings.simulationSpeed;
-
-      let matchEnded = false;
-
-      for (let i = 0; i < loops; i++) {
-        if (!currentGameState.matchActive || matchEnded) break;
-
-        const dummyInput = { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
-
-        // Player 1 Input
-        let p1Input = (currentSettings.gameMode === 'ARCADE' && inputManager.current)
-          ? inputManager.current.getState()
-          : dummyInput;
-
-        // If WAITING (Round start), neutralize all inputs to let physics settle
-        if (currentGameState.roundStatus === 'WAITING') {
-          p1Input = dummyInput;
-          // Force AI to be idle too (handled below by not processing p2 updates or overriding it)
-        }
-
-        p1.update(p1Input, p2);
-
-        // Player 2 Update (AI)
-        // If WAITING, pass dummy input to force idle
-        if (currentGameState.roundStatus === 'WAITING') {
-          p2.update(dummyInput, p1);
-        } else {
-          p2.update(dummyInput, p1); // Normal AI update (it ignores input arg and uses internal brain)
-        }
-
-        // Body collision - prevent fighters from overlapping (only when vertically overlapping)
-        // This allows fighters to jump over each other
-        const verticalOverlap = (p1.y + p1.height > p2.y) && (p2.y + p2.height > p1.y);
-
-        if (verticalOverlap) {
-          if (p1.x < p2.x) {
-            const overlap = (p1.x + p1.width) - p2.x;
-            if (overlap > 0) {
-              p1.x -= overlap / 2;
-              p2.x += overlap / 2;
-            }
-          } else {
-            const overlap = (p2.x + p2.width) - p1.x;
-            if (overlap > 0) {
-              p2.x -= overlap / 2;
-              p1.x += overlap / 2;
-            }
-          }
-        }
-
-        p1.checkHit(p2);
-        p2.checkHit(p1);
-
-        // Update Timer (1/60th of a second per loop iteration)
-        // Only count down if actively fighting
-        if (currentGameState.roundStatus === 'FIGHTING') {
-          matchTimerRef.current -= 1 / 60;
-        }
-
-        // End Conditions
-        const isTimeout = matchTimerRef.current <= 0;
-        const isKO = p1.health <= 0 || p2.health <= 0;
-
-        if (isKO || isTimeout) {
-          matchEnded = true;
-
-          // Apply Fitness Results
-
-          if (currentSettings.gameMode === 'TRAINING') {
-            // IMPROVED FITNESS SYSTEM: Rich rewards for learning
-            // Matches the TrainingWorker.ts fitness shaping for consistency
-
-            // Calculate damage dealt by each fighter
-            const p1DamageDealt = 100 - p2.health;
-            const p2DamageDealt = 100 - p1.health;
-            const totalEngagement = p1DamageDealt + p2DamageDealt;
-
-            // Base fitness: damage dealt + remaining health bonus
-            if (p1.genome) {
-              p1.genome.fitness += p1DamageDealt * 3;  // Reward damage dealt
-              p1.genome.fitness += p1.health * 2;       // Reward staying alive
-            }
-            if (p2.genome) {
-              p2.genome.fitness += p2DamageDealt * 3;
-              p2.genome.fitness += p2.health * 2;
-            }
-
-            // KO bonus (significant reward for decisive wins)
-            if (p1.health > 0 && p2.health <= 0) {
-              if (p1.genome) { p1.genome.fitness += 500; p1.genome.matchesWon++; }
-            } else if (p2.health > 0 && p1.health <= 0) {
-              if (p2.genome) { p2.genome.fitness += 500; p2.genome.matchesWon++; }
-            } else if (isTimeout) {
-              // Timeout: reward whoever has more health
-              if (p1.health > p2.health && p1.genome) {
-                p1.genome.fitness += 200;
-                p1.genome.matchesWon++;
-              } else if (p2.health > p1.health && p2.genome) {
-                p2.genome.fitness += 200;
-                p2.genome.matchesWon++;
-              }
-            }
-
-            // Stalemate penalty: punish passive play
-            if (isTimeout && totalEngagement < 30) {
-              if (p1.genome) p1.genome.fitness -= 100;
-              if (p2.genome) p2.genome.fitness -= 100;
-            }
-
-            currentMatchIndex.current++;
-            startMatch();
-          } else {
-            // Arcade Game Over - show toast and auto-restart
-            const playerWon = p1.health > p2.health;
-            addToast(playerWon ? 'success' : 'info', playerWon ? 'You Win!' : 'AI Wins!');
-
-            // Auto-restart after 1 second delay
-            setTimeout(() => {
-              startMatch();
-            }, 1000);
-          }
-          break;
-        }
-      }
-
-      // Sync State to React
-      setGameState(prev => ({
-        ...prev,
-        player1Health: p1.health,
-        player2Health: p2.health,
-        player1Energy: p1.energy,
-        player2Energy: p2.energy,
-        timeRemaining: Math.max(0, matchTimerRef.current)
-      }));
-    }
-
-    requestRef.current = requestAnimationFrame(update);
-  };
+  // useGameLoop handles update cycle, requestRef, and cleanup
 
   useEffect(() => {
     // Check disclaimer acceptance
@@ -761,12 +208,12 @@ const App = () => {
     // Initialize InputManager here to avoid side effects in render
     inputManager.current = new InputManager();
 
-    initPopulation();
-    // Start Game Loop
+    resetPopulation();
+    // Start Game Loop logic
     requestRef.current = requestAnimationFrame(update);
 
     return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      // requestRef cleanup handled by useGameLoop
       inputManager.current?.destroy();
     };
   }, []); // Only run once on mount
@@ -787,9 +234,9 @@ const App = () => {
   // Restart match when population size changes (but keep best genome)
   useEffect(() => {
     if (populationRef.current.length !== settings.populationSize) {
-      initPopulation(false); // Don't clear best genome on resize
+      resetPopulation(false); // Don't clear best genome on resize
     }
-  }, [settings.populationSize, initPopulation]);
+  }, [settings.populationSize, resetPopulation]);
 
   // Handle Mode Switching reset
   const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
@@ -1018,7 +465,7 @@ const App = () => {
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl">
                   <div className="text-center">
                     <h2 className="text-5xl font-black text-white italic tracking-tighter mb-2">
-                      {gameState.winner === 'PLAYER' ? 'VICTORY' : 'DEFEAT'}
+                      {gameState.winner === 'Player 1' ? 'VICTORY' : 'DEFEAT'}
                     </h2>
                     <p className="text-slate-400 font-mono">RESTARTING MATCH...</p>
                   </div>
@@ -1072,7 +519,7 @@ const App = () => {
               fitnessHistory={fitnessHistory}
               currentGen={gameState.generation}
               bestFitness={gameState.bestFitness}
-              onReset={initPopulation}
+              onReset={() => resetPopulation(true)}
               onModeChange={handleModeChange}
               onExportWeights={handleExportWeights}
               onImportWeights={handleImportWeights}

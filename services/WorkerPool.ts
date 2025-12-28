@@ -40,6 +40,7 @@
  */
 
 import { Genome } from '../types';
+import TrainingWorker from './TrainingWorker.ts?worker';
 
 // =============================================================================
 // TYPES
@@ -141,20 +142,18 @@ export class WorkerPool {
     for (let i = 0; i < this.workerCount; i++) {
       // Create worker from the TrainingWorker module
       // Vite handles bundling the worker code correctly
-      const worker = new Worker(
-        new URL('./TrainingWorker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      const worker = new TrainingWorker();
 
       const workerId = i;
+      if (!worker) throw new Error('Worker creation failed');
 
       // Set up message handler for this worker
-      worker.onmessage = (e: MessageEvent) => {
-        this.handleWorkerMessage(workerId, e.data);
+      worker.onmessage = (messageEvent: MessageEvent) => {
+        this.handleWorkerMessage(workerId, messageEvent.data);
       };
 
       // Log errors from workers
-      worker.onerror = (error) => {
+      worker.onerror = (error: ErrorEvent) => {
         console.error(`Worker ${workerId} error:`, error);
       };
 

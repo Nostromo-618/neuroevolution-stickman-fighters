@@ -19,6 +19,7 @@
  */
 
 import { InputState } from '../types';
+import CustomScriptWorker from './CustomScriptWorker.js?worker';
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -604,16 +605,15 @@ export class ScriptWorkerManager {
         // Return a Promise because we need to wait for the worker's response
         return new Promise((resolvePromise) => {
             try {
-                // Create a new Web Worker from the worker script file
-                // The URL constructor with import.meta.url ensures the path works
-                // regardless of how the page is hosted
-                this.workerInstance = new Worker(
-                    new URL('./CustomScriptWorker.js', import.meta.url),
-                    { type: 'classic' }  // Use classic script mode (not ES modules)
-                );
+                // Create a new Web Worker using Vite's explicit worker import
+                // This ensures Vite handles the worker bundling and env injection correctly
+                this.workerInstance = new CustomScriptWorker();
+
+                if (!this.workerInstance) throw new Error('Worker creation failed');
+                const worker = this.workerInstance;
 
                 // Set up the message handler to receive responses from the worker
-                this.workerInstance.onmessage = (messageEvent) => {
+                worker.onmessage = (messageEvent) => {
                     // The worker sends back different types of messages
                     const { type, success, action, error } = messageEvent.data;
 
@@ -637,14 +637,14 @@ export class ScriptWorkerManager {
                 };
 
                 // Set up error handler for unexpected worker errors
-                this.workerInstance.onerror = (errorEvent) => {
+                worker.onerror = (errorEvent) => {
                     this.lastErrorMessage = errorEvent.message;
                     this.scriptIsCompiled = false;
                     resolvePromise({ success: false, error: errorEvent.message });
                 };
 
                 // Send the compile command to the worker
-                this.workerInstance.postMessage({ type: 'compile', code: userCode });
+                worker.postMessage({ type: 'compile', code: userCode });
 
             } catch (setupError: any) {
                 // This catches errors in creating the worker itself
