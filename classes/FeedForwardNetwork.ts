@@ -8,11 +8,10 @@ import { NN_ARCH } from '../services/Config';
  * 
  * Standard Multi-Layer Perceptron (MLP) implementation.
  * 
- * NASA Rule #3 Compliance (Memory Management):
+ * Memory Management:
  * - Buffers for hidden and output layers are pre-allocated in constructor.
  * - 'predict' method avoids creating new arrays/objects.
- * - Weights are stored in Float32Array (if possible in future) or standard arrays
- *   but are stable shapes.
+ * - Weights are stored in standard arrays (stable shapes).
  */
 
 export class FeedForwardNetwork extends NeuralNetwork {
@@ -23,7 +22,7 @@ export class FeedForwardNetwork extends NeuralNetwork {
     outputWeights: number[][];  // [Hidden][Output]
     biases: number[];           // [Hidden + Output]
 
-    // --- Pre-allocated Buffers (Rule #3) ---
+    // --- Pre-allocated Buffers ---
     private hiddenBuffer: number[];
     private outputBuffer: number[];
 
@@ -73,7 +72,7 @@ export class FeedForwardNetwork extends NeuralNetwork {
      * Optimized Predict method (No dynamic allocation)
      */
     predict(inputs: number[]): number[] {
-        // Validation (Rule #5)
+        // Validation
         if (inputs.length !== NN_ARCH.INPUT_NODES) {
             throw new Error(`Input size mismatch. Expected ${NN_ARCH.INPUT_NODES}, got ${inputs.length}`);
         }
@@ -94,7 +93,7 @@ export class FeedForwardNetwork extends NeuralNetwork {
         // 2. Hidden -> Output
         // Note: Returning a new array here is necessary for the external API unless inputs are passed by reference output buffer,
         // but for safety in JS/TS usually we return values. 
-        // To strictly follow Rule #3, we should let the caller provide a buffer, but 
+        // To strictly manage memory, we should let the caller provide a buffer, but 
         // to fit the interface `predict(inputs): outputs`, we usually return a new array
         // OR we return a reference to our internal buffer (dangerous if caller modifies it)
         // OR we return a copy.
@@ -110,7 +109,7 @@ export class FeedForwardNetwork extends NeuralNetwork {
             this.outputBuffer[o] = this.sigmoid(sum);
         }
 
-        // Return a copy to prevent external mutation of internal state (Rule #9)
+        // Return a copy to prevent external mutation of internal state
         // .slice() is faster than [...] spread
         return this.outputBuffer.slice();
     }

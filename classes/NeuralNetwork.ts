@@ -6,8 +6,7 @@
  * Defines the contract for all neural network implementations.
  * Enables polymorphism for different network architectures (FeedForward, RNN, etc).
  * 
- * NASA Rule #3 Compliance:
- * - Subclasses should prioritize object pooling and stable shapes.
+ * Subclasses should prioritize object pooling and stable shapes for memory efficiency.
  */
 
 export abstract class NeuralNetwork {

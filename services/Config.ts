@@ -3,11 +3,10 @@
  * CONFIG.TS - Centralized Application Configuration
  * =============================================================================
  * 
- * Adheres to NASA Power of 10 Rule #6 (Smallest Scope / No Globals).
- * While these are exported constants, they are centralized here rather than
- * scattered across files, acting as a single source of truth.
+ * Centralized application settings and physics constants acting as a single 
+ * source of truth.
  * 
- * All constants are Readonly to ensure immutability (Rule #9).
+ * All constants are Readonly to ensure immutability.
  */
 
 // =============================================================================

@@ -357,7 +357,7 @@ export const createRandomNetwork = (): NeuralNetwork => {
 // File: classes/FeedForwardNetwork.ts
 
 export class FeedForwardNetwork extends NeuralNetwork {
-  // Pre-allocated buffers for memory safety (NASA Rule #3)
+  // Pre-allocated buffers for memory safety
   private hiddenBuffer: Float32Array;
   private outputBuffer: Float32Array;
 
