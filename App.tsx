@@ -55,6 +55,7 @@ import { createRandomNetwork, mutateNetwork, crossoverNetworks, exportGenome, im
 import { loadScript } from './services/CustomScriptRunner';
 import { Genome, TrainingSettings, GameState, OpponentType } from './types';
 import GameCanvas from './components/GameCanvas';
+import GameHUD from './components/GameHUD';
 import Dashboard from './components/Dashboard';
 import Toast, { useToast } from './components/Toast';
 import { WorkerPool } from './services/WorkerPool';
@@ -359,93 +360,12 @@ const App = () => {
             </header>
 
             <div className="relative group">
-              {/* HUD */}
-              <div className="absolute top-4 left-4 right-4 flex justify-between text-xl font-bold font-mono z-10 drop-shadow-md pointer-events-none">
-                {/* Determine side swapping for training mode */}
-                {/* Unified HUD Logic */}
-                {(() => {
-                  if (!activeMatchRef.current) return null;
-
-                  const p1 = activeMatchRef.current.p1; // Left side fighter
-                  const p2 = activeMatchRef.current.p2; // Right side fighter
-
-                  // Helper to determine label and visual style
-                  const getFighterInfo = (f: Fighter, defaultLabel: string) => {
-                    if (f.isCustom) {
-                      // Distinguish Script A vs B based on color
-                      if (f.color === '#a855f7') return { label: 'SCRIPT A', color: 'text-purple-400', bar: 'bg-purple-400' };
-                      if (f.color === '#14b8a6') return { label: 'SCRIPT B', color: 'text-teal-400', bar: 'bg-teal-400' };
-                      return { label: 'CUSTOM', color: 'text-purple-400', bar: 'bg-purple-400' };
-                    }
-
-                    if (f.isAi) {
-                      if (settings.gameMode === 'TRAINING') {
-                        // In training, show Generation if available, or just AI
-                        return { label: `GEN ${gameState.generation}`, color: 'text-blue-400', bar: 'bg-blue-500' };
-                      }
-                      return { label: 'AI', color: 'text-blue-500', bar: 'bg-blue-500' };
-                    }
-                    // Human
-                    return { label: 'YOU', color: 'text-red-500', bar: 'bg-red-500' };
-                  };
-
-                  // Override colors/labels for simple P1/P2 distinction if both are basic AIs in training
-                  // But the user requested "Script A" labeling, so we prioritize the detailed check above.
-                  // For basic AI vs AI training, we'll just distinguish by P1/P2 color if needed, or keep generic.
-                  // Default behavior for AI vs AI:
-                  let leftInfo = getFighterInfo(p1, 'P1');
-                  let rightInfo = getFighterInfo(p2, 'P2');
-
-                  // Specific override for AI vs AI training to behave like P1 (Red) vs P2 (Blue)
-                  if (settings.gameMode === 'TRAINING' && !p1.isCustom && !p2.isCustom) {
-                    leftInfo = { label: 'P1', color: 'text-red-500', bar: 'bg-red-500' };
-                    rightInfo = { label: 'P2', color: 'text-blue-500', bar: 'bg-blue-500' };
-                  }
-
-                  return (
-                    <>
-                      {/* Left Fighter (P1 in GameState) */}
-                      <div className="flex flex-col items-start">
-                        <span className={`${leftInfo.color} font-bold text-xs tracking-wider animate-pulse`}>{leftInfo.label}</span>
-                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                          <div className={`h-full ${leftInfo.bar} transition-all duration-75`} style={{ width: `${gameState.player1Health}%` }}></div>
-                        </div>
-                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player1Energy}%` }}></div>
-                        </div>
-                      </div>
-
-
-
-                      {/* Center Info */}
-                      <div className="flex flex-col items-center pt-2">
-                        {settings.gameMode === 'TRAINING' ? (
-                          <>
-                            <span className="text-slate-500 font-bold text-[10px] tracking-widest uppercase">ROUND {currentMatchIndex.current + 1}</span>
-                            <span className="text-slate-300 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-white font-bold opacity-60 tracking-widest text-xs">VS</span>
-                            <span className="text-yellow-400 font-mono text-sm">{gameState.timeRemaining.toFixed(0)}</span>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Right Fighter (P2 in GameState) */}
-                      <div className="flex flex-col items-end">
-                        <span className={`${rightInfo.color} font-bold text-xs tracking-wider animate-pulse`}>{rightInfo.label}</span>
-                        <div className="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
-                          <div className={`h-full ${rightInfo.bar} transition-all duration-75`} style={{ width: `${gameState.player2Health}%` }}></div>
-                        </div>
-                        <div className="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
-                          <div className="h-full bg-amber-400 transition-all duration-75" style={{ width: `${gameState.player2Energy}%` }}></div>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
+              <GameHUD
+                activeMatch={activeMatchRef.current}
+                gameState={gameState}
+                settings={settings}
+                currentMatchIndex={currentMatchIndex.current}
+              />
 
               {activeMatchRef.current ? (
                 <GameCanvas
