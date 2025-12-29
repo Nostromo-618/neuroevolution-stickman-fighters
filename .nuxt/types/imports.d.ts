@@ -14,6 +14,7 @@ declare global {
   const assertNever: typeof import('../../utils/assert').assertNever
   const assertNonEmptyString: typeof import('../../utils/assert').assertNonEmptyString
   const avatarGroupInjectionKey: typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useAvatarGroup').avatarGroupInjectionKey
+  const calculateEvolutionInterval: typeof import('../../composables/useEvolution').calculateEvolutionInterval
   const callOnce: typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/once').callOnce
   const cancelIdleCallback: typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/compat/idle-callback').cancelIdleCallback
   const clearError: typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/error').clearError
@@ -140,6 +141,7 @@ declare global {
   const useDisclaimer: typeof import('../../composables/useDisclaimer').useDisclaimer
   const useEditorMenu: typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useEditorMenu').useEditorMenu
   const useError: typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/error').useError
+  const useEvolution: typeof import('../../composables/useEvolution').useEvolution
   const useFetch: typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/fetch').useFetch
   const useFieldGroup: typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useFieldGroup').useFieldGroup
   const useFileUpload: typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useFileUpload').useFileUpload
@@ -160,6 +162,7 @@ declare global {
   const useLocale: typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useLocale').useLocale
   const useMatchSetup: typeof import('../../composables/useMatchSetup').useMatchSetup
   const useMatchUpdate: typeof import('../../composables/useMatchUpdate').useMatchUpdate
+  const useModeSwitch: typeof import('../../composables/useModeSwitch').useModeSwitch
   const useModel: typeof import('vue').useModel
   const useNuxtApp: typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/nuxt').useNuxtApp
   const useNuxtData: typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/asyncData').useNuxtData
@@ -262,6 +265,7 @@ declare module 'vue' {
     readonly assertNever: UnwrapRef<typeof import('../../utils/assert')['assertNever']>
     readonly assertNonEmptyString: UnwrapRef<typeof import('../../utils/assert')['assertNonEmptyString']>
     readonly avatarGroupInjectionKey: UnwrapRef<typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useAvatarGroup')['avatarGroupInjectionKey']>
+    readonly calculateEvolutionInterval: UnwrapRef<typeof import('../../composables/useEvolution')['calculateEvolutionInterval']>
     readonly callOnce: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/once')['callOnce']>
     readonly cancelIdleCallback: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/compat/idle-callback')['cancelIdleCallback']>
     readonly clearError: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/error')['clearError']>
@@ -388,6 +392,7 @@ declare module 'vue' {
     readonly useDisclaimer: UnwrapRef<typeof import('../../composables/useDisclaimer')['useDisclaimer']>
     readonly useEditorMenu: UnwrapRef<typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useEditorMenu')['useEditorMenu']>
     readonly useError: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/error')['useError']>
+    readonly useEvolution: UnwrapRef<typeof import('../../composables/useEvolution')['useEvolution']>
     readonly useFetch: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/fetch')['useFetch']>
     readonly useFieldGroup: UnwrapRef<typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useFieldGroup')['useFieldGroup']>
     readonly useFileUpload: UnwrapRef<typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useFileUpload')['useFileUpload']>
@@ -408,6 +413,7 @@ declare module 'vue' {
     readonly useLocale: UnwrapRef<typeof import('../../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useLocale')['useLocale']>
     readonly useMatchSetup: UnwrapRef<typeof import('../../composables/useMatchSetup')['useMatchSetup']>
     readonly useMatchUpdate: UnwrapRef<typeof import('../../composables/useMatchUpdate')['useMatchUpdate']>
+    readonly useModeSwitch: UnwrapRef<typeof import('../../composables/useModeSwitch')['useModeSwitch']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useNuxtApp: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/nuxt')['useNuxtApp']>
     readonly useNuxtData: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@4.2.2_@parcel+watcher@2.5.1_@types+node@25.0.3_@vue+compiler-sfc@3.5.26_cac@6.7.14_5d74515bcf9931049c218857eff0a3c5/node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']>

@@ -100,11 +100,11 @@ import { useBackgroundTraining } from '~/composables/useBackgroundTraining';
 import { useGameLoop } from '~/composables/useGameLoop';
 import { useGenomeImportExport } from '~/composables/useGenomeImportExport';
 import { useDisclaimer } from '~/composables/useDisclaimer';
+import { useEvolution, calculateEvolutionInterval } from '~/composables/useEvolution';
+import { useModeSwitch } from '~/composables/useModeSwitch';
 import { InputManager } from '~/services/InputManager';
 import type { Fighter } from '~/services/GameEngine';
-import { mutateNetwork, crossoverNetworks } from '~/services/NeuralNetwork';
-import type { Genome, TrainingSettings } from '~/types';
-import { clearGenomeStorage } from '~/services/PersistenceManager';
+import type { TrainingSettings } from '~/types';
 
 // Disable SSR for this page since it requires browser APIs
 definePageMeta({
@@ -173,99 +173,43 @@ const inputManager = ref<InputManager | null>(null);
 
 const { customScriptWorkerARef, customScriptWorkerBRef, recompileCustomScript } = useCustomScriptWorkers(settings, addToast);
 
-const resetPopulation = (clearBest: boolean = true) => {
+// Evolution composable - handles population reset, evolution logic
+const {
+  resetPopulation,
+  resetMatch: evolutionResetMatch,
+  resetGenomeAndStorage,
+  evolve
+} = useEvolution({
+  settingsRef,
+  gameStateRef,
+  setGameState,
+  populationRef,
+  bestTrainedGenomeRef,
+  setFitnessHistory,
+  currentMatchIndex,
+  addToast
+});
+
+// Local resetPopulation wrapper that integrates with initPopulation
+const initAndResetPopulation = (clearBest: boolean = true) => {
   initPopulation(settings.value, clearBest);
   currentMatchIndex.value = 0;
   activeMatchRef.value = null;
   if (settings.value.gameMode === 'TRAINING') {
-    const isHumanOpponent = settings.value.player1Type === 'HUMAN';
-    const isAIOpponent = settings.value.player1Type === 'AI';
-    const popSize = populationRef.value.length;
-    const evolutionInterval = isHumanOpponent 
-      ? 3 
-      : (isAIOpponent ? Math.floor(popSize / 2) : popSize);
+    const evolutionInterval = calculateEvolutionInterval(
+      settings.value.player1Type,
+      populationRef.value.length
+    );
     setGameState(prev => ({ ...prev, matchesUntilEvolution: evolutionInterval }));
   }
 };
 
+// Local resetMatch that also handles settings
 const resetMatch = () => {
   setSettings(prev => ({ ...prev, isRunning: false }));
   activeMatchRef.value = null;
   resetMatchTimer();
-  let matchesRemaining = 3;
-  if (settings.value.gameMode === 'TRAINING') {
-    const isHumanOpponent = settings.value.player1Type === 'HUMAN';
-    const isAIOpponent = settings.value.player1Type === 'AI';
-    const popSize = populationRef.value.length;
-    const EVOLUTION_INTERVAL = isHumanOpponent 
-      ? 3 
-      : (isAIOpponent ? Math.floor(popSize / 2) : popSize);
-    matchesRemaining = EVOLUTION_INTERVAL - (currentMatchIndex.value % EVOLUTION_INTERVAL);
-  }
-  setGameState(prev => ({
-    ...prev,
-    player1Health: 100,
-    player2Health: 100,
-    player1Energy: 100,
-    player2Energy: 100,
-    timeRemaining: 90,
-    matchActive: false,
-    winner: null,
-    roundStatus: 'WAITING',
-    matchesUntilEvolution: matchesRemaining
-  }));
-};
-
-const resetGenomeAndStorage = () => {
-  resetPopulation(true);
-  clearGenomeStorage();
-  addToast('info', 'Genome reset: Population and storage cleared');
-};
-
-const evolve = () => {
-  const pop = populationRef.value;
-  pop.sort((a, b) => b.fitness - a.fitness);
-  const best = pop[0];
-
-  if (!bestTrainedGenomeRef.value || best.fitness > bestTrainedGenomeRef.value.fitness) {
-    bestTrainedGenomeRef.value = JSON.parse(JSON.stringify(best));
-  }
-
-  setFitnessHistory(prev => [...prev.slice(-20), { gen: gameStateRef.value.generation, fitness: best.fitness }]);
-  
-  const isHumanOpponent = settingsRef.value.player1Type === 'HUMAN';
-  const isAIOpponent = settingsRef.value.player1Type === 'AI';
-  const popSize = populationRef.value.length;
-  const nextEvolutionInterval = isHumanOpponent 
-    ? 3 
-    : (isAIOpponent ? Math.floor(popSize / 2) : popSize);
-  
-  setGameState(prev => ({ ...prev, bestFitness: best.fitness, generation: prev.generation + 1, matchesUntilEvolution: nextEvolutionInterval }));
-
-  const currentGen = gameStateRef.value.generation;
-  const newPop: Genome[] = [
-    { ...pop[0], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-0` },
-    { ...pop[1], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-1` }
-  ];
-
-  const adaptiveRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
-  const selectionPoolSize = Math.max(2, Math.floor(pop.length / 4));
-
-  while (newPop.length < settingsRef.value.populationSize) {
-    const parentA = pop[Math.floor(Math.random() * selectionPoolSize)];
-    const parentB = pop[Math.floor(Math.random() * selectionPoolSize)];
-    let childNet = crossoverNetworks(parentA.network, parentB.network);
-    childNet = mutateNetwork(childNet, adaptiveRate);
-    newPop.push({
-      id: `gen${currentGen + 1}-${newPop.length}`,
-      network: childNet,
-      fitness: 0,
-      matchesWon: 0
-    });
-  }
-
-  populationRef.value = newPop;
-  currentMatchIndex.value = 0;
+  evolutionResetMatch();
 };
 
 const { update, startMatch, requestRef } = useGameLoop({
