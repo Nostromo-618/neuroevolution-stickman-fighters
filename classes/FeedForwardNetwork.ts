@@ -1,6 +1,15 @@
 import { NeuralNetwork } from './NeuralNetwork';
 import { NN_ARCH } from '../services/Config';
 
+// Serialized network structure for JSON persistence
+export interface FeedForwardNetworkJSON {
+    type: 'FeedForwardNetwork';
+    id?: string;
+    inputWeights: number[][];
+    outputWeights: number[][];
+    biases: number[];
+}
+
 /**
  * =============================================================================
  * FEED FORWARD NEURAL NETWORK
@@ -82,10 +91,16 @@ export class FeedForwardNetwork extends NeuralNetwork {
             let sum = 0;
             // Weighted sum
             for (let i = 0; i < NN_ARCH.INPUT_NODES; i++) {
-                sum += inputs[i] * this.inputWeights[i][h];
+                const weight = this.inputWeights[i]?.[h];
+                if (weight !== undefined) {
+                    sum += inputs[i]! * weight;
+                }
             }
             // Add bias
-            sum += this.biases[h];
+            const bias = this.biases[h];
+            if (bias !== undefined) {
+                sum += bias;
+            }
             // Activation
             this.hiddenBuffer[h] = this.relu(sum);
         }
@@ -103,9 +118,16 @@ export class FeedForwardNetwork extends NeuralNetwork {
         for (let o = 0; o < NN_ARCH.OUTPUT_NODES; o++) {
             let sum = 0;
             for (let h = 0; h < NN_ARCH.HIDDEN_NODES; h++) {
-                sum += this.hiddenBuffer[h] * this.outputWeights[h][o];
+                const hiddenVal = this.hiddenBuffer[h];
+                const weight = this.outputWeights[h]?.[o];
+                if (hiddenVal !== undefined && weight !== undefined) {
+                    sum += hiddenVal * weight;
+                }
             }
-            sum += this.biases[NN_ARCH.HIDDEN_NODES + o];
+            const bias = this.biases[NN_ARCH.HIDDEN_NODES + o];
+            if (bias !== undefined) {
+                sum += bias;
+            }
             this.outputBuffer[o] = this.sigmoid(sum);
         }
 
@@ -139,21 +161,36 @@ export class FeedForwardNetwork extends NeuralNetwork {
 
         // Mutate Input Weights
         for (let i = 0; i < this.inputWeights.length; i++) {
-            for (let j = 0; j < this.inputWeights[i].length; j++) {
-                this.inputWeights[i][j] = mutateValue(this.inputWeights[i][j]);
+            const row = this.inputWeights[i];
+            if (row) {
+                for (let j = 0; j < row.length; j++) {
+                    const val = row[j];
+                    if (val !== undefined) {
+                        row[j] = mutateValue(val);
+                    }
+                }
             }
         }
 
         // Mutate Output Weights
         for (let i = 0; i < this.outputWeights.length; i++) {
-            for (let j = 0; j < this.outputWeights[i].length; j++) {
-                this.outputWeights[i][j] = mutateValue(this.outputWeights[i][j]);
+            const row = this.outputWeights[i];
+            if (row) {
+                for (let j = 0; j < row.length; j++) {
+                    const val = row[j];
+                    if (val !== undefined) {
+                        row[j] = mutateValue(val);
+                    }
+                }
             }
         }
 
         // Mutate Biases
         for (let i = 0; i < this.biases.length; i++) {
-            this.biases[i] = mutateValue(this.biases[i]);
+            const bias = this.biases[i];
+            if (bias !== undefined) {
+                this.biases[i] = mutateValue(bias);
+            }
         }
     }
 
@@ -170,16 +207,17 @@ export class FeedForwardNetwork extends NeuralNetwork {
         });
     }
 
-    toJSON(): any {
+    toJSON(): FeedForwardNetworkJSON {
         return {
             type: 'FeedForwardNetwork',
+            id: this.id,
             inputWeights: this.inputWeights,
             outputWeights: this.outputWeights,
             biases: this.biases
         };
     }
 
-    fromJSON(data: any): void {
+    fromJSON(data: FeedForwardNetworkJSON): void {
         this.inputWeights = data.inputWeights;
         this.outputWeights = data.outputWeights;
         this.biases = data.biases;

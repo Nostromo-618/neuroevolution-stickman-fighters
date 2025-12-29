@@ -16,7 +16,7 @@
  * =============================================================================
  */
 
-import { InputState } from '../types';
+import type { InputState } from '../types';
 import CustomScriptWorker from './CustomScriptWorker.js?worker';
 
 // Re-export functions from separate modules
@@ -128,9 +128,10 @@ export class ScriptWorkerManager {
 
                 worker.postMessage({ type: 'compile', code: userCode });
 
-            } catch (setupError: any) {
-                this.lastErrorMessage = setupError.message;
-                resolvePromise({ success: false, error: setupError.message });
+            } catch (setupError) {
+                const errorMessage = setupError instanceof Error ? setupError.message : String(setupError);
+                this.lastErrorMessage = errorMessage;
+                resolvePromise({ success: false, error: errorMessage });
             }
         });
     }

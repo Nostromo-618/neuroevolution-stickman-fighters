@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2025-12-29
+
+### Changed - Major Framework Migration
+Complete rewrite from React to Nuxt 4 with Vue 3 Composition API:
+
+- **Framework**: Migrated from React 19 + Vite to Nuxt 4 + Vue 3
+- **UI Library**: Replaced custom components with Nuxt UI for consistent, accessible styling
+- **Styling**: Integrated Tailwind CSS with Nuxt UI theme tokens (emerald primary color)
+- **Architecture**: Adopted Nuxt file-based routing and Vue composables
+- **Layout**: Added global AppHeader and AppFooter components
+- **SSR**: Disabled SSR for client-only game rendering
+
+### Added
+- **AppHeader**: Sticky header with app logo, version badge, and GitHub link
+- **AppFooter**: Footer with Nuxt branding and credits
+- **Simplified Controls**: J/K/L for Punch/Kick/Block with Xbox controller mappings
+
+### Fixed
+- **Monaco Editor**: Fixed initialization timing when modal opens
+- **Script Editor**: Now properly reinitializes when reopened
+
+### Documentation
+- Updated README.md with Nuxt/Vue tech stack and project structure
+- Updated STANDARD.md with Vue patterns (composables, computed, onMounted)
+- Updated docs/GAME_ENGINE.md and docs/RENDERING.md code references
+
+### Breaking Changes
+- Project now requires Nuxt 4 instead of React
+- Package manager changed to pnpm
+
 ## [1.3.1] - 2025-12-21
 
 ### Changed - Mobile Responsive Improvements

@@ -39,7 +39,7 @@
  * =============================================================================
  */
 
-import { Genome } from '../types';
+import type { Genome } from '../types';
 import TrainingWorker from './TrainingWorker.ts?worker';
 
 // =============================================================================

@@ -42,8 +42,8 @@ The game runs at **60 frames per second** using `requestAnimationFrame`.
 │     ├── Update match timer                                  │
 │     └── Check end conditions (KO, timeout)                  │
 │                                                              │
-│  4. SYNC TO REACT                                            │
-│     └── Update React state for UI rendering                 │
+│  4. SYNC TO VUE                                              │
+│     └── Update Vue reactive state for UI rendering          │
 │                                                              │
 │  5. SCHEDULE NEXT FRAME                                      │
 │     └── requestAnimationFrame(gameLoop)                     │
@@ -459,7 +459,7 @@ This systematic side swapping replaces the previous random assignment, guarantee
 ## Code References
 
 ### Main Game Loop
-[App.tsx - update() function](../App.tsx#L316)
+[index.vue - update() function](../pages/index.vue)
 
 ### Fighter Physics
 [GameEngine.ts - Fighter.update()](../services/GameEngine.ts#L120)

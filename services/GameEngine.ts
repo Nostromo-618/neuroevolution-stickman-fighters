@@ -12,9 +12,11 @@
  * =============================================================================
  */
 
-import { FighterAction, Genome, InputState } from '../types';
+import { FighterAction } from '../types';
+import type { Genome, InputState } from '../types';
 import { predict } from './NeuralNetwork';
-import { ScriptWorkerManager, FighterState as CustomFighterState } from './CustomScriptRunner';
+import { ScriptWorkerManager } from './CustomScriptRunner';
+import type { FighterState as CustomFighterState } from './CustomScriptRunner';
 import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
 import { applyFitnessShaping } from './FitnessShaping';
 

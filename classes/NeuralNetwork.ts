@@ -9,6 +9,13 @@
  * Subclasses should prioritize object pooling and stable shapes for memory efficiency.
  */
 
+// Base interface for serialized network data
+export interface NetworkJSON {
+    type: string;
+    id?: string;
+    [key: string]: unknown;
+}
+
 export abstract class NeuralNetwork {
     /**
      * Unique identifier for this network/genome
@@ -41,10 +48,11 @@ export abstract class NeuralNetwork {
     /**
      * Serialize the network structure to a plain object/JSON.
      */
-    abstract toJSON(): any;
+    abstract toJSON(): NetworkJSON;
 
     /**
      * Load network weights from a serialized object.
      */
-    abstract fromJSON(data: any): void;
+    abstract fromJSON(data: NetworkJSON): void;
 }
+

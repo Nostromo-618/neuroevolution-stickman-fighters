@@ -12,9 +12,9 @@
  * 
  * KEYBOARD CONTROLS:
  * - Move: Arrow Keys or WASD
- * - Punch: J or Space
+ * - Punch: J
  * - Kick: K
- * - Block: L or Shift
+ * - Block: L
  * 
  * GAMEPAD CONTROLS (Standard layout):
  * - Move: D-pad or Left Stick
@@ -30,7 +30,7 @@
  * ===========================================================================
  */
 
-import { InputState } from '../types';
+import type { InputState } from '../types';
 
 // =============================================================================
 // INPUT MANAGER CLASS
@@ -77,7 +77,7 @@ export class InputManager {
   private handleKeyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
 
   /** Handler for gamepad connection - stores gamepad index */
-  private handleGamepadConnected = (e: any) => {
+  private handleGamepadConnected = (e: GamepadEvent) => {
     console.log('Gamepad connected at index %d: %s.', e.gamepad.index, e.gamepad.id);
     this.gamepadIndex = e.gamepad.index;
   };
@@ -117,9 +117,9 @@ export class InputManager {
    * - Arrow Right / D → right
    * - Arrow Up / W → up (jump)
    * - Arrow Down / S → down (crouch)
-   * - J / Space → action1 (punch)
+   * - J → action1 (punch)
    * - K → action2 (kick)
-   * - L / Shift → action3 (block)
+   * - L → action3 (block)
    * 
    * GAMEPAD MAPPING (Standard Gamepad):
    * - D-pad/Left Stick → directional
@@ -136,9 +136,9 @@ export class InputManager {
       right: this.keys.has('ArrowRight') || this.keys.has('KeyD'),
       up: this.keys.has('ArrowUp') || this.keys.has('KeyW'),
       down: this.keys.has('ArrowDown') || this.keys.has('KeyS'),
-      action1: this.keys.has('KeyJ') || this.keys.has('Space'), // Punch
+      action1: this.keys.has('KeyJ'), // Punch
       action2: this.keys.has('KeyK'), // Kick
-      action3: this.keys.has('KeyL') || this.keys.has('ShiftLeft'), // Block
+      action3: this.keys.has('KeyL'), // Block
     };
 
     // === TOUCH INPUT ===

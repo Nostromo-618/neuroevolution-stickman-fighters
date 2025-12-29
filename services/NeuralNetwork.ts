@@ -47,7 +47,7 @@
  * =============================================================================
  */
 
-import { NeuralNetworkData } from '../types';
+import type { NeuralNetworkData } from '../types';
 
 import { NN_ARCH } from './Config';
 

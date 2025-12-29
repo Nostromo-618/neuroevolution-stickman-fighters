@@ -7,8 +7,7 @@
  * Ensures user progress (settings, trained AI) is preserved across sessions.
  */
 
-import { TrainingSettings } from '../types';
-import { Genome } from '../types';
+import type { TrainingSettings, Genome } from '../types';
 import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
 
 const KEYS = {
@@ -16,6 +15,14 @@ const KEYS = {
     BEST_GENOME: 'neuroevolution_best_genome_v1',
     POPULATION: 'neuroevolution_population_v1' // Optional: Save full state
 };
+
+// Serialized genome structure (matches what we store in localStorage)
+interface SerializedGenome {
+    id: string;
+    fitness: number;
+    matchesWon: number;
+    network: ReturnType<FeedForwardNetwork['toJSON']>;
+}
 
 // --- SETTINGS PERSISTENCE ---
 
@@ -42,22 +49,26 @@ export const loadSettings = (): Partial<TrainingSettings> | null => {
 /**
  * Serializes a Genome object, ensuring the NeuralNetwork class is properly handled.
  */
-const serializeGenome = (genome: Genome): any => {
+const serializeGenome = (genome: Genome): SerializedGenome => {
     return {
-        ...genome,
-        network: genome.network // Use class-specific serialization
+        id: genome.id,
+        fitness: genome.fitness,
+        matchesWon: genome.matchesWon,
+        network: genome.network.toJSON()
     };
 };
 
 /**
  * Deserializes a Genome object, reconstructing the FeedForwardNetwork class.
  */
-const deserializeGenome = (data: any): Genome => {
+const deserializeGenome = (data: SerializedGenome): Genome => {
     const network = new FeedForwardNetwork(data.network.id || 'restored');
     network.fromJSON(data.network);
 
     return {
-        ...data,
+        id: data.id,
+        fitness: data.fitness,
+        matchesWon: data.matchesWon,
         network: network
     };
 };

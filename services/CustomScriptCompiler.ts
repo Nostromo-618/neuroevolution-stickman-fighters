@@ -6,8 +6,8 @@
  * Compiles user-written JavaScript code into safe, executable functions.
  */
 
-import { InputState } from '../types';
-import { FighterState, CompileResult } from './CustomScriptRunner';
+import type { InputState } from '../types';
+import type { FighterState, CompileResult } from './CustomScriptRunner';
 
 /**
  * Compiles user code string into an executable function.
@@ -44,8 +44,9 @@ export function compileScript(userCode: string): CompileResult {
                     action2: Boolean(userResult?.action2),
                     action3: Boolean(userResult?.action3),
                 };
-            } catch (runtimeError: any) {
-                console.warn('Custom script runtime error:', runtimeError.message);
+            } catch (runtimeError) {
+                const errorMessage = runtimeError instanceof Error ? runtimeError.message : String(runtimeError);
+                console.warn('Custom script runtime error:', errorMessage);
                 return {
                     left: false,
                     right: false,
@@ -60,10 +61,11 @@ export function compileScript(userCode: string): CompileResult {
 
         return { compiledDecideFunction: safeDecideFunction, error: null };
 
-    } catch (syntaxError: any) {
+    } catch (syntaxError) {
+        const errorMessage = syntaxError instanceof Error ? syntaxError.message : String(syntaxError);
         return {
             compiledDecideFunction: null,
-            error: `Syntax Error: ${syntaxError.message}`
+            error: `Syntax Error: ${errorMessage}`
         };
     }
 }

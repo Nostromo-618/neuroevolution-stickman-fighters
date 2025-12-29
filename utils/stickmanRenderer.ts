@@ -179,14 +179,22 @@ export function renderStickman(ctx: CanvasRenderingContext2D, fighter: Fighter, 
 
   // LIMBS with joints
   ctx.lineWidth = 6;
-  const drawLimb = (originX: number, originY: number, config: any) => {
+
+  interface LimbConfig {
+    knee?: { x: number; y: number };
+    elbow?: { x: number; y: number };
+    foot?: { x: number; y: number };
+    hand?: { x: number; y: number };
+  }
+
+  const drawLimb = (originX: number, originY: number, config: LimbConfig) => {
     ctx.beginPath();
     ctx.moveTo(originX, originY);
-    const kX = originX + (config.knee?.x || config.elbow?.x);
-    const kY = originY + (config.knee?.y || config.elbow?.y);
+    const kX = originX + (config.knee?.x ?? config.elbow?.x ?? 0);
+    const kY = originY + (config.knee?.y ?? config.elbow?.y ?? 0);
     ctx.lineTo(kX, kY);
-    const eX = originX + (config.foot?.x || config.hand?.x);
-    const eY = originY + (config.foot?.y || config.hand?.y);
+    const eX = originX + (config.foot?.x ?? config.hand?.x ?? 0);
+    const eY = originY + (config.foot?.y ?? config.hand?.y ?? 0);
     ctx.lineTo(eX, eY);
     ctx.stroke();
 

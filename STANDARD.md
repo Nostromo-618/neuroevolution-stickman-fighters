@@ -1,6 +1,6 @@
 # Project Coding Standard - Stability & Safety Rules
 
-This project adheres to a strict set of 10 stability and safety rules, adapted from NASA JPL's "Power of 10" standards for modern TypeScript/React applications.
+This project adheres to a strict set of 10 stability and safety rules, adapted for modern TypeScript/Vue/Nuxt applications.
 
 ## 1. Simple Control Flow & State Machines
 * **No Recursion:** Recursive functions are prohibited in logic. Use explicit `for`, `while`, or `.reduce()` loops to prevent stack overflow issues.
@@ -15,14 +15,14 @@ This project adheres to a strict set of 10 stability and safety rules, adapted f
 
 ## 3. High-Performance Memory Management
 * **Object Pooling (Engine):** In performance-critical sections (game loop, evolution cycles), reuse object instances instead of creating new ones to minimize Garbage Collection (GC) pressure.
-    * *Note:* Do not pool React Props/State, as React relies on new object references to trigger re-renders.
+    * *Note:* Vue reactivity relies on new object references to trigger updates. Use `structuredClone` or spread operators for state updates.
 * **Stable Shapes:** Initialize all class properties in the constructor. Avoid adding dynamic properties to objects at runtime to allow the engine to use optimized hidden classes.
-* **React Optimization:** Use `React.memo`, `useMemo`, and `useCallback` strategically in the hot-path (canvas/controls), but strictly ensure dependency arrays are exhaustive.
+* **Vue Optimization:** Use `computed` and `watch` strategically. Extract heavy computations into `computed` properties that only recalculate when dependencies change.
 
 ## 4. Function & Component Granularity
-* **One Page Rule:** No function or React component should exceed 120 lines of logic.
-* **Single Responsibility:** If a component grows large, separate "View" (JSX) from "Logic" (Hooks). Extract logic into a custom `useFeature` hook.
-* **Hook Composition:** Extract complex state logic into dedicated, testable hooks that return data/methods, not JSX.
+* **One Page Rule:** No function or Vue component should exceed 120 lines of logic.
+* **Single Responsibility:** If a component grows large, separate "Template" (HTML) from "Logic" (script setup). Extract logic into composables.
+* **Composable Composition:** Extract complex state logic into dedicated, testable composables (e.g., `useFeature.ts`) that return reactive data and methods.
 
 ## 5. Strict Assertion Density
 * **Type Safety:** Explicitly type all function signatures. Avoid implicit `any`.
@@ -33,12 +33,12 @@ This project adheres to a strict set of 10 stability and safety rules, adapted f
 
 ## 6. Encapsulated Scope
 * **Zero Globals:** Never attach data to `window` or `global`.
-* **State Localization:** Keep state as close as possible to where it is used. Favor Component State over Context, and Context over Global Stores, unless broad synchronization is required.
+* **State Localization:** Keep state as close as possible to where it is used. Favor Component State over `provide/inject`, and `provide/inject` over Pinia stores, unless broad synchronization is required.
 * **Const by Default:** Always use `const`. Use `let` only when re-assignment is explicitly required for loop or logic state.
 
 ## 7. Explicit Result Handling
 * **No Floating Promises:** Every Promise must be `await`ed or have a `.catch()` handler to prevent unhandled rejections.
-* **Unmount Safety:** Async actions in `useEffect` must check if the component is still mounted before setting state, or use `AbortController` to cancel stale requests.
+* **Unmount Safety:** Async actions in `onMounted` must check if the component is still mounted before setting state, or use `AbortController` to cancel stale requests.
 * **Return Status:** If a function can fail, it should return a descriptive `Result` object or throw a typed error.
 
 ## 8. Explicit Type Simplicity
@@ -47,22 +47,22 @@ This project adheres to a strict set of 10 stability and safety rules, adapted f
 
 ## 9. Immutability & Reference Safety
 * **Readonly Parameters:** Treat all objects passed as parameters as read-only. Use `Readonly<T>` in function signatures where appropriate.
-* **State Purity:** In React, never mutate state or props directly. Use spread operators or `structuredClone` for deep updates.
-* **Pure Functions:** Logic in `classes/` and `services/` should be pure where possible, making testing and debugging predictable.
+* **State Purity:** In Vue, never mutate props directly. Use `emit` for child-to-parent communication and create local copies for modifications.
+* **Pure Functions:** Logic in `services/` should be pure where possible, making testing and debugging predictable.
 
 ## 10. Zero Warning Policy
 * **Strict Mode:** `strict: true` is mandatory in `tsconfig.json`.
-* **Exhaustive Dependencies:** You must not silence `react-hooks/exhaustive-deps`. If a dependency is missing, fix the logic or use the `useEvent` pattern; do not lie to the linter.
+* **Vue Compiler Warnings:** Address all Vue and TypeScript compiler warnings. Do not ignore `vue-tsc` errors.
 * **Linter Compliance:** No `// eslint-disable` comments. Fix the root cause or refine the rule project-wide. `any` and `@ts-ignore` require a documented justification block.
 
 ---
 
 # Addendum: Required Helper Code
 
-To satisfy **Rule 5 (Fail Fast)**, include the following helper utility in `src/utils/assert.ts`.
+To satisfy **Rule 5 (Fail Fast)**, include the following helper utility in `utils/assert.ts`.
 
 ```typescript
-// src/utils/assert.ts
+// utils/assert.ts
 
 class InvariantError extends Error {
   constructor(message: string) {
@@ -72,7 +72,7 @@ class InvariantError extends Error {
 }
 
 /**
- * NASA Rule 5: "Fail Fast" Assertion Helper.
+ * Stability Rule 5: "Fail Fast" Assertion Helper.
  * Asserts that a condition is truthy. If not, throws a hard error.
  * This explicitly narrates to the compiler that the condition is true
  * for the remainder of the scope, removing the need for optional chaining.
@@ -82,7 +82,6 @@ class InvariantError extends Error {
  */
 export function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
-    // Optional: Log to telemetry before crashing
     console.error(`CRITICAL ASSERTION FAILURE: ${message}`);
     throw new InvariantError(message);
   }
@@ -98,3 +97,4 @@ export function assertDefined<T>(
 ): asserts value is T {
   assert(value !== null && value !== undefined, `${name} must be defined`);
 }
+```

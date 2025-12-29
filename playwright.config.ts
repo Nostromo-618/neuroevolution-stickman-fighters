@@ -14,7 +14,7 @@ export default defineConfig({
   reporter: 'html',
   
   use: {
-    baseURL: 'http://localhost:3003/neuroevolution-stickman-fighters/',
+    baseURL: 'http://localhost:3000/neuroevolution-stickman-fighters/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -61,8 +61,8 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3003/neuroevolution-stickman-fighters/',
+    command: 'pnpm run dev',
+    url: 'http://localhost:3000/neuroevolution-stickman-fighters/',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

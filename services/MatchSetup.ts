@@ -1,6 +1,6 @@
 import { Fighter } from './GameEngine';
 import { ScriptWorkerManager } from './CustomScriptRunner';
-import { Genome, TrainingSettings } from '../types';
+import type { Genome, TrainingSettings } from '../types';
 import { createRandomNetwork } from './NeuralNetwork';
 
 export class MatchSetup {

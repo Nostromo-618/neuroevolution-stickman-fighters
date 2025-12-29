@@ -9,7 +9,8 @@
  */
 
 import { Fighter, CANVAS_WIDTH } from './GameEngine';
-import { Genome, FighterAction } from '../types';
+import { FighterAction } from '../types';
+import type { Genome } from '../types';
 
 /**
  * Applies fitness shaping rewards/penalties during training.

@@ -1,0 +1,38 @@
+/* 
+ * =============================================================================
+ * MAIN.CSS - Global Styles with Nuxt UI
+ * =============================================================================
+ * Nuxt UI imports Tailwind CSS and provides design system tokens.
+ * Dark mode is automatically enabled by Nuxt UI.
+ * =============================================================================
+ */
+
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@layer base {
+  body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    @apply bg-slate-950 text-white;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+}
+

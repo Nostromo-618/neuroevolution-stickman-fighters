@@ -6,8 +6,8 @@
  * Runs compiled script functions with error handling.
  */
 
-import { FighterState, CustomScriptResult } from './CustomScriptRunner';
-import { InputState } from '../types';
+import type { FighterState, CustomScriptResult } from './CustomScriptRunner';
+import type { InputState } from '../types';
 
 /**
  * Runs a compiled script function with the current game state.

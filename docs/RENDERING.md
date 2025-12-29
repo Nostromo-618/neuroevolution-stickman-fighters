@@ -83,7 +83,7 @@ Each frame, we completely redraw the canvas (retained mode is not used).
 │  4. EFFECTS                                                  │
 │     └── Attack hitbox glow (when active)                    │
 │                                                              │
-│  5. HUD (Rendered via React, overlaid on canvas)            │
+│  5. HUD (Rendered via Vue components, overlaid on canvas)   │
 │     ├── Health bars                                          │
 │     ├── Energy bars                                          │
 │     ├── Timer                                                │
@@ -377,47 +377,49 @@ ctx.fillStyle = '#eab308';
 ctx.fillRect(fighter.x, fighter.y - 22, 50 * (energy / 100), 3);
 ```
 
-### Main HUD (React Overlay)
+### Main HUD (Vue Component Overlay)
 
-The main HUD (large health bars, timer, generation) is rendered as React components overlaid on the canvas:
+The main HUD (large health bars, timer, generation) is rendered as Vue components overlaid on the canvas:
 
-```jsx
-<div className="absolute top-4 left-4 right-4 z-10">
-  {/* P1 Health Bar */}
-  <div className="w-32 h-4 bg-slate-800 rounded-sm">
-    <div 
-      className="h-full bg-red-500" 
-      style={{ width: `${player1Health}%` }}
-    />
+```vue
+<template>
+  <div class="absolute top-4 left-4 right-4 z-10">
+    <!-- P1 Health Bar -->
+    <div class="w-32 h-4 bg-slate-800 rounded-sm">
+      <div 
+        class="h-full bg-red-500" 
+        :style="{ width: `${player1Health}%` }"
+      />
+    </div>
+    
+    <!-- Timer -->
+    <span class="text-yellow-400">
+      {{ timeRemaining.toFixed(0) }}
+    </span>
+    
+    <!-- P2 Health Bar -->
+    <!-- ... -->
   </div>
-  
-  {/* Timer */}
-  <span className="text-yellow-400">
-    {timeRemaining.toFixed(0)}
-  </span>
-  
-  {/* P2 Health Bar */}
-  {/* ... */}
-</div>
+</template>
 ```
 
-This hybrid approach lets us use CSS animations for smooth transitions while keeping the canvas for fast game rendering.
+This hybrid approach lets us use Vue transitions for smooth animations while keeping the canvas for fast game rendering.
 
 ---
 
 ## Code References
 
 ### Main Render Function
-[GameCanvas.tsx - useEffect()](../components/GameCanvas.tsx#L14)
+[GameCanvas.vue - onMounted()](../components/GameCanvas.vue)
 
 ### Stickman Drawing
-[GameCanvas.tsx - drawStickman()](../components/GameCanvas.tsx#L67)
+[GameCanvas.vue - drawStickman()](../components/GameCanvas.vue)
 
 ### Background Rendering
-[GameCanvas.tsx - Lines 26-63](../components/GameCanvas.tsx#L26)
+[GameCanvas.vue - drawBackground()](../components/GameCanvas.vue)
 
 ### HUD Overlay
-[App.tsx - JSX return](../App.tsx#L566)
+[index.vue - template](../pages/index.vue)
 
 ---
 
