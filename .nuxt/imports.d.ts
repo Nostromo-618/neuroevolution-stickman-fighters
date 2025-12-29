@@ -43,6 +43,7 @@ export { usePopulation } from '../composables/usePopulation';
 export { InvariantError, InvariantError, assert, assertDefined, assertNonEmptyString, assertInRange, assertNever } from '../utils/assert';
 export { renderBackground } from '../utils/canvasRendering';
 export { renderStickman } from '../utils/stickmanRenderer';
+export { FeedForwardNetworkJSONSchema, SerializedGenomeSchema, ExportedGenomeSchema, TrainingSettingsSchema, safeLoadFromStorage, validateImportedGenome, FeedForwardNetworkJSONValidated, SerializedGenomeValidated, ExportedGenomeValidated, TrainingSettingsValidated } from '../utils/validation';
 export { defineLocale, extendLocale } from '../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/defineLocale';
 export { extractShortcuts, defineShortcuts } from '../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts';
 export { useFileUpload } from '../node_modules/.pnpm/@nuxt+ui@4.3.0_@babel+parser@7.28.5_@floating-ui+dom@1.7.4_@tiptap+extension-drag-handl_3a690419a02858a5ab0e0095ebe0c427/node_modules/@nuxt/ui/dist/runtime/composables/useFileUpload';

@@ -1,8 +1,8 @@
-import { NeuralNetwork } from './NeuralNetwork';
+import { NeuralNetwork, type NetworkJSON } from './NeuralNetwork';
 import { NN_ARCH } from '../services/Config';
 
 // Serialized network structure for JSON persistence
-export interface FeedForwardNetworkJSON {
+export interface FeedForwardNetworkJSON extends NetworkJSON {
     type: 'FeedForwardNetwork';
     id?: string;
     inputWeights: number[][];
