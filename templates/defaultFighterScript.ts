@@ -102,8 +102,8 @@ function decide(self, opponent) {
   // ============================================================
   
   // Distance thresholds (in pixels)
-  const TOO_FAR_AWAY = 200;      // Need to get closer
-  const TOO_CLOSE = 50;          // Might want to back up
+  const TOO_FAR_AWAY = 100;      // Need to get closer
+  const TOO_CLOSE = 25;          // Might want to back up
   const MINIMUM_ENERGY_FOR_CHASE = 30;
   
   // If opponent is far away, move toward them
