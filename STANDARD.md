@@ -21,6 +21,7 @@ This project adheres to a strict set of 10 stability and safety rules, adapted f
 
 ## 4. Function & Component Granularity
 * **One Page Rule:** No function or Vue component should exceed 120 lines of logic.
+    * *Exception:* **Page-level orchestration components** (e.g., `pages/index.vue`) that wire together multiple composables may exceed this limit, provided all complex business logic is extracted into composables.
 * **Single Responsibility:** If a component grows large, separate "Template" (HTML) from "Logic" (script setup). Extract logic into composables.
 * **Composable Composition:** Extract complex state logic into dedicated, testable composables (e.g., `useFeature.ts`) that return reactive data and methods.
 
