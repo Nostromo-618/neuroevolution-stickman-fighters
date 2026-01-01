@@ -83,7 +83,8 @@ export const TrainingSettingsSchema = z.object({
     mutationRate: z.number().min(0).max(1),
     populationSize: z.number().min(2).max(100),
     player1Type: z.string(),
-    player2Type: z.string()
+    player2Type: z.string(),
+    intelligentMutation: z.boolean().optional()
 });
 
 export type TrainingSettingsValidated = z.infer<typeof TrainingSettingsSchema>;

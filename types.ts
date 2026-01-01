@@ -172,6 +172,7 @@ export interface TrainingSettings {
   backgroundTraining: boolean;       // Continue training in background while playing arcade?
   turboTraining: boolean;            // Use parallel workers for training (no visualization)
   workerCount: number;               // Number of Web Workers for parallel training (1-8)
+  intelligentMutation: boolean;      // Use adaptive mutation rate based on generation (default: true)
 }
 
 // =============================================================================

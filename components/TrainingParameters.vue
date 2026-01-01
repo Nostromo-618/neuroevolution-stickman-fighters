@@ -10,9 +10,9 @@
       <UIcon :name="showTrainingParams ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="w-4 h-4" />
     </UButton>
 
-    <div :class="['space-y-4 transition-all duration-300 overflow-hidden', showTrainingParams ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0']">
-      <!-- Speed Slider -->
-      <div class="space-y-2">
+    <div :class="['space-y-4 transition-all duration-300 overflow-hidden', showTrainingParams ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0']">
+      <!-- Speed Slider - Only shown in TRAINING mode -->
+      <div v-if="isTrainingActive" class="space-y-2">
         <div class="flex justify-between">
           <label class="text-xs font-semibold text-slate-300">Simulation Speed</label>
           <span class="text-xs font-mono text-teal-400">{{ isHumanOpponent ? '1x' : `${settings.simulationSpeed}x` }}</span>
@@ -29,8 +29,26 @@
         </p>
       </div>
 
-      <!-- Mutation Rate Slider -->
-      <div class="space-y-2">
+      <!-- Intelligent Mutation Toggle - Only shown in TRAINING mode -->
+      <div v-if="isTrainingActive" class="pt-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-300">Intelligent Mutation</span>
+            <span v-if="settings.intelligentMutation" class="w-2 h-2 bg-purple-500 rounded-full animate-pulse" title="Adaptive mutation active" />
+          </div>
+          <USwitch
+            :model-value="settings.intelligentMutation"
+            @update:model-value="toggleIntelligentMutation"
+            color="secondary"
+          />
+        </div>
+        <p class="text-[10px] text-slate-500 mt-1">
+          {{ settings.intelligentMutation ? 'Mutation auto-adjusts: high initially, decreases over time' : 'Manual mutation rate control' }}
+        </p>
+      </div>
+
+      <!-- Mutation Rate Slider - Only in TRAINING mode when Intelligent Mutation is OFF -->
+      <div v-if="isTrainingActive && !settings.intelligentMutation" class="space-y-2">
         <div class="flex justify-between">
           <label class="text-xs font-semibold text-slate-300">Mutation Rate</label>
           <span class="text-xs font-mono text-purple-400">{{ (settings.mutationRate * 100).toFixed(0) }}%</span>
@@ -57,7 +75,7 @@
           />
         </div>
         <p class="text-[10px] text-slate-500 mt-1">
-          AI keeps learning while you play Arcade
+          AI keeps learning while you play Arcade (uses intelligent mutation)
         </p>
       </div>
 
@@ -188,6 +206,10 @@ const toggleTurboTraining = () => {
   props.setSettings(s => ({ ...s, turboTraining: !s.turboTraining }));
 };
 
+const toggleIntelligentMutation = () => {
+  props.setSettings(s => ({ ...s, intelligentMutation: !s.intelligentMutation }));
+};
+
 const maxWorkers = computed(() =>
   typeof navigator !== 'undefined' ? Math.min(navigator.hardwareConcurrency || 4, 8) : 8
 );
@@ -198,4 +220,3 @@ const updateWorkerCount = (value: number | undefined) => {
   }
 };
 </script>
-

@@ -166,8 +166,15 @@ export function useEvolution(ctx: EvolutionContext) {
             });
         }
 
-        // Adaptive mutation rate (decays over generations)
-        const adaptiveRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
+        // Mutation rate: intelligent (adaptive decay) or manual
+        let mutationRate: number;
+        if (ctx.settingsRef.value.intelligentMutation) {
+            // Adaptive mutation rate: starts high (30%), decays to 5% minimum
+            mutationRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
+        } else {
+            // Manual mutation rate from settings
+            mutationRate = ctx.settingsRef.value.mutationRate;
+        }
 
         // Selection pool (top 25%)
         const selectionPoolSize = Math.max(2, Math.floor(pop.length / 4));
@@ -180,7 +187,7 @@ export function useEvolution(ctx: EvolutionContext) {
             if (!parentA || !parentB) continue;
 
             let childNet = crossoverNetworks(parentA.network, parentB.network);
-            childNet = mutateNetwork(childNet, adaptiveRate);
+            childNet = mutateNetwork(childNet, mutationRate);
 
             newPop.push({
                 id: `gen${currentGen + 1}-${newPop.length}`,

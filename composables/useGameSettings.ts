@@ -24,6 +24,7 @@ export const useGameSettings = (): UseGameSettingsReturn => {
         backgroundTraining: hasMultipleThreads(), // Auto-enable when multiple threads available
         turboTraining: true,
         workerCount: getDefaultWorkerCount(),     // 50% of threads (e.g., 4 of 8)
+        intelligentMutation: true,                // Use adaptive mutation rate by default
         opponentType: 'SIMPLE_AI',
         player1Type: 'HUMAN',                     // Default to human player
         player2Type: 'CHUCK_AI'                   // Default to Chuck AI opponent
