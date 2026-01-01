@@ -62,7 +62,8 @@ export function useEvolution(ctx: EvolutionContext) {
         ctx.setGameState(prev => ({
             ...prev,
             generation: 1,
-            bestFitness: 0
+            bestFitness: 0,
+            currentMutationRate: 0.30
         }));
     };
 
@@ -137,7 +138,10 @@ export function useEvolution(ctx: EvolutionContext) {
             ...prev,
             bestFitness: best.fitness,
             generation: prev.generation + 1,
-            matchesUntilEvolution: nextEvolutionInterval
+            matchesUntilEvolution: nextEvolutionInterval,
+            currentMutationRate: ctx.settingsRef.value.intelligentMutation
+                ? Math.max(0.05, 0.30 - ((prev.generation + 1) * 0.008))
+                : ctx.settingsRef.value.mutationRate
         }));
 
         const currentGen = ctx.gameStateRef.value.generation;

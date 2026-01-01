@@ -9,8 +9,9 @@
         <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
         <span class="text-xs text-orange-400 font-bold uppercase tracking-wider">Chuck Training Arena</span>
       </div>
-      <div class="text-[10px] text-slate-500 font-mono">
-        Cycle {{ trainingStats.iterations }} • {{ trainingStats.hasMirror ? 'Training Active' : 'Learning Patterns...' }}
+      <div class="text-[10px] text-slate-500 font-mono flex gap-3">
+        <span>Cycle {{ trainingStats.iterations }}</span>
+        <span class="text-yellow-500">Rate: {{ (gameState.currentMutationRate * 100).toFixed(1) }}%</span>
       </div>
     </div>
 
@@ -49,7 +50,7 @@
  */
 
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import type { TrainingSettings, Genome, InputState } from '~/types';
+import type { TrainingSettings, Genome, InputState, GameState } from '~/types';
 import type { NeuralNetworkData } from '~/types';
 import { Fighter, CANVAS_WIDTH as GAME_WIDTH, CANVAS_HEIGHT as GAME_HEIGHT } from '~/services/GameEngine';
 import { getChuckGenome, getChuckStats, isChuckInitialized, getMirrorGenome } from '~/services/ChuckAI';
@@ -59,6 +60,7 @@ import { COLORS } from '~/services/Config';
 
 interface Props {
   settings: TrainingSettings;
+  gameState: GameState;
 }
 
 const props = defineProps<Props>();

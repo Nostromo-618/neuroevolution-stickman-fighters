@@ -60,7 +60,14 @@ export const useBackgroundTraining = ({
             let currentGen = 0;
             setGameState(prev => {
                 currentGen = prev.generation;
-                return { ...prev, bestFitness: best.fitness, generation: prev.generation + 1 };
+                return {
+                    ...prev,
+                    bestFitness: best.fitness,
+                    generation: prev.generation + 1,
+                    currentMutationRate: settings.value.intelligentMutation
+                        ? Math.max(0.05, 0.30 - ((prev.generation + 1) * 0.008))
+                        : settings.value.mutationRate
+                };
             });
 
             setFitnessHistory(prev => [...prev.slice(-20), { gen: currentGen, fitness: best.fitness }]);

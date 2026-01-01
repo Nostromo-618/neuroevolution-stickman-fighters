@@ -126,6 +126,7 @@ export interface GameState {
   matchesUntilEvolution: number; // Matches remaining until next evolution (Training mode only)
   arcadeStats: ArcadeStats; // Arcade mode win/loss tracking
   countdownValue: number | null; // Countdown display: 3, 2, 1, 0 (FIGHT!), null (hidden)
+  currentMutationRate: number; // Current mutation rate (for display)
 }
 
 // =============================================================================

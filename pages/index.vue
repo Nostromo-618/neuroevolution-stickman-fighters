@@ -43,6 +43,15 @@
           <ChuckTrainingCanvas
             class="hidden md:block w-full"
             :settings="settings"
+            :game-state="gameState"
+          />
+
+          <!-- Simple Training Visualization (Desktop Only, Training Mode) -->
+          <SimpleTrainingCanvas
+            class="hidden md:block w-full"
+            :settings="settings"
+            :game-state="gameState"
+            :population="populationRef"
           />
         </div>
 

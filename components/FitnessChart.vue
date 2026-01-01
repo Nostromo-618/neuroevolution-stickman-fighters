@@ -13,6 +13,7 @@
           :option="chartOption"
           class="w-full"
           style="height: 100px"
+          autoresize
         />
       </div>
 
@@ -55,14 +56,17 @@ interface Props {
 const props = defineProps<Props>();
 
 const chartOption = computed(() => ({
+  grid: { left: 30, right: 10, top: 10, bottom: 20 },
   xAxis: {
     type: 'category',
     data: props.fitnessHistory.map(d => d.gen),
-    show: false
+    axisLabel: { color: '#64748b', fontSize: 10 },
+    axisLine: { lineStyle: { color: '#334155' } }
   },
   yAxis: {
     type: 'value',
-    show: false
+    splitLine: { lineStyle: { color: '#334155', type: 'dashed' } },
+    axisLabel: { color: '#64748b', fontSize: 10 }
   },
   tooltip: {
     backgroundColor: '#1e293b',
@@ -77,10 +81,19 @@ const chartOption = computed(() => ({
     type: 'line',
     smooth: true,
     lineStyle: { color: '#2dd4bf', width: 2 },
+    areaStyle: {
+      color: {
+        type: 'linear',
+        x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [
+          { offset: 0, color: 'rgba(45, 212, 191, 0.5)' },
+          { offset: 1, color: 'rgba(45, 212, 191, 0.0)' }
+        ]
+      }
+    },
     symbol: 'none',
     animationDuration: 300
-  }],
-  grid: { left: 0, right: 0, top: 0, bottom: 0 }
+  }]
 }));
 </script>
 
