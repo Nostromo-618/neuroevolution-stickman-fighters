@@ -225,16 +225,16 @@ class WorkerFighter {
       // Proximity reward
       if (dist < 400) this.matchFitness += 0.005;
       if (dist < 200) this.matchFitness += 0.02;
-      if (dist < 80) this.matchFitness += 0.05;
+      if (dist < 80) this.matchFitness += 0.08;  // Increased to encourage close engagement
 
       // Facing reward
       const dx = opponent.x - this.x;
       const correctFacing = (dx > 0 && this.direction === 1) || (dx < 0 && this.direction === -1);
-      if (correctFacing) this.matchFitness += 0.02;
+      if (correctFacing) this.matchFitness += 0.01;  // Reduced to prevent passive reward farming
 
       // Aggression reward
       if (dist < 100 && (this.state === PUNCH || this.state === KICK)) {
-        this.matchFitness += 0.1;
+        this.matchFitness += 0.15;  // Increased as main learning signal
       }
 
       // Time penalty
@@ -243,20 +243,17 @@ class WorkerFighter {
       // Edge penalty
       const edgeThreshold = 60;
       if (this.x < edgeThreshold || this.x > CANVAS_WIDTH - this.width - edgeThreshold) {
-        this.matchFitness -= 0.04;
+        this.matchFitness -= 0.03;  // Softened from -0.04
       }
 
       // Center bonus
       const centerX = CANVAS_WIDTH / 2;
       const distFromCenter = Math.abs(this.x + this.width / 2 - centerX);
       if (distFromCenter < 150) {
-        this.matchFitness += 0.015;
+        this.matchFitness += 0.02;  // Increased to balance with edge penalty
       }
 
-      // Movement reward
-      if (Math.abs(this.vx) > 0.5) {
-        this.matchFitness += 0.008;
-      }
+      // Movement reward removed to prevent jittering exploits
     }
 
     // === COOLDOWN & ENERGY ===
@@ -417,9 +414,8 @@ class WorkerFighter {
 
         opponent.health = Math.max(0, opponent.health - damage);
 
-        // Fitness updates
-        this.matchFitness += 50;
-        opponent.matchFitness -= 20;
+        // Per-hit fitness updates removed for consistency with main thread
+        // (match-end damage calculation already captures hit value)
 
         // Knockback
         opponent.vx = this.direction * (this.state === KICK ? 15 : 8);
@@ -524,9 +520,9 @@ function runMatch(job: MatchJob): MatchResult {
   const damageDealt2 = startHealth1 - f1.health;
   const totalEngagement = damageDealt1 + damageDealt2;
 
-  // Base fitness from match + remaining health bonus
-  let leftFitness = f1.matchFitness + f1.health * 2;
-  let rightFitness = f2.matchFitness + f2.health * 2;
+  // Base fitness from match + remaining health bonus (increased from *2 to *2.5)
+  let leftFitness = f1.matchFitness + f1.health * 2.5;
+  let rightFitness = f2.matchFitness + f2.health * 2.5;
 
   // === STALEMATE PENALTY ===
   // If match timed out with barely any fighting, punish both
@@ -548,19 +544,19 @@ function runMatch(job: MatchJob): MatchResult {
   if (f1.health > f2.health) {
     // Left fighter won
     if (swapSides) {
-      fitness2 += 500;  // Win bonus
+      fitness2 += 300;  // Win bonus (reduced from 500 for balanced learning)
       won2 = true;
     } else {
-      fitness1 += 500;
+      fitness1 += 300;
       won1 = true;
     }
   } else if (f2.health > f1.health) {
     // Right fighter won
     if (swapSides) {
-      fitness1 += 500;
+      fitness1 += 300;
       won1 = true;
     } else {
-      fitness2 += 500;
+      fitness2 += 300;
       won2 = true;
     }
   }

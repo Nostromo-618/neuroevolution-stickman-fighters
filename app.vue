@@ -5,7 +5,6 @@
       <main class="flex-1">
         <NuxtPage />
       </main>
-      <AppFooter />
     </div>
   </UApp>
 </template>

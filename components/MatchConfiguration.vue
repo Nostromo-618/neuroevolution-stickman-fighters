@@ -20,7 +20,7 @@
       <!-- Visual Training Toggle -->
       <div class="flex items-center gap-2">
         <span :class="['text-[10px] font-bold', isTrainingActive ? 'text-success' : 'text-muted']">
-          {{ isTrainingActive ? 'TRAINING' : 'SINGLE MATCH' }}
+          {{ isTrainingActive ? 'TRAINING' : 'ARCADE' }}
         </span>
         <USwitch
           :model-value="isTrainingActive"
@@ -39,7 +39,7 @@
         </h2>
         <div :class="['flex flex-col gap-1 p-1 rounded-lg', isMatchRunning ? 'bg-slate-900/50 opacity-50' : 'bg-slate-900']">
           <UButton
-            v-for="type in player1Types"
+            v-for="type in currentPlayer1Types"
             :key="type"
             :color="settings.player1Type === type ? 'success' : 'neutral'"
             :variant="settings.player1Type === type ? 'solid' : 'outline'"
@@ -119,8 +119,15 @@ const props = defineProps<Props>();
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
 const isMatchRunning = computed(() => isTrainingActive.value && props.settings.isRunning);
 
-const player1Types = ['HUMAN', 'AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+// Arcade mode includes HUMAN option, Training mode does not
+const arcadePlayer1Types = ['HUMAN', 'AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+const trainingPlayer1Types = ['AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
 const player2Types = ['AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+
+// Use computed to dynamically select available types based on mode
+const currentPlayer1Types = computed(() => 
+  isTrainingActive.value ? trainingPlayer1Types : arcadePlayer1Types
+);
 
 const hasCustomScript = computed(() => {
   return props.settings.player1Type.includes('CUSTOM') || 
@@ -141,7 +148,7 @@ const toggleTrainingMode = () => {
   }));
 };
 
-const setPlayer1Type = (type: typeof player1Types[number]) => {
+const setPlayer1Type = (type: (typeof arcadePlayer1Types)[number] | (typeof trainingPlayer1Types)[number]) => {
   props.setSettings(s => ({
     ...s,
     player1Type: type,

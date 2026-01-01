@@ -20,11 +20,11 @@ interface MatchContext {
     customScriptWorkerARef: Ref<ScriptWorkerManager | null>;
     customScriptWorkerBRef: Ref<ScriptWorkerManager | null>;
     evolve: () => void;
-    addToast: (type: string, message: string) => void;
+    addToast: (type: 'success' | 'error' | 'info', message: string, clearFirst?: boolean) => void;
 }
 
 export const useGameLoop = (ctx: MatchContext) => {
-    const { startMatch } = useMatchSetup({
+    const { startMatch, clearWaitingTimeout } = useMatchSetup({
         settingsRef: ctx.settingsRef,
         gameStateRef: ctx.gameStateRef,
         setGameState: ctx.setGameState,
@@ -38,7 +38,7 @@ export const useGameLoop = (ctx: MatchContext) => {
         evolve: ctx.evolve
     });
 
-    const { update, requestRef } = useMatchUpdate({
+    const { update, requestRef, clearMatchRestartTimeout } = useMatchUpdate({
         settingsRef: ctx.settingsRef,
         gameStateRef: ctx.gameStateRef,
         setGameState: ctx.setGameState,
@@ -55,7 +55,9 @@ export const useGameLoop = (ctx: MatchContext) => {
         if (requestRef.value !== null) {
             cancelAnimationFrame(requestRef.value);
         }
+        clearWaitingTimeout();
+        clearMatchRestartTimeout();
     });
 
-    return { update, startMatch, requestRef };
+    return { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout };
 };

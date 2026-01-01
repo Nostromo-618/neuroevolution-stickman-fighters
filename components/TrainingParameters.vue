@@ -57,7 +57,42 @@
           />
         </div>
         <p class="text-[10px] text-slate-500 mt-1">
-          AI keeps learning while you play Single Matches
+          AI keeps learning while you play Arcade
+        </p>
+      </div>
+
+      <!-- Turbo Training Toggle - Only shown in TRAINING mode -->
+      <div v-if="isTrainingActive" class="pt-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-300">Turbo Training</span>
+            <span v-if="settings.turboTraining && settings.isRunning" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" title="Turbo training active" />
+          </div>
+          <USwitch
+            :model-value="settings.turboTraining"
+            @update:model-value="toggleTurboTraining"
+            color="success"
+          />
+        </div>
+        <p class="text-[10px] text-slate-500 mt-1">
+          Parallel workers, no visualization (faster)
+        </p>
+      </div>
+
+      <!-- Worker Threads Slider -->
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <label class="text-xs font-semibold text-slate-300">Worker Threads</label>
+          <span class="text-xs font-mono text-cyan-400">{{ settings.workerCount }}</span>
+        </div>
+        <USlider
+          :model-value="settings.workerCount"
+          :min="1"
+          :max="8"
+          @update:model-value="updateWorkerCount"
+        />
+        <p class="text-[10px] text-slate-500">
+          Fewer workers = less CPU usage ({{ maxWorkers }} cores detected)
         </p>
       </div>
 
@@ -147,6 +182,20 @@ const updateMutationRate = (value: number | undefined) => {
 
 const toggleBackgroundTraining = () => {
   props.setSettings(s => ({ ...s, backgroundTraining: !s.backgroundTraining }));
+};
+
+const toggleTurboTraining = () => {
+  props.setSettings(s => ({ ...s, turboTraining: !s.turboTraining }));
+};
+
+const maxWorkers = computed(() =>
+  typeof navigator !== 'undefined' ? Math.min(navigator.hardwareConcurrency || 4, 8) : 8
+);
+
+const updateWorkerCount = (value: number | undefined) => {
+  if (value !== undefined) {
+    props.setSettings({ ...props.settings, workerCount: value });
+  }
 };
 </script>
 

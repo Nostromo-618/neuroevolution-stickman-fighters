@@ -19,17 +19,6 @@
         <div class="w-full max-w-6xl px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Left Column: Game View -->
         <div class="lg:col-span-2 space-y-4">
-          <header class="flex justify-between items-center mb-4">
-            <div>
-              <h3 class="text-lg sm:text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
-                NeuroEvolution: Stickman Fighters
-              </h3>
-              <p class="text-slate-400 text-sm">
-                {{ settings.gameMode === 'TRAINING' ? 'Training Mode' : 'Single Match Mode' }}
-              </p>
-            </div>
-          </header>
-
           <GameArena
             :active-match="activeMatchRef ?? null"
             :game-state="gameState"
@@ -44,11 +33,10 @@
 
           <!-- Neural Network Visualization (Desktop Only) -->
           <NeuralNetworkVisualizer
-            v-if="gameState.matchActive && activeMatchRef?.value"
             class="hidden md:block w-full"
             :width="800"
             :height="250"
-            :fighter="settings.gameMode === 'TRAINING' ? activeMatchRef?.p2 : activeMatchRef?.p2"
+            :fighter="activeMatchRef ? activeMatchRef.p2 : null"
           />
         </div>
 
@@ -116,8 +104,11 @@ const pkgVersion = '1.3.1';
 
 const toast = useToast();
 
-const addToast = (type: 'success' | 'error' | 'info', message: string) => {
+const addToast = (type: 'success' | 'error' | 'info', message: string, clearFirst = false) => {
   if (process.client) {
+    if (clearFirst) {
+      toast.clear();
+    }
     toast.add({
       title: message,
       color: type === 'error' ? 'red' : type === 'success' ? 'green' : 'blue'
@@ -212,7 +203,7 @@ const resetMatch = () => {
   evolutionResetMatch();
 };
 
-const { update, startMatch, requestRef } = useGameLoop({
+const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout } = useGameLoop({
   settings,
   settingsRef,
   gameStateRef,
@@ -282,7 +273,12 @@ if (process.client) {
 
   watch(() => settings.value.isRunning, (isRunning) => {
     if (!gameStateRef) return;
-    
+
+    if (!isRunning) {
+      // Clear match restart timeout when pausing to prevent auto-restart
+      clearMatchRestartTimeout();
+    }
+
     if (isRunning && activeMatchRef.value && !gameState.value.matchActive) {
       const isTraining = settings.value.gameMode === 'TRAINING';
       if (gameStateRef.value) {
@@ -307,6 +303,10 @@ if (process.client) {
 }
 
 const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
+  // Clear any pending timeouts
+  clearWaitingTimeout();
+  clearMatchRestartTimeout();
+
   setSettings(prev => ({
     ...prev,
     gameMode: mode,
@@ -316,27 +316,23 @@ const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
       player2Type: 'AI'
     })
   }));
-  
+
   let evolutionInterval = 3;
   if (mode === 'TRAINING') {
-    const isHumanOpponent = settings.value.player1Type === 'HUMAN';
-    const isAIOpponent = settings.value.player1Type === 'AI';
-    const popSize = populationRef.value.length;
-    evolutionInterval = isHumanOpponent 
-      ? 3 
-      : (isAIOpponent ? Math.floor(popSize / 2) : popSize);
+    evolutionInterval = calculateEvolutionInterval(settings.value.player1Type, populationRef.value.length);
   }
-  
-  setGameState(prev => ({ 
-    ...prev, 
-    winner: null, 
+
+  setGameState(prev => ({
+    ...prev,
+    winner: null,
     matchActive: false,
-    ...(mode === 'TRAINING' && { matchesUntilEvolution: evolutionInterval })
+    ...(mode === 'TRAINING' && { matchesUntilEvolution: evolutionInterval }),
+    ...(mode === 'ARCADE' && { arcadeStats: { matchesPlayed: 0, wins: 0, losses: 0 } })
   }));
   activeMatchRef.value = null;
-  if (mode === 'TRAINING') {
-    currentMatchIndex.value = 0;
-  }
+
+  // Reset match index for both modes
+  currentMatchIndex.value = 0;
 };
 
 onMounted(() => {

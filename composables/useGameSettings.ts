@@ -17,6 +17,8 @@ export const useGameSettings = (): UseGameSettingsReturn => {
         gameMode: 'TRAINING',
         isRunning: false,
         backgroundTraining: false,
+        turboTraining: true,
+        workerCount: typeof navigator !== 'undefined' ? Math.min(navigator.hardwareConcurrency || 4, 8) : 4,
         opponentType: 'AI',
         player1Type: 'AI',
         player2Type: 'AI'

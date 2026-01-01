@@ -263,10 +263,11 @@ export class WorkerPool {
       const spawnOffset1 = Math.random() * 100 - 50;  // -50 to +50
       const spawnOffset2 = Math.random() * 100 - 50;
 
+      // Deep clone genomes to strip Vue reactive proxies (required for postMessage)
       jobs.push({
         jobId: i / 2,
-        genome1: population[p1Idx],
-        genome2: population[p2Idx],
+        genome1: JSON.parse(JSON.stringify(population[p1Idx])),
+        genome2: JSON.parse(JSON.stringify(population[p2Idx])),
         spawn1X: 280 + spawnOffset1,  // Left side
         spawn2X: 470 + spawnOffset2   // Right side
       });

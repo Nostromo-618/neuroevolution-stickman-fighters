@@ -6,12 +6,13 @@
  * Handles setting up new matches (spawning fighters, initializing game state).
  */
 
-import type { Ref } from 'vue';
+import { ref, type Ref } from 'vue';
 import type { TrainingSettings, GameState, Genome } from '~/types';
 import { Fighter } from '~/services/GameEngine';
 import { MatchSetup } from '~/services/MatchSetup';
 import type { ScriptWorkerManager } from '~/services/CustomScriptRunner';
 import { createRandomNetwork } from '~/services/NeuralNetwork';
+import { calculateEvolutionInterval } from './useEvolution';
 
 interface MatchSetupContext {
     settingsRef: Ref<TrainingSettings>;
@@ -28,7 +29,17 @@ interface MatchSetupContext {
 }
 
 export function useMatchSetup(ctx: MatchSetupContext) {
+    const waitingTimeoutRef = ref<ReturnType<typeof setTimeout> | null>(null);
+
+    const clearWaitingTimeout = () => {
+        if (waitingTimeoutRef.value) {
+            clearTimeout(waitingTimeoutRef.value);
+            waitingTimeoutRef.value = null;
+        }
+    };
+
     const startMatch = () => {
+        clearWaitingTimeout();
         ctx.matchTimerRef.value = 90;
 
         const workers = {
@@ -44,11 +55,7 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             const p1Type = ctx.settingsRef.value.player1Type;
             const p2Type = 'AI';
             const isP1AI = p1Type === 'AI';
-            const isP1Human = p1Type === 'HUMAN';
-
-            const EVOLUTION_INTERVAL = isP1Human
-                ? 3
-                : (isP1AI ? Math.floor(popSize / 2) : popSize);
+            const EVOLUTION_INTERVAL = calculateEvolutionInterval(p1Type, popSize);
 
             if (ctx.currentMatchIndex.value > 0 && ctx.currentMatchIndex.value % EVOLUTION_INTERVAL === 0) {
                 ctx.evolve();
@@ -146,17 +153,15 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             roundStatus: isArcade ? 'WAITING' : 'FIGHTING'
         }));
 
-        if (ctx.gameStateRef.value) ctx.gameStateRef.value.roundStatus = isArcade ? 'WAITING' : 'FIGHTING';
-
         if (isArcade) {
-            setTimeout(() => {
+            waitingTimeoutRef.value = setTimeout(() => {
                 if (ctx.activeMatchRef.value) {
-                    if (ctx.gameStateRef.value) ctx.gameStateRef.value.roundStatus = 'FIGHTING';
                     ctx.setGameState(prev => ({ ...prev, roundStatus: 'FIGHTING' }));
                 }
+                waitingTimeoutRef.value = null;
             }, 1500);
         }
     };
 
-    return { startMatch };
+    return { startMatch, clearWaitingTimeout };
 }

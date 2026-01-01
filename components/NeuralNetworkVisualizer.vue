@@ -52,7 +52,15 @@ const getLineColor = (weight: number, activation: number) => {
     : `rgba(255, 40, 40, ${opacity})`;
 };
 
-watchEffect(() => {
+watchEffect((onCleanup) => {
+  // Cancel any existing animation frame when watchEffect re-runs
+  onCleanup(() => {
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+  });
+
   const canvas = canvasRef.value;
   if (!canvas) return;
   const ctx = canvas.getContext('2d');

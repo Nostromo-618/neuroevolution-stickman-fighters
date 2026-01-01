@@ -1,20 +1,20 @@
 <template>
-  <UModal :open="true" :ui="{ width: 'max-w-2xl' }" :dismissible="false">
+  <UModal :open="true" :ui="{ width: 'max-w-2xl', height: 'max-h-[90vh]' }" :dismissible="false">
     <template #default>
       <!-- Modal is controlled programmatically -->
     </template>
     <template #content>
-      <UCard>
+      <UCard class="flex flex-col max-h-[90vh]">
       <template #header>
-        <div class="p-6 border-b border-slate-700 bg-slate-900/50">
-          <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
+        <div class="p-4 sm:p-6 border-b border-slate-700 bg-slate-900/50 flex-shrink-0">
+          <h2 class="text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
             Disclaimer & Terms of Use
           </h2>
           <p class="text-slate-400 text-sm mt-1">Last Updated: December 21, 2025</p>
         </div>
       </template>
 
-      <div class="p-6 overflow-y-auto custom-scrollbar text-slate-300 space-y-4">
+      <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar text-slate-300 space-y-4 flex-1 min-h-0">
         <section>
           <h3 class="text-lg font-semibold text-white mb-2">Important Notice</h3>
           <p>
@@ -65,7 +65,7 @@
       </div>
 
       <template #footer>
-        <div class="p-6 border-t border-slate-700 bg-slate-900/50 flex flex-col sm:flex-row gap-3 justify-end items-center">
+        <div class="p-4 sm:p-6 border-t border-slate-700 bg-slate-900/50 flex flex-col sm:flex-row gap-3 justify-end items-center flex-shrink-0">
           <UButton
             @click="onDecline"
             color="neutral"

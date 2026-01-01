@@ -1,41 +1,43 @@
 <template>
   <div
     v-if="activeMatch"
-    class="absolute top-4 left-4 right-4 flex justify-between text-xl font-bold font-mono z-10 drop-shadow-md pointer-events-none"
+    class="absolute top-4 left-4 right-4 grid grid-cols-3 gap-2 text-xl font-bold font-mono z-10 drop-shadow-md pointer-events-none"
   >
     <!-- Left Fighter (P1) -->
-    <div class="flex flex-col items-start">
-      <span :class="[leftInfo.color, 'font-bold text-xs tracking-wider animate-pulse']">{{ leftInfo.label }}</span>
-      <div class="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+    <div class="flex flex-col items-start min-w-0">
+      <span :class="[leftInfo.color, 'font-bold text-xs tracking-wider animate-pulse truncate max-w-full']">{{ leftInfo.label }}</span>
+      <div class="w-28 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
         <div :class="['h-full', leftInfo.bar, 'transition-all duration-75']" :style="{ width: `${gameState.player1Health}%` }" />
       </div>
-      <div class="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+      <div class="w-28 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
         <div class="h-full bg-amber-400 transition-all duration-75" :style="{ width: `${gameState.player1Energy}%` }" />
       </div>
     </div>
 
     <!-- Center Info -->
-    <div class="flex flex-col items-center pt-2">
+    <div class="flex flex-col items-center pt-2 min-w-0">
       <template v-if="settings.gameMode === 'TRAINING'">
         <span class="text-slate-500 font-bold text-[10px] tracking-widest uppercase">ROUND {{ currentMatchIndex + 1 }}</span>
         <span class="text-slate-300 font-mono text-sm">{{ gameState.timeRemaining.toFixed(0) }}</span>
-        <span class="text-teal-400 font-bold text-[9px] tracking-wider uppercase mt-1">
+        <span class="text-teal-400 font-bold text-[9px] tracking-wider uppercase mt-1 text-center">
           {{ gameState.matchesUntilEvolution }} {{ gameState.matchesUntilEvolution === 1 ? 'MATCH' : 'MATCHES' }} TO EVOLVE
         </span>
       </template>
       <template v-else>
-        <span class="text-white font-bold opacity-60 tracking-widest text-xs">VS</span>
+        <span class="text-emerald-400 font-bold text-[10px] tracking-wider">
+          {{ gameState.arcadeStats.wins }}W - {{ gameState.arcadeStats.losses }}L
+        </span>
         <span class="text-yellow-400 font-mono text-sm">{{ gameState.timeRemaining.toFixed(0) }}</span>
       </template>
     </div>
 
     <!-- Right Fighter (P2) -->
-    <div class="flex flex-col items-end">
-      <span :class="[rightInfo.color, 'font-bold text-xs tracking-wider animate-pulse']">{{ rightInfo.label }}</span>
-      <div class="w-32 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
+    <div class="flex flex-col items-end min-w-0">
+      <span :class="[rightInfo.color, 'font-bold text-xs tracking-wider animate-pulse truncate max-w-full']">{{ rightInfo.label }}</span>
+      <div class="w-28 h-4 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden">
         <div :class="['h-full', rightInfo.bar, 'transition-all duration-75']" :style="{ width: `${gameState.player2Health}%` }" />
       </div>
-      <div class="w-32 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
+      <div class="w-28 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
         <div class="h-full bg-amber-400 transition-all duration-75" :style="{ width: `${gameState.player2Energy}%` }" />
       </div>
     </div>

@@ -36,7 +36,7 @@ export function calculateEvolutionInterval(
 
     return isHumanOpponent
         ? 3
-        : (isAIOpponent ? Math.floor(populationSize / 2) : populationSize);
+        : (isAIOpponent ? Math.floor(populationSize / 4) : Math.floor(populationSize / 2));
 }
 
 export function useEvolution(ctx: EvolutionContext) {

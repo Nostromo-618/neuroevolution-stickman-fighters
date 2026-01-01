@@ -34,7 +34,7 @@ export const useBackgroundTraining = ({
         }
 
         if (!workerPoolRef.value) {
-            workerPoolRef.value = new WorkerPool();
+            workerPoolRef.value = new WorkerPool(settings.value.workerCount);
             await new Promise(resolve => setTimeout(resolve, 100));
         }
 
@@ -104,16 +104,61 @@ export const useBackgroundTraining = ({
         isWorkerTrainingRef.value = false;
     };
 
+    // Training cycle ID to prevent overlapping runs
+    let trainingCycleId = 0;
+
     if (process.client) {
-        watch(() => [settings.value.backgroundTraining, settings.value.gameMode], () => {
-            if (settings.value.backgroundTraining && settings.value.gameMode === 'ARCADE') {
-                const runContinuousTraining = async () => {
-                    while (settings.value.backgroundTraining && settings.value.gameMode === 'ARCADE') {
-                        await runWorkerTrainingGeneration();
-                        await new Promise(resolve => setTimeout(resolve, 10));
+        // Recreate worker pool when worker count changes
+        watch(() => settings.value.workerCount, (newCount) => {
+            if (workerPoolRef.value) {
+                workerPoolRef.value.terminate();
+                workerPoolRef.value = null;  // Set to null so runWorkerTrainingGeneration creates fresh pool
+            }
+            // Reset the training lock - old cycle's promise will never resolve since workers are terminated
+            isWorkerTrainingRef.value = false;
+        });
+
+        watch(() => [
+            settings.value.backgroundTraining,
+            settings.value.gameMode,
+            settings.value.turboTraining,
+            settings.value.isRunning,
+            settings.value.workerCount  // Include workerCount to restart training cycle when changed
+        ], () => {
+            // Reset training lock when settings change to ensure cycles can restart
+            isWorkerTrainingRef.value = false;
+            // Increment cycle ID to invalidate any running cycles
+            trainingCycleId++;
+
+            // Run workers for:
+            // 1. Training mode with turbo enabled and running
+            // 2. Arcade mode with background training enabled
+            const shouldRunWorkers =
+                (settings.value.gameMode === 'TRAINING' && settings.value.turboTraining && settings.value.isRunning) ||
+                (settings.value.backgroundTraining && settings.value.gameMode === 'ARCADE');
+
+            if (shouldRunWorkers) {
+                const currentCycleId = trainingCycleId;
+
+                // Rule #2: Use recursive setTimeout instead of while(true)
+                const runTrainingCycle = async () => {
+                    // Stop if settings changed or cycle invalidated
+                    const stillValid =
+                        currentCycleId === trainingCycleId &&
+                        ((settings.value.gameMode === 'TRAINING' && settings.value.turboTraining && settings.value.isRunning) ||
+                         (settings.value.backgroundTraining && settings.value.gameMode === 'ARCADE'));
+
+                    if (!stillValid) {
+                        return;
                     }
+
+                    await runWorkerTrainingGeneration();
+
+                    // Schedule next cycle (non-blocking)
+                    setTimeout(runTrainingCycle, 10);
                 };
-                runContinuousTraining();
+
+                runTrainingCycle();
             }
         }, { immediate: true });
     }

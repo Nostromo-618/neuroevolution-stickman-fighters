@@ -17,7 +17,8 @@ export const useGameState = (): UseGameStateReturn => {
         matchActive: false,
         winner: null,
         roundStatus: 'WAITING',
-        matchesUntilEvolution: 3
+        matchesUntilEvolution: 3,
+        arcadeStats: { matchesPlayed: 0, wins: 0, losses: 0 }
     });
 
     const gameStateRef = ref(gameState.value);

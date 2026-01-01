@@ -101,6 +101,17 @@ export interface Genome {
  * Represents the current state of a match, displayed in the UI.
  * This is updated every frame and drives the HUD (health bars, timer, etc.)
  */
+/**
+ * ArcadeStats Interface
+ *
+ * Tracks player performance in Arcade mode across multiple matches.
+ */
+export interface ArcadeStats {
+  matchesPlayed: number;  // Total matches played in current arcade session
+  wins: number;           // Number of wins
+  losses: number;         // Number of losses
+}
+
 export interface GameState {
   player1Health: number;    // P1 health (0-100)
   player2Health: number;    // P2 health (0-100)
@@ -113,6 +124,7 @@ export interface GameState {
   winner: 'Player 1' | 'Player 2' | null;  // Match result
   roundStatus: 'WAITING' | 'FIGHTING' | 'ENDED'; // Status of the current round
   matchesUntilEvolution: number; // Matches remaining until next evolution (Training mode only)
+  arcadeStats: ArcadeStats; // Arcade mode win/loss tracking
 }
 
 // =============================================================================
@@ -156,6 +168,8 @@ export interface TrainingSettings {
   player2Type: 'AI' | 'CUSTOM_A' | 'CUSTOM_B';
   isRunning: boolean;                // Is the evolution/game loop running?
   backgroundTraining: boolean;       // Continue training in background while playing arcade?
+  turboTraining: boolean;            // Use parallel workers for training (no visualization)
+  workerCount: number;               // Number of Web Workers for parallel training (1-8)
 }
 
 // =============================================================================

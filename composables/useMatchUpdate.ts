@@ -21,15 +21,29 @@ interface MatchUpdateContext {
     inputManager: Ref<InputManager | null>;
     currentMatchIndex: Ref<number>;
     startMatch: () => void;
-    addToast: (type: string, message: string) => void;
+    addToast: (type: 'success' | 'error' | 'info', message: string, clearFirst?: boolean) => void;
 }
 
 export function useMatchUpdate(ctx: MatchUpdateContext) {
     const requestRef = ref<number | null>(null);
+    const matchRestartTimeoutRef = ref<ReturnType<typeof setTimeout> | null>(null);
+
+    const clearMatchRestartTimeout = () => {
+        if (matchRestartTimeoutRef.value) {
+            clearTimeout(matchRestartTimeoutRef.value);
+            matchRestartTimeoutRef.value = null;
+        }
+    };
 
     const update = () => {
         const currentSettings = ctx.settingsRef.value;
         const currentGameState = ctx.gameStateRef.value;
+
+        // Skip sequential loop when turbo training handles it via workers
+        if (currentSettings.gameMode === 'TRAINING' && currentSettings.turboTraining && currentSettings.isRunning) {
+            requestRef.value = requestAnimationFrame(update);
+            return;
+        }
 
         // Start match if no active match exists
         // For TRAINING mode, require population; for ARCADE mode, start immediately
@@ -66,11 +80,7 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
 
             match.p1.update(p1Input, match.p2);
 
-            if (currentGameState.roundStatus === 'WAITING') {
-                match.p2.update(dummyInput, match.p1);
-            } else {
-                match.p2.update(dummyInput, match.p1);
-            }
+            match.p2.update(dummyInput, match.p1);
 
             const p1 = match.p1;
             const p2 = match.p2;
@@ -103,16 +113,16 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                     const p1Damage = 100 - p2.health;
                     const p2Damage = 100 - p1.health;
 
-                    if (p1.genome) { p1.genome.fitness += p1Damage * 3 + p1.health * 2; }
-                    if (p2.genome) { p2.genome.fitness += p2Damage * 3 + p2.health * 2; }
+                    if (p1.genome) { p1.genome.fitness += p1Damage * 2 + p1.health * 2.5; }
+                    if (p2.genome) { p2.genome.fitness += p2Damage * 2 + p2.health * 2.5; }
 
                     if (p1.health > 0 && p2.health <= 0) {
-                        if (p1.genome) { p1.genome.fitness += 500; p1.genome.matchesWon++; }
+                        if (p1.genome) { p1.genome.fitness += 300; p1.genome.matchesWon++; }
                     } else if (p2.health > 0 && p1.health <= 0) {
-                        if (p2.genome) { p2.genome.fitness += 500; p2.genome.matchesWon++; }
+                        if (p2.genome) { p2.genome.fitness += 300; p2.genome.matchesWon++; }
                     } else if (isTimeout) {
-                        if (p1.health > p2.health && p1.genome) { p1.genome.fitness += 200; p1.genome.matchesWon++; }
-                        else if (p2.health > p1.health && p2.genome) { p2.genome.fitness += 200; p2.genome.matchesWon++; }
+                        if (p1.health > p2.health && p1.genome) { p1.genome.fitness += 150; p1.genome.matchesWon++; }
+                        else if (p2.health > p1.health && p2.genome) { p2.genome.fitness += 150; p2.genome.matchesWon++; }
                     }
 
                     if (isTimeout && (p1Damage + p2Damage) < 30) {
@@ -124,24 +134,54 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                     ctx.startMatch();
                 } else {
                     const playerWon = p1.health > p2.health;
-                    ctx.addToast(playerWon ? 'success' : 'info', playerWon ? 'You Win!' : 'AI Wins!');
-                    setTimeout(() => ctx.startMatch(), 1000);
+                    ctx.setGameState(prev => ({
+                        ...prev,
+                        matchActive: false,
+                        arcadeStats: {
+                            matchesPlayed: prev.arcadeStats.matchesPlayed + 1,
+                            wins: prev.arcadeStats.wins + (playerWon ? 1 : 0),
+                            losses: prev.arcadeStats.losses + (playerWon ? 0 : 1)
+                        }
+                    }));
+                    ctx.activeMatchRef.value = null;
+                    ctx.addToast(playerWon ? 'success' : 'info', playerWon ? 'You Win!' : 'AI Wins!', true);
+                    clearMatchRestartTimeout();
+                    matchRestartTimeoutRef.value = setTimeout(() => {
+                        ctx.startMatch();
+                        matchRestartTimeoutRef.value = null;
+                    }, 1000);
                 }
                 break;
             }
         }
 
-        ctx.setGameState(prev => ({
-            ...prev,
-            player1Health: match.p1.health,
-            player2Health: match.p2.health,
-            player1Energy: match.p1.energy,
-            player2Energy: match.p2.energy,
-            timeRemaining: Math.max(0, ctx.matchTimerRef.value)
-        }));
+        // Only update state if values changed (Rule #3: minimize allocations)
+        const currentState = ctx.gameStateRef.value;
+        const newP1H = match.p1.health;
+        const newP2H = match.p2.health;
+        const newP1E = match.p1.energy;
+        const newP2E = match.p2.energy;
+        const newTime = Math.max(0, ctx.matchTimerRef.value);
+
+        if (
+            currentState.player1Health !== newP1H ||
+            currentState.player2Health !== newP2H ||
+            currentState.player1Energy !== newP1E ||
+            currentState.player2Energy !== newP2E ||
+            currentState.timeRemaining !== newTime
+        ) {
+            ctx.setGameState(prev => ({
+                ...prev,
+                player1Health: newP1H,
+                player2Health: newP2H,
+                player1Energy: newP1E,
+                player2Energy: newP2E,
+                timeRemaining: newTime
+            }));
+        }
 
         requestRef.value = requestAnimationFrame(update);
     };
 
-    return { update, requestRef };
+    return { update, requestRef, clearMatchRestartTimeout };
 }
