@@ -18,7 +18,8 @@ export const useGameState = (): UseGameStateReturn => {
         winner: null,
         roundStatus: 'WAITING',
         matchesUntilEvolution: 3,
-        arcadeStats: { matchesPlayed: 0, wins: 0, losses: 0 }
+        arcadeStats: { matchesPlayed: 0, wins: 0, losses: 0 },
+        countdownValue: null
     });
 
     const gameStateRef = ref(gameState.value);

@@ -31,6 +31,7 @@ interface MatchSetupContext {
 
 export function useMatchSetup(ctx: MatchSetupContext) {
     const waitingTimeoutRef = ref<ReturnType<typeof setTimeout> | null>(null);
+    const countdownIntervalRef = ref<ReturnType<typeof setInterval> | null>(null);
 
     const clearWaitingTimeout = () => {
         if (waitingTimeoutRef.value) {
@@ -39,8 +40,16 @@ export function useMatchSetup(ctx: MatchSetupContext) {
         }
     };
 
+    const clearCountdownInterval = () => {
+        if (countdownIntervalRef.value) {
+            clearInterval(countdownIntervalRef.value);
+            countdownIntervalRef.value = null;
+        }
+    };
+
     const startMatch = () => {
         clearWaitingTimeout();
+        clearCountdownInterval();  // Clear any existing countdown
         ctx.matchTimerRef.value = 90;
 
         const workers = {
@@ -146,24 +155,63 @@ export function useMatchSetup(ctx: MatchSetupContext) {
         }
 
         const isArcade = ctx.settingsRef.value.gameMode === 'ARCADE';
+        const shouldStartCountdown = isArcade && ctx.settingsRef.value.isRunning;
+        const isSubsequentRound = ctx.gameStateRef.value.arcadeStats.matchesPlayed > 0;
 
         ctx.setGameState(prev => ({
             ...prev,
             matchActive: true,
             timeRemaining: 90,
             winner: null,
-            roundStatus: isArcade ? 'WAITING' : 'FIGHTING'
+            // Arcade: start in WAITING unless isRunning (then will start countdown)
+            // Training: start FIGHTING immediately
+            roundStatus: isArcade ? 'WAITING' : 'FIGHTING',
+            countdownValue: null
         }));
 
-        if (isArcade) {
-            waitingTimeoutRef.value = setTimeout(() => {
-                if (ctx.activeMatchRef.value) {
-                    ctx.setGameState(prev => ({ ...prev, roundStatus: 'FIGHTING' }));
-                }
-                waitingTimeoutRef.value = null;
-            }, 1500);
+        // For subsequent rounds while playing, start countdown immediately (with fast timing)
+        if (shouldStartCountdown) {
+            startCountdown(isSubsequentRound);
         }
     };
 
-    return { startMatch, clearWaitingTimeout };
+    /**
+     * Start the countdown sequence for Arcade mode.
+     * Called when isRunning becomes true and match is in WAITING status.
+     * @param fast - If true, uses 3x faster timing (for subsequent rounds)
+     */
+    const startCountdown = (fast: boolean = false) => {
+        if (ctx.settingsRef.value.gameMode !== 'ARCADE') return;
+
+        clearCountdownInterval();
+        let count = 3;
+
+        // First round: 700ms per step (~2.8s total)
+        // Subsequent rounds: 233ms per step (~0.9s total) - keeps user in flow
+        const interval = fast ? 233 : 700;
+
+        ctx.setGameState(prev => ({
+            ...prev,
+            roundStatus: 'COUNTDOWN',
+            countdownValue: 3
+        }));
+
+        countdownIntervalRef.value = setInterval(() => {
+            count--;
+            if (count > 0) {
+                ctx.setGameState(prev => ({ ...prev, countdownValue: count }));
+            } else if (count === 0) {
+                ctx.setGameState(prev => ({ ...prev, countdownValue: 0 }));
+            } else {
+                clearCountdownInterval();
+                ctx.setGameState(prev => ({
+                    ...prev,
+                    roundStatus: 'FIGHTING',
+                    countdownValue: null
+                }));
+            }
+        }, interval);
+    };
+
+    return { startMatch, clearWaitingTimeout, startCountdown, clearCountdownInterval };
 }

@@ -24,7 +24,7 @@ interface MatchContext {
 }
 
 export const useGameLoop = (ctx: MatchContext) => {
-    const { startMatch, clearWaitingTimeout } = useMatchSetup({
+    const { startMatch, clearWaitingTimeout, startCountdown, clearCountdownInterval } = useMatchSetup({
         settingsRef: ctx.settingsRef,
         gameStateRef: ctx.gameStateRef,
         setGameState: ctx.setGameState,
@@ -59,5 +59,5 @@ export const useGameLoop = (ctx: MatchContext) => {
         clearMatchRestartTimeout();
     });
 
-    return { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout };
+    return { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout, startCountdown };
 };

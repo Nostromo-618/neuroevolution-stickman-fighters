@@ -47,9 +47,15 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
         }
 
         // Start match if no active match exists
-        // For TRAINING mode, require population; for ARCADE mode, start immediately
+        // Training: auto-start when population ready
+        // Arcade: only spawn initial fighters on page load (isRunning=false), 
+        //         NOT after match ends (that's handled by restart timeout)
         if (!ctx.activeMatchRef.value) {
-            const canStart = currentSettings.gameMode === 'ARCADE' || ctx.populationRef.value.length > 0;
+            const isTraining = currentSettings.gameMode === 'TRAINING';
+            const isArcadeInitialSpawn = !isTraining && !currentSettings.isRunning && currentGameState.arcadeStats.matchesPlayed === 0;
+            const canStart = isTraining
+                ? ctx.populationRef.value.length > 0
+                : isArcadeInitialSpawn;  // Arcade: only initial spawn, restart timeout handles subsequent
             if (canStart) {
                 ctx.startMatch();
             }
@@ -58,6 +64,12 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
         }
 
         if (!currentSettings.isRunning || !ctx.activeMatchRef.value) {
+            requestRef.value = requestAnimationFrame(update);
+            return;
+        }
+
+        // Freeze BOTH players during countdown - ensures fair simultaneous start
+        if (currentGameState.roundStatus === 'COUNTDOWN') {
             requestRef.value = requestAnimationFrame(update);
             return;
         }

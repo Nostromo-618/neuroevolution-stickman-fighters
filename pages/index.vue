@@ -209,7 +209,7 @@ const resetMatch = () => {
   evolutionResetMatch();
 };
 
-const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout } = useGameLoop({
+const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout, startCountdown } = useGameLoop({
   settings,
   settingsRef,
   gameStateRef,
@@ -298,6 +298,13 @@ if (process.client) {
         matchActive: true,
         ...(isTraining && { roundStatus: 'FIGHTING' })
       }));
+    }
+
+    // Arcade: Start countdown when isRunning becomes true and in WAITING status
+    // Only for first match - subsequent rounds are handled by startMatch() directly
+    const isFirstMatch = gameState.value.arcadeStats.matchesPlayed === 0;
+    if (isRunning && settings.value.gameMode === 'ARCADE' && gameState.value.roundStatus === 'WAITING' && isFirstMatch) {
+      startCountdown(false);  // First match uses normal speed
     }
   });
 

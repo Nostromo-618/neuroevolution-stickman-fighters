@@ -37,18 +37,22 @@
       </div>
     </div>
 
-    <!-- Game Over Overlays -->
-    <div
-      v-if="!gameState.matchActive && gameState.roundStatus === 'FIGHTING'"
-      class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl"
-    >
-      <div class="text-center">
-        <h2 class="text-5xl font-black text-white italic tracking-tighter mb-2">
-          {{ gameState.winner === 'Player 1' ? 'VICTORY' : 'DEFEAT' }}
-        </h2>
-        <p class="text-slate-400 font-mono">RESTARTING MATCH...</p>
+
+
+    <!-- Countdown Overlay (3, 2, 1, FIGHT!) -->
+    <Transition name="countdown">
+      <div
+        v-if="gameState.countdownValue !== null"
+        class="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+      >
+        <div 
+          class="text-9xl font-black tracking-tight drop-shadow-2xl"
+          :class="gameState.countdownValue === 0 ? 'text-orange-500' : 'text-white'"
+        >
+          {{ gameState.countdownValue === 0 ? 'FIGHT!' : gameState.countdownValue }}
+        </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 

@@ -122,9 +122,10 @@ export interface GameState {
   bestFitness: number;      // Highest fitness achieved so far
   matchActive: boolean;     // Whether a match is currently in progress
   winner: 'Player 1' | 'Player 2' | null;  // Match result
-  roundStatus: 'WAITING' | 'FIGHTING' | 'ENDED'; // Status of the current round
+  roundStatus: 'WAITING' | 'COUNTDOWN' | 'FIGHTING' | 'ENDED'; // Status of the current round
   matchesUntilEvolution: number; // Matches remaining until next evolution (Training mode only)
   arcadeStats: ArcadeStats; // Arcade mode win/loss tracking
+  countdownValue: number | null; // Countdown display: 3, 2, 1, 0 (FIGHT!), null (hidden)
 }
 
 // =============================================================================
