@@ -48,7 +48,7 @@
             @click="!isMatchRunning && setPlayer1Type(type)"
             class="text-[10px] font-bold"
           >
-            {{ type === 'CUSTOM_A' ? 'SCRIPT A' : type === 'CUSTOM_B' ? 'SCRIPT B' : type }}
+            {{ getPlayerTypeLabel(type) }}
           </UButton>
         </div>
       </div>
@@ -61,7 +61,7 @@
         </h2>
         <div class="flex flex-col gap-1 bg-slate-900 p-1 rounded-lg">
           <UButton
-            v-for="type in player2Types"
+            v-for="type in currentPlayer2Types"
             :key="type"
             :color="settings.player2Type === type ? 'success' : 'neutral'"
             :variant="settings.player2Type === type ? 'solid' : 'outline'"
@@ -69,7 +69,7 @@
             @click="setPlayer2Type(type)"
             class="text-[10px] font-bold"
           >
-            {{ type === 'CUSTOM_A' ? 'SCRIPT A' : type === 'CUSTOM_B' ? 'SCRIPT B' : type }}
+            {{ getPlayerTypeLabel(type) }}
           </UButton>
         </div>
       </div>
@@ -119,14 +119,20 @@ const props = defineProps<Props>();
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
 const isMatchRunning = computed(() => isTrainingActive.value && props.settings.isRunning);
 
-// Arcade mode includes HUMAN option, Training mode does not
-const arcadePlayer1Types = ['HUMAN', 'AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
-const trainingPlayer1Types = ['AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
-const player2Types = ['AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+// Arcade mode: Player 1 can be Human or AI (no Chuck - Chuck is opponent only)
+// Training mode: No Human, No Chuck (Chuck is ARCADE-exclusive)
+const arcadePlayer1Types = ['HUMAN', 'SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+const trainingPlayer1Types = ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+// Player 2: Chuck only available in ARCADE mode
+const arcadePlayer2Types = ['SIMPLE_AI', 'CHUCK_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+const trainingPlayer2Types = ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
 
 // Use computed to dynamically select available types based on mode
 const currentPlayer1Types = computed(() => 
   isTrainingActive.value ? trainingPlayer1Types : arcadePlayer1Types
+);
+const currentPlayer2Types = computed(() => 
+  isTrainingActive.value ? trainingPlayer2Types : arcadePlayer2Types
 );
 
 const hasCustomScript = computed(() => {
@@ -142,8 +148,8 @@ const toggleTrainingMode = () => {
     gameMode: newMode,
     isRunning: false,
     ...(newMode === 'TRAINING' && {
-      player1Type: prev.player1Type || 'AI',
-      player2Type: 'AI'
+      player1Type: prev.player1Type === 'HUMAN' ? 'SIMPLE_AI' : prev.player1Type,
+      player2Type: 'SIMPLE_AI'
     })
   }));
 };
@@ -156,8 +162,20 @@ const setPlayer1Type = (type: (typeof arcadePlayer1Types)[number] | (typeof trai
   }));
 };
 
-const setPlayer2Type = (type: typeof player2Types[number]) => {
+const setPlayer2Type = (type: (typeof arcadePlayer2Types)[number] | (typeof trainingPlayer2Types)[number]) => {
   props.setSettings(s => ({ ...s, player2Type: type }));
+};
+
+/** Get human-readable label for player type */
+const getPlayerTypeLabel = (type: string): string => {
+  switch (type) {
+    case 'HUMAN': return 'HUMAN';
+    case 'SIMPLE_AI': return 'SIMPLE AI';
+    case 'CHUCK_AI': return 'CHUCK AI';
+    case 'CUSTOM_A': return 'SCRIPT A';
+    case 'CUSTOM_B': return 'SCRIPT B';
+    default: return type;
+  }
 };
 </script>
 

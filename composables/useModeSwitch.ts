@@ -31,8 +31,8 @@ export function useModeSwitch(ctx: ModeSwitchContext) {
             gameMode: mode,
             isRunning: false,
             ...(mode === 'TRAINING' && {
-                player1Type: prev.player1Type || 'AI',
-                player2Type: 'AI'
+                player1Type: prev.player1Type === 'HUMAN' ? 'SIMPLE_AI' : prev.player1Type,
+                player2Type: 'SIMPLE_AI'
             })
         }));
 

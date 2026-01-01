@@ -10,6 +10,7 @@ import { ref, type Ref } from 'vue';
 import type { TrainingSettings, GameState } from '~/types';
 import { Fighter } from '~/services/GameEngine';
 import type { InputManager } from '~/services/InputManager';
+import { recordOpponentMove, runChuckTrainingCycle, runIncrementalTraining } from '~/services/ChuckAI';
 
 interface MatchUpdateContext {
     settingsRef: Ref<TrainingSettings>;
@@ -82,6 +83,12 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
 
             match.p2.update(dummyInput, match.p1);
 
+            // Chuck AI: Record opponent (human) moves for pattern learning
+            if (match.p2.isChuckAI && isP1Human && currentGameState.roundStatus === 'FIGHTING') {
+                recordOpponentMove(p1Input);
+                runIncrementalTraining();  // Real-time adaptation during fight
+            }
+
             const p1 = match.p1;
             const p2 = match.p2;
             const verticalOverlap = (p1.y + p1.height > p2.y) && (p2.y + p2.height > p1.y);
@@ -133,6 +140,7 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                     ctx.currentMatchIndex.value++;
                     ctx.startMatch();
                 } else {
+                    // ARCADE mode match end
                     const playerWon = p1.health > p2.health;
                     ctx.setGameState(prev => ({
                         ...prev,
@@ -143,6 +151,12 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                             losses: prev.arcadeStats.losses + (playerWon ? 0 : 1)
                         }
                     }));
+
+                    // Chuck AI: Run training cycle after each match to evolve
+                    if (match.p2.isChuckAI) {
+                        runChuckTrainingCycle();
+                    }
+
                     ctx.activeMatchRef.value = null;
                     ctx.addToast(playerWon ? 'success' : 'info', playerWon ? 'You Win!' : 'AI Wins!', true);
                     clearMatchRestartTimeout();

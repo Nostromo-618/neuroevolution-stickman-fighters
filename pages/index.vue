@@ -38,6 +38,12 @@
             :height="250"
             :fighter="activeMatchRef ? activeMatchRef.p2 : null"
           />
+
+          <!-- Chuck Training Visualization (Desktop Only, Arcade Chuck Mode) -->
+          <ChuckTrainingCanvas
+            class="hidden md:block w-full"
+            :settings="settings"
+          />
         </div>
 
         <!-- Right Column: Dashboards & Stats -->
@@ -312,8 +318,8 @@ const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
     gameMode: mode,
     isRunning: false,
     ...(mode === 'TRAINING' && {
-      player1Type: prev.player1Type || 'AI',
-      player2Type: 'AI'
+      player1Type: prev.player1Type === 'HUMAN' ? 'SIMPLE_AI' : prev.player1Type,
+      player2Type: 'SIMPLE_AI'
     })
   }));
 

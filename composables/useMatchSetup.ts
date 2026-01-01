@@ -13,6 +13,7 @@ import { MatchSetup } from '~/services/MatchSetup';
 import type { ScriptWorkerManager } from '~/services/CustomScriptRunner';
 import { createRandomNetwork } from '~/services/NeuralNetwork';
 import { calculateEvolutionInterval } from './useEvolution';
+import { COLORS } from '~/services/Config';
 
 interface MatchSetupContext {
     settingsRef: Ref<TrainingSettings>;
@@ -47,14 +48,14 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             workerB: ctx.customScriptWorkerBRef.value
         };
 
-        const spawnFighter = (type: 'HUMAN' | 'AI' | 'CUSTOM_A' | 'CUSTOM_B', x: number, color: string, isP2: boolean) =>
+        const spawnFighter = (type: 'HUMAN' | 'SIMPLE_AI' | 'CHUCK_AI' | 'CUSTOM_A' | 'CUSTOM_B', x: number, color: string, isP2: boolean) =>
             MatchSetup.createFighter(type, x, color, isP2, ctx.settingsRef.value, workers, ctx.getBestGenome());
 
         if (ctx.settingsRef.value.gameMode === 'TRAINING') {
             const popSize = ctx.populationRef.value.length;
             const p1Type = ctx.settingsRef.value.player1Type;
-            const p2Type = 'AI';
-            const isP1AI = p1Type === 'AI';
+            const p2Type = 'SIMPLE_AI'; // Training always uses Simple AI for P2
+            const isP1AI = p1Type === 'SIMPLE_AI' || p1Type === 'CHUCK_AI';
             const EVOLUTION_INTERVAL = calculateEvolutionInterval(p1Type, popSize);
 
             if (ctx.currentMatchIndex.value > 0 && ctx.currentMatchIndex.value % EVOLUTION_INTERVAL === 0) {
@@ -73,11 +74,11 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             let p1GenomeIdx: number;
 
             if (p1Type === 'HUMAN') {
-                p1Color = '#22c55e';
+                p1Color = COLORS.HUMAN;
                 p1Fighter = new Fighter(280 + spawnOffset1, p1Color, false);
                 p1GenomeIdx = -1;
             } else if (p1Type === 'CUSTOM_A') {
-                p1Color = '#a855f7';
+                p1Color = COLORS.CUSTOM_A;
                 p1Fighter = new Fighter(280 + spawnOffset1, p1Color, false);
                 const worker = ctx.customScriptWorkerARef.value;
                 if (worker && worker.isReady()) {
@@ -88,7 +89,7 @@ export function useMatchSetup(ctx: MatchSetupContext) {
                 }
                 p1GenomeIdx = -1;
             } else if (p1Type === 'CUSTOM_B') {
-                p1Color = '#14b8a6';
+                p1Color = COLORS.CUSTOM_B;
                 p1Fighter = new Fighter(280 + spawnOffset1, p1Color, false);
                 const worker = ctx.customScriptWorkerBRef.value;
                 if (worker && worker.isReady()) {
@@ -99,7 +100,8 @@ export function useMatchSetup(ctx: MatchSetupContext) {
                 }
                 p1GenomeIdx = -1;
             } else {
-                p1Color = '#ef4444';
+                // p1Type is SIMPLE_AI or CHUCK_AI
+                p1Color = p1Type === 'CHUCK_AI' ? COLORS.CHUCK_AI : COLORS.SIMPLE_AI;
                 if (isP1AI) {
                     const p1Idx = ctx.currentMatchIndex.value * 2;
                     let p2Idx = p1Idx + 1;
@@ -110,7 +112,7 @@ export function useMatchSetup(ctx: MatchSetupContext) {
                     const leftGenome = swapSides ? g2 : g1;
                     const rightGenome = swapSides ? g1 : g2;
                     p1Fighter = new Fighter(280 + spawnOffset1, p1Color, true, leftGenome);
-                    const p2Fighter = new Fighter(470 + spawnOffset2, '#3b82f6', true, rightGenome);
+                    const p2Fighter = new Fighter(470 + spawnOffset2, COLORS.SIMPLE_AI, true, rightGenome);
                     p2Fighter.direction = -1;
                     ctx.activeMatchRef.value = { p1: p1Fighter, p2: p2Fighter, p1GenomeIdx: p1Idx, p2GenomeIdx: p2Idx };
                     return;
@@ -123,7 +125,7 @@ export function useMatchSetup(ctx: MatchSetupContext) {
 
             const p2GenomeIdx = isP1AI ? -1 : ctx.currentMatchIndex.value;
             const p2Genome = ctx.populationRef.value[p2GenomeIdx] || ctx.getBestGenome() || { id: 'cpu', network: createRandomNetwork(), fitness: 0, matchesWon: 0 };
-            const p2Fighter = new Fighter(470 + spawnOffset2, '#3b82f6', true, p2Genome);
+            const p2Fighter = new Fighter(470 + spawnOffset2, COLORS.SIMPLE_AI, true, p2Genome);
             p2Fighter.direction = -1;
 
             ctx.activeMatchRef.value = { p1: p1Fighter, p2: p2Fighter, p1GenomeIdx, p2GenomeIdx };
@@ -133,8 +135,8 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             const p2Type = ctx.settingsRef.value.player2Type;
             const spawnOffset = Math.random() * 60 - 30;
 
-            const p1Color = p1Type === 'HUMAN' ? '#22c55e' : '#ef4444';
-            const p2Color = '#3b82f6';
+            const p1Color = p1Type === 'HUMAN' ? COLORS.HUMAN : (p1Type === 'CHUCK_AI' ? COLORS.CHUCK_AI : COLORS.SIMPLE_AI);
+            const p2Color = p2Type === 'CHUCK_AI' ? COLORS.CHUCK_AI : COLORS.SIMPLE_AI;
 
             const f1 = spawnFighter(p1Type, 280 + spawnOffset, p1Color, false);
             const f2 = spawnFighter(p2Type, 470 - spawnOffset, p2Color, true);

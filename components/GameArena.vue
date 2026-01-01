@@ -1,5 +1,5 @@
 <template>
-  <div class="relative group pt-4 sm:pt-6">
+  <div class="relative group">
     <GameHUD
       :active-match="activeMatch"
       :game-state="gameState"

@@ -132,10 +132,10 @@ export const useBackgroundTraining = ({
 
             // Run workers for:
             // 1. Training mode with turbo enabled and running
-            // 2. Arcade mode with background training enabled
+            // 2. Arcade mode with background training enabled AND running (user pressed Start)
             const shouldRunWorkers =
                 (settings.value.gameMode === 'TRAINING' && settings.value.turboTraining && settings.value.isRunning) ||
-                (settings.value.backgroundTraining && settings.value.gameMode === 'ARCADE');
+                (settings.value.backgroundTraining && settings.value.gameMode === 'ARCADE' && settings.value.isRunning);
 
             if (shouldRunWorkers) {
                 const currentCycleId = trainingCycleId;
@@ -146,7 +146,7 @@ export const useBackgroundTraining = ({
                     const stillValid =
                         currentCycleId === trainingCycleId &&
                         ((settings.value.gameMode === 'TRAINING' && settings.value.turboTraining && settings.value.isRunning) ||
-                         (settings.value.backgroundTraining && settings.value.gameMode === 'ARCADE'));
+                            (settings.value.backgroundTraining && settings.value.gameMode === 'ARCADE' && settings.value.isRunning));
 
                     if (!stillValid) {
                         return;

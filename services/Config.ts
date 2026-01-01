@@ -12,10 +12,34 @@
 // =============================================================================
 // NEURAL NETWORK ARCHITECTURE
 // =============================================================================
+
+/**
+ * Standard Simple AI architecture (13 hidden nodes)
+ */
 export const NN_ARCH = {
     INPUT_NODES: 9,
     HIDDEN_NODES: 13,
     OUTPUT_NODES: 8,
+} as const;
+
+/**
+ * Chuck AI architecture (64 hidden nodes for advanced adaptive learning)
+ */
+export const NN_ARCH_CHUCK = {
+    INPUT_NODES: 9,
+    HIDDEN_NODES: 64,
+    OUTPUT_NODES: 8,
+} as const;
+
+// =============================================================================
+// FIGHTER COLORS
+// =============================================================================
+export const COLORS = {
+    HUMAN: '#22c55e',       // Green (Tailwind green-500)
+    SIMPLE_AI: '#3b82f6',   // Blue (Tailwind blue-500)
+    CHUCK_AI: '#f97316',    // Orange (Tailwind orange-500)
+    CUSTOM_A: '#a855f7',    // Purple (Tailwind purple-500)
+    CUSTOM_B: '#14b8a6',    // Teal (Tailwind teal-500)
 } as const;
 
 // =============================================================================

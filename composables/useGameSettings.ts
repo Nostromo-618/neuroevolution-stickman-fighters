@@ -7,6 +7,11 @@ interface UseGameSettingsReturn {
     settingsRef: Ref<TrainingSettings>;
 }
 
+// Calculate smart defaults for background training
+const getHardwareConcurrency = () => typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency || 4) : 4;
+const hasMultipleThreads = () => getHardwareConcurrency() > 1;
+const getDefaultWorkerCount = () => Math.max(1, Math.floor(getHardwareConcurrency() / 2)); // 50% of threads
+
 export const useGameSettings = (): UseGameSettingsReturn => {
     const settings = ref<TrainingSettings>({
         populationSize: 48,
@@ -14,14 +19,14 @@ export const useGameSettings = (): UseGameSettingsReturn => {
         hiddenLayers: [13],
         fps: 60,
         simulationSpeed: 1,
-        gameMode: 'TRAINING',
+        gameMode: 'ARCADE',                      // Default to ARCADE mode
         isRunning: false,
-        backgroundTraining: false,
+        backgroundTraining: hasMultipleThreads(), // Auto-enable when multiple threads available
         turboTraining: true,
-        workerCount: typeof navigator !== 'undefined' ? Math.min(navigator.hardwareConcurrency || 4, 8) : 4,
-        opponentType: 'AI',
-        player1Type: 'AI',
-        player2Type: 'AI'
+        workerCount: getDefaultWorkerCount(),     // 50% of threads (e.g., 4 of 8)
+        opponentType: 'SIMPLE_AI',
+        player1Type: 'HUMAN',                     // Default to human player
+        player2Type: 'CHUCK_AI'                   // Default to Chuck AI opponent
     });
 
     const settingsRef = ref(settings.value);

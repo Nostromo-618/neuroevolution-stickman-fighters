@@ -63,6 +63,7 @@ export class Fighter {
   isAi: boolean;          // True if controlled by neural network
 
   isCustom: boolean;      // True if controlled by user custom script
+  isChuckAI: boolean = false; // True if this is Chuck AI (64-node adaptive network)
   scriptWorker: ScriptWorkerManager | null = null; // Web Worker for secure custom script execution
   genome?: Genome;        // AI brain (only set for AI fighters)
 

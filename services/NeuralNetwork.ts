@@ -49,7 +49,7 @@
 
 import type { NeuralNetworkData } from '../types';
 
-import { NN_ARCH } from './Config';
+import { NN_ARCH, NN_ARCH_CHUCK } from './Config';
 
 // =============================================================================
 // NETWORK ARCHITECTURE CONSTANTS
@@ -107,20 +107,41 @@ export const OUTPUT_NODES = NN_ARCH.OUTPUT_NODES;
  * @returns A new NeuralNetwork with random weights and biases
  */
 export const createRandomNetwork = (): NeuralNetworkData => {
-  // Input → Hidden weights (9 inputs × 16 hidden = 144 weights)
+  return createRandomNetworkWithArch(HIDDEN_NODES);
+};
+
+/**
+ * Creates a neural network with a configurable number of hidden nodes.
+ * Used for different AI architectures (Simple AI vs Chuck AI).
+ * 
+ * @param hiddenNodes - Number of hidden layer neurons
+ * @returns A new NeuralNetwork with random weights and biases
+ */
+export const createRandomNetworkWithArch = (hiddenNodes: number): NeuralNetworkData => {
+  // Input → Hidden weights
   const inputWeights = Array(INPUT_NODES).fill(0).map(() =>
-    Array(HIDDEN_NODES).fill(0).map(() => Math.random() * 2 - 1)
+    Array(hiddenNodes).fill(0).map(() => Math.random() * 2 - 1)
   );
 
-  // Hidden → Output weights (16 hidden × 8 outputs = 128 weights)
-  const outputWeights = Array(HIDDEN_NODES).fill(0).map(() =>
+  // Hidden → Output weights
+  const outputWeights = Array(hiddenNodes).fill(0).map(() =>
     Array(OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1)
   );
 
-  // Biases: one per neuron in hidden and output layers (16 + 8 = 24)
-  const biases = Array(HIDDEN_NODES + OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1);
+  // Biases: one per neuron in hidden and output layers
+  const biases = Array(hiddenNodes + OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1);
 
   return { inputWeights, outputWeights, biases };
+};
+
+/**
+ * Creates a Chuck AI network with 64 hidden nodes.
+ * Chuck AI uses a larger architecture for advanced adaptive learning.
+ * 
+ * @returns A NeuralNetwork configured for Chuck AI
+ */
+export const createChuckNetwork = (): NeuralNetworkData => {
+  return createRandomNetworkWithArch(NN_ARCH_CHUCK.HIDDEN_NODES);
 };
 
 // =============================================================================
@@ -188,20 +209,23 @@ export const relu = (t: number) => Math.max(0, t);
  * 
  * 2. OUTPUT LAYER COMPUTATION
  *    For each output neuron o:
- *      sum = Σ(hidden[h] × outputWeight[h][o]) + bias[HIDDEN_NODES + o]
+ *      sum = Σ(hidden[h] × outputWeight[h][o]) + bias[hiddenNodes + o]
  *      output[o] = sigmoid(sum)
  * 
  * Time Complexity: O(INPUT × HIDDEN + HIDDEN × OUTPUT)
- * For our network: O(9×10 + 10×8) = O(170) operations per call
  * 
  * @param network - The neural network to use
  * @param inputs - Array of 9 normalized input values
  * @returns Array of 8 output values (0-1 each)
  */
 export const predict = (network: NeuralNetworkData, inputs: number[]): number[] => {
+  // Dynamically read hidden node count from network structure
+  // This allows the function to work with different architectures
+  const hiddenNodes = network.outputWeights.length;
+
   // --- STEP 1: Input → Hidden Layer ---
   const hiddenOutputs: number[] = [];
-  for (let h = 0; h < HIDDEN_NODES; h++) {
+  for (let h = 0; h < hiddenNodes; h++) {
     let sum = 0;
     // Weighted sum of all inputs
     for (let i = 0; i < INPUT_NODES; i++) {
@@ -217,12 +241,12 @@ export const predict = (network: NeuralNetworkData, inputs: number[]): number[] 
   for (let o = 0; o < OUTPUT_NODES; o++) {
     let sum = 0;
     // Weighted sum of hidden layer outputs
-    for (let h = 0; h < HIDDEN_NODES; h++) {
+    for (let h = 0; h < hiddenNodes; h++) {
       sum += hiddenOutputs[h] * network.outputWeights[h][o];
     }
     // Add bias and apply Sigmoid activation
-    // (biases for output layer start at index HIDDEN_NODES)
-    sum += network.biases[HIDDEN_NODES + o];
+    // (biases for output layer start at index hiddenNodes)
+    sum += network.biases[hiddenNodes + o];
     finalOutputs.push(sigmoid(sum));
   }
 

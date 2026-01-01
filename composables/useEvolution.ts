@@ -32,7 +32,7 @@ export function calculateEvolutionInterval(
     populationSize: number
 ): number {
     const isHumanOpponent = player1Type === 'HUMAN';
-    const isAIOpponent = player1Type === 'AI';
+    const isAIOpponent = player1Type === 'SIMPLE_AI' || player1Type === 'CHUCK_AI';
 
     return isHumanOpponent
         ? 3
@@ -71,8 +71,6 @@ export function useEvolution(ctx: EvolutionContext) {
      */
     const resetMatch = () => {
         const popSize = ctx.populationRef.value.length;
-        const isHumanOpponent = ctx.settingsRef.value.player1Type === 'HUMAN';
-        const isAIOpponent = ctx.settingsRef.value.player1Type === 'AI';
 
         let matchesRemaining = popSize;
         if (ctx.settingsRef.value.gameMode === 'TRAINING') {
