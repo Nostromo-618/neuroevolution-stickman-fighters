@@ -157,6 +157,7 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                     ctx.setGameState(prev => ({
                         ...prev,
                         matchActive: false,
+                        roundStatus: 'ROUND_END',  // Keep arena visible, show result
                         arcadeStats: {
                             matchesPlayed: prev.arcadeStats.matchesPlayed + 1,
                             wins: prev.arcadeStats.wins + (playerWon ? 1 : 0),
@@ -169,11 +170,11 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                         runChuckTrainingCycle();
                     }
 
-                    ctx.activeMatchRef.value = null;
-                    ctx.addToast(playerWon ? 'success' : 'info', playerWon ? 'You Win!' : 'AI Wins!', true);
+                    // Keep activeMatchRef populated so arena stays visible
+                    // (Don't set to null - that causes "Initializing Arena..." flash)
                     clearMatchRestartTimeout();
                     matchRestartTimeoutRef.value = setTimeout(() => {
-                        ctx.startMatch();
+                        ctx.startMatch();  // This will respawn fighters and start countdown
                         matchRestartTimeoutRef.value = null;
                     }, 1000);
                 }

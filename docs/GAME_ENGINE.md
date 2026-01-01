@@ -177,11 +177,11 @@ Each fighter has a **state** that determines their animation and available actio
 | Any | Death | DEAD | Special physics |
 | IDLE | Left pressed | MOVE_LEFT | |
 | IDLE | Right pressed | MOVE_RIGHT | |
-| IDLE | Up pressed (grounded) | JUMP | Costs 10 energy |
-| IDLE | Down pressed | CROUCH | Slows movement |
-| IDLE | Block pressed | BLOCK | Drains energy |
-| IDLE | Punch pressed | PUNCH | 30 frame cooldown |
-| IDLE | Kick pressed | KICK | 40 frame cooldown |
+| IDLE | Up pressed (grounded) | JUMP | Costs 15 energy |
+| IDLE | Down pressed | CROUCH | ~0.5 energy/frame |
+| IDLE | Block pressed | BLOCK | ~0.5 energy/frame |
+| IDLE | Punch pressed | PUNCH | 10 energy, 30 frame cooldown |
+| IDLE | Kick pressed | KICK | 20 energy, 20 frame cooldown |
 | JUMP | Landing | IDLE | |
 | PUNCH/KICK | Cooldown ends | IDLE | |
 
@@ -193,8 +193,8 @@ Each fighter has a **state** that determines their animation and available actio
 
 | Attack | Damage | Energy Cost | Cooldown | Hitbox Size | Knockback |
 |--------|--------|-------------|----------|-------------|-----------|
-| Punch | 5 | 25 (25%) | 30 frames | 46 × 20 px | 8 px/frame |
-| Kick | 10 | 50 (50%) | 40 frames | 66 × 30 px | 15 px/frame |
+| Punch | 5 | 10 (10%) | 30 frames | 46 × 20 px | 8 px/frame |
+| Kick | 10 | 20 (20%) | 20 frames | 66 × 30 px | 15 px/frame |
 
 ### Attack Timing Windows
 
@@ -209,12 +209,26 @@ Frame:  30  29  28  27  26  25  24  23  22  21  20  19  18  17  16  15  14  ... 
 
 **Active window**: Cooldown 25-15 (10 frames of hitbox)
 
-### Damage Modifiers
+### Damage Modifiers (Rock-Paper-Scissors System)
 
-| Situation | Multiplier |
-|-----------|------------|
-| Normal hit | 1.0× |
-| Blocked | 0.5× |
+The combat system uses strategic counters where defensive moves perfectly negate specific attacks:
+
+| Attack | vs Defense | Damage | Effect |
+|--------|------------|--------|--------|
+| **Punch** | None | 5 (100%) | Normal hit |
+| **Punch** | vs BLOCK | **0 (0%)** | ✅ Perfect block, attacker stunned +5 frames |
+| **Punch** | vs CROUCH | 2.5 (50%) | Partial dodge |
+| **Kick** | None | 10 (100%) | Normal hit |
+| **Kick** | vs BLOCK | 5 (50%) | Partial block |
+| **Kick** | vs CROUCH | **0 (0%)** | ✅ Perfect dodge, attacker stunned +5 frames |
+
+**Strategic Depth:**
+- **Block** is the counter to **Punch** (arm blocks fist perfectly)
+- **Crouch** is the counter to **Kick** (duck under the kick entirely)
+- This creates mind games: predict opponent's attack and counter it
+
+> [!IMPORTANT]
+> **Facing Requirement**: Block and Crouch defensive counters **only work if the defender is facing the attacker**. If hit from behind while blocking/crouching, the defender takes **full damage** with no reduction.
 
 ### Backstab Detection
 
@@ -226,15 +240,16 @@ The system can still detect when a defender is facing away from an attacker, but
 
 - Holding block costs **0.5 energy per frame** (~30 energy/sec at 60 FPS)
 - Full energy allows **~5.5 seconds** of continuous blocking
-- Blocked hits deal **50% damage** for punches, **75% damage reduction** for kicks
-- Getting hit while blocking costs **5 extra energy**
+- **Blocking a Punch = 0 damage** (perfect counter, attacker stunned)
+- **Blocking a Kick = 50% damage**
 - Movement is reduced to **30%** while blocking
 
 ### Crouch Mechanics
 
 - Holding crouch costs **0.5 energy per frame** (~30 energy/sec at 60 FPS)
 - Full energy allows **~5.5 seconds** of continuous crouching
-- Crouching blocks **50% damage** for kicks, **75% damage reduction** for punches
+- **Crouching a Kick = 0 damage** (perfect counter, attacker stunned)
+- **Crouching a Punch = 50% damage**
 - Movement is reduced to **50%** while crouching
 
 ---
@@ -248,11 +263,11 @@ Energy is a resource that limits rapid action spam.
 | Action | Energy Cost |
 |--------|-------------|
 | Moving (per frame) | 0.1 |
-| Jumping | 10 (10% of total) |
+| Jumping | 15 (15% of total) |
 | Crouching (per frame) | 0.5 |
 | Blocking (per frame) | 0.5 |
-| Punch | 25 (25% of total) |
-| Kick | 50 (50% of total) |
+| Punch | 10 (10% of total) |
+| Kick | 20 (20% of total) |
 
 ### Energy Regeneration
 

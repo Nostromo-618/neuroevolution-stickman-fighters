@@ -23,11 +23,11 @@ export const NN_ARCH = {
 } as const;
 
 /**
- * Chuck AI architecture (64 hidden nodes for advanced adaptive learning)
+ * Chuck AI architecture (32 hidden nodes for balanced performance)
  */
 export const NN_ARCH_CHUCK = {
     INPUT_NODES: 9,
-    HIDDEN_NODES: 64,
+    HIDDEN_NODES: 32,
     OUTPUT_NODES: 8,
 } as const;
 
@@ -61,11 +61,11 @@ export const ENERGY = {
     REGEN_IDLE: 0.5,
     REGEN_ACTIVE: 0.2,
     COST_MOVE: 0.1,
-    COST_JUMP: 10,
+    COST_JUMP: 15,
     COST_CROUCH: 0.5,
     COST_BLOCK: 0.5,
     COST_PUNCH: 10,
-    COST_KICK: 50,
+    COST_KICK: 20,
     PENALTY_HIT: 1,
 } as const;
 

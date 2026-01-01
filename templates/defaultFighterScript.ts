@@ -5,6 +5,11 @@
  * 
  * A balanced, educational template for new users to learn from.
  * Demonstrates all key concepts: state analysis, movement, defense, offense.
+ * 
+ * Updated for Rock-Paper-Scissors combat system:
+ * - BLOCK perfectly counters PUNCH (0 damage + attacker stun)
+ * - CROUCH perfectly counters KICK (0 damage + attacker stun)
+ * - Defensive counters only work when FACING the attacker!
  */
 
 export const DEFAULT_FIGHTER_SCRIPT = `/**
@@ -34,6 +39,7 @@ export const DEFAULT_FIGHTER_SCRIPT = `/**
  *   energy       Power for attacks                    0 to 100
  *   cooldown     Frames until you can act again       0 = ready!
  *   direction    Which way you're facing              -1 or 1
+ *   state        Current action (5=punch, 6=kick)     0 to 7
  * 
  * ============================================================
  * OUTPUTS - Actions you can take:
@@ -41,13 +47,23 @@ export const DEFAULT_FIGHTER_SCRIPT = `/**
  * 
  *   ACTION       WHAT IT DOES                         ENERGY COST
  *   ─────────────────────────────────────────────────────────────
- *   left         Move left                            free
- *   right        Move right                           free
- *   up           Jump                                 25 energy
- *   down         Crouch (blocks kicks better)         free
- *   action1      Punch (quick, 5 damage)              30 energy
- *   action2      Kick (slow, 10 damage)               60 energy
- *   action3      Block (reduces damage taken)         drains energy
+ *   left         Move left                            ~0 (minimal)
+ *   right        Move right                           ~0 (minimal)
+ *   up           Jump                                 15 energy
+ *   down         Crouch (COUNTERS KICKS!)             ~0.5/frame
+ *   action1      Punch (quick, 5 damage)              10 energy
+ *   action2      Kick (strong, 10 damage)             20 energy
+ *   action3      Block (COUNTERS PUNCHES!)            ~0.5/frame
+ * 
+ * ============================================================
+ * COMBAT SYSTEM (Rock-Paper-Scissors):
+ * ============================================================
+ * 
+ *   - BLOCK beats PUNCH → 0 damage, attacker stunned!
+ *   - CROUCH beats KICK → 0 damage, attacker stunned!
+ *   - PUNCH vs CROUCH → 50% damage (partial dodge)
+ *   - KICK vs BLOCK → 50% damage (partial block)
+ *   - Must be FACING attacker for counters to work!
  * 
  * ============================================================
  */
@@ -72,13 +88,17 @@ function decide(self, opponent) {
   // Am I ready to act? (cooldown must be 0)
   const iAmReadyToAct = self.cooldown === 0;
   
-  // Is opponent in the middle of an attack animation?
-  // (Their cooldown will be between these values during attack)
-  const ATTACK_ANIMATION_START_FRAME = 15;
-  const ATTACK_ANIMATION_END_FRAME = 35;
-  const opponentIsCurrentlyAttacking = 
-      opponent.cooldown > ATTACK_ANIMATION_START_FRAME && 
-      opponent.cooldown < ATTACK_ANIMATION_END_FRAME;
+  // Am I facing the opponent? (IMPORTANT for counters!)
+  const iAmFacingOpponent = 
+    (opponentIsToMyRight && self.direction === 1) ||
+    (opponentIsToMyLeft && self.direction === -1);
+  
+  // What attack is the opponent doing?
+  const PUNCH_STATE = 5;
+  const KICK_STATE = 6;
+  const opponentIsPunching = opponent.state === PUNCH_STATE;
+  const opponentIsKicking = opponent.state === KICK_STATE;
+  const opponentIsAttacking = opponentIsPunching || opponentIsKicking;
   
   
   // ============================================================
@@ -104,7 +124,7 @@ function decide(self, opponent) {
   // Distance thresholds (in pixels)
   const TOO_FAR_AWAY = 100;      // Need to get closer
   const TOO_CLOSE = 25;          // Might want to back up
-  const MINIMUM_ENERGY_FOR_CHASE = 30;
+  const MINIMUM_ENERGY_FOR_CHASE = 20;
   
   // If opponent is far away, move toward them
   if (distanceToOpponent > TOO_FAR_AWAY && self.energy > MINIMUM_ENERGY_FOR_CHASE) {
@@ -115,8 +135,8 @@ function decide(self, opponent) {
     }
   }
   
-  // If opponent is very close, sometimes back away (30% chance)
-  const shouldRetreat = Math.random() < 0.3;  // Random chance each frame
+  // If opponent is very close, sometimes back away (20% chance)
+  const shouldRetreat = Math.random() < 0.2;
   if (distanceToOpponent < TOO_CLOSE && shouldRetreat) {
     if (opponentIsToMyRight) {
       moveLeft = true;   // Back away to the left
@@ -127,23 +147,30 @@ function decide(self, opponent) {
   
   
   // ============================================================
-  // STEP 4: Decide on DEFENSE
+  // STEP 4: Decide on DEFENSE (Rock-Paper-Scissors!)
   // ============================================================
   
-  const BLOCK_RANGE = 130;           // How close before we block
-  const MINIMUM_ENERGY_TO_BLOCK = 20;
+  const DEFENSE_RANGE = 130;           // How close before we defend
+  const MINIMUM_ENERGY_TO_DEFEND = 15;
   
-  // Block if: opponent is attacking AND they're close AND we have energy
-  const shouldBlock = 
-      opponentIsCurrentlyAttacking && 
-      distanceToOpponent < BLOCK_RANGE && 
-      self.energy > MINIMUM_ENERGY_TO_BLOCK;
+  // Only try to counter if we're facing the opponent!
+  const canCounter = 
+      iAmFacingOpponent && 
+      distanceToOpponent < DEFENSE_RANGE && 
+      self.energy > MINIMUM_ENERGY_TO_DEFEND;
   
-  if (shouldBlock) {
-    doBlock = true;
-    // Stop moving while blocking (focus on defense)
-    moveLeft = false;
-    moveRight = false;
+  if (canCounter && opponentIsAttacking) {
+    if (opponentIsPunching) {
+      // BLOCK counters PUNCH → Perfect defense!
+      doBlock = true;
+      moveLeft = false;
+      moveRight = false;
+    } else if (opponentIsKicking) {
+      // CROUCH counters KICK → Perfect dodge!
+      crouch = true;
+      moveLeft = false;
+      moveRight = false;
+    }
   }
   
   
@@ -153,16 +180,17 @@ function decide(self, opponent) {
   
   const PUNCH_RANGE = 80;            // Close range for punches
   const KICK_RANGE = 120;            // Medium range for kicks
-  const MINIMUM_ENERGY_FOR_PUNCH = 30;
-  const MINIMUM_ENERGY_FOR_KICK = 60;
+  const MINIMUM_ENERGY_FOR_PUNCH = 10;
+  const MINIMUM_ENERGY_FOR_KICK = 20;
   
-  // Only attack if: not blocking AND ready to act AND have energy
-  const canAttack = !doBlock && iAmReadyToAct && self.energy > MINIMUM_ENERGY_FOR_PUNCH;
+  // Only attack if: not defending AND ready to act AND have energy
+  const isDefending = doBlock || crouch;
+  const canAttack = !isDefending && iAmReadyToAct && self.energy > MINIMUM_ENERGY_FOR_PUNCH;
   
   if (canAttack) {
-    // Close range: prefer punch (70% chance), sometimes kick
+    // Close range: prefer punch (60% chance), sometimes kick
     if (distanceToOpponent < PUNCH_RANGE) {
-      const preferPunch = Math.random() < 0.7;
+      const preferPunch = Math.random() < 0.6;
       if (preferPunch) {
         doPunch = true;
       } else if (self.energy > MINIMUM_ENERGY_FOR_KICK) {
@@ -180,8 +208,8 @@ function decide(self, opponent) {
   // STEP 6: Decide on JUMPING
   // ============================================================
   
-  const MINIMUM_ENERGY_TO_JUMP = 25;
-  const JUMP_CHANCE = 0.05;  // 5% chance each frame = occasional jumps
+  const MINIMUM_ENERGY_TO_JUMP = 15;
+  const JUMP_CHANCE = 0.03;  // 3% chance each frame = occasional jumps
   
   // Sometimes jump to dodge attacks or mix up movement
   const shouldJump = 
@@ -189,7 +217,7 @@ function decide(self, opponent) {
       self.energy > MINIMUM_ENERGY_TO_JUMP && 
       Math.random() < JUMP_CHANCE;
   
-  if (shouldJump) {
+  if (shouldJump && !isDefending) {
     jump = true;
   }
   
@@ -203,10 +231,10 @@ function decide(self, opponent) {
     left: moveLeft,       // Press left arrow?
     right: moveRight,     // Press right arrow?
     up: jump,             // Press jump?
-    down: crouch,         // Press crouch?
+    down: crouch,         // Press crouch? (COUNTERS KICKS!)
     action1: doPunch,     // Press punch button?
     action2: doKick,      // Press kick button?
-    action3: doBlock      // Press block button?
+    action3: doBlock      // Press block button? (COUNTERS PUNCHES!)
   };
 }
 `;

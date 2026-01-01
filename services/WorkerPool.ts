@@ -228,7 +228,7 @@ export class WorkerPool {
 
         // Only send if worker has jobs to do
         if (workerJobs.length > 0) {
-          this.workers[i].postMessage({ type: 'runMatches', jobs: workerJobs });
+          this.workers[i]?.postMessage({ type: 'runMatches', jobs: workerJobs });
         }
       }
     });

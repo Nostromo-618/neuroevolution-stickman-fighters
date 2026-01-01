@@ -331,13 +331,13 @@ export class Fighter {
     // Threshold-based activation: output > 0.5 means "do this action"
     // This allows the AI to combine actions (e.g., move + punch) like humans can
     return {
-      left: outputs[FighterAction.MOVE_LEFT] > 0.5,
-      right: outputs[FighterAction.MOVE_RIGHT] > 0.5,
-      up: outputs[FighterAction.JUMP] > 0.5,
-      down: outputs[FighterAction.CROUCH] > 0.5,
-      action1: outputs[FighterAction.PUNCH] > 0.5,
-      action2: outputs[FighterAction.KICK] > 0.5,
-      action3: outputs[FighterAction.BLOCK] > 0.5,
+      left: (outputs[FighterAction.MOVE_LEFT] ?? 0) > 0.5,
+      right: (outputs[FighterAction.MOVE_RIGHT] ?? 0) > 0.5,
+      up: (outputs[FighterAction.JUMP] ?? 0) > 0.5,
+      down: (outputs[FighterAction.CROUCH] ?? 0) > 0.5,
+      action1: (outputs[FighterAction.PUNCH] ?? 0) > 0.5,
+      action2: (outputs[FighterAction.KICK] ?? 0) > 0.5,
+      action3: (outputs[FighterAction.BLOCK] ?? 0) > 0.5,
     };
   }
 
@@ -433,21 +433,40 @@ export class Fighter {
         const defenderFacingAway = (attackerToRight && opponent.direction === -1) ||
           (!attackerToRight && opponent.direction === 1);
 
-        // === DAMAGE CALCULATION ===
+        // === DAMAGE CALCULATION (Rock-Paper-Scissors System) ===
         let damage = this.state === FighterAction.PUNCH ? 5 : 10;
+        let isPerfectCounter = false;
 
-        // Removed backstab multiplier as requested
-        if (opponent.state === FighterAction.BLOCK) {
-          damage *= 0.5;  // Blocked: 50% damage reduction for punches, 75% for kicks
-          opponent.energy -= ENERGY.PENALTY_HIT;  // Blocking costs extra energy when hit
-        } else if (opponent.state === FighterAction.CROUCH) {
-          // Crouching blocks 75% of kicks and 50% of punches
-          if (this.state === FighterAction.KICK) {
-            damage *= 0.25;  // 75% reduction for kicks
+        // Defensive counters ONLY work if defender is facing the attacker
+        // If facing away, they take full damage regardless of stance
+        const defenderFacingAttacker = !defenderFacingAway;
+
+        if (defenderFacingAttacker && opponent.state === FighterAction.BLOCK) {
+          if (this.state === FighterAction.PUNCH) {
+            // PERFECT BLOCK: Block counters Punch completely
+            damage = 0;
+            isPerfectCounter = true;
           } else {
-            damage *= 0.5;   // 50% reduction for punches
+            // Partial block: Kick vs Block = 50% damage
+            damage *= 0.5;
+            opponent.energy -= ENERGY.PENALTY_HIT;
           }
-          opponent.energy -= ENERGY.PENALTY_HIT;  // Crouching costs extra energy when hit
+        } else if (defenderFacingAttacker && opponent.state === FighterAction.CROUCH) {
+          if (this.state === FighterAction.KICK) {
+            // PERFECT DODGE: Crouch counters Kick completely
+            damage = 0;
+            isPerfectCounter = true;
+          } else {
+            // Partial dodge: Punch vs Crouch = 50% damage
+            damage *= 0.5;
+            opponent.energy -= ENERGY.PENALTY_HIT;
+          }
+        }
+        // If defenderFacingAway: full damage, no counter effects
+
+        // Perfect counter: stun attacker (extend cooldown)
+        if (isPerfectCounter) {
+          this.cooldown += 5;  // Attacker is briefly stunned
         }
 
         // Apply damage (clamped to 0)

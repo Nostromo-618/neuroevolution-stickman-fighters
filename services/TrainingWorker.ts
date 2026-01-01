@@ -133,9 +133,9 @@ function predict(network: NeuralNetwork, inputs: number[]): number[] {
   for (let h = 0; h < HIDDEN_NODES; h++) {
     let sum = 0;
     for (let i = 0; i < INPUT_NODES; i++) {
-      sum += inputs[i] * network.inputWeights[i][h];
+      sum += (inputs[i] ?? 0) * (network.inputWeights[i]?.[h] ?? 0);
     }
-    sum += network.biases[h];
+    sum += network.biases[h] ?? 0;
     hiddenOutputs.push(relu(sum));
   }
 
@@ -144,9 +144,9 @@ function predict(network: NeuralNetwork, inputs: number[]): number[] {
   for (let o = 0; o < OUTPUT_NODES; o++) {
     let sum = 0;
     for (let h = 0; h < HIDDEN_NODES; h++) {
-      sum += hiddenOutputs[h] * network.outputWeights[h][o];
+      sum += (hiddenOutputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
     }
-    sum += network.biases[HIDDEN_NODES + o];
+    sum += network.biases[HIDDEN_NODES + o] ?? 0;
     finalOutputs.push(sigmoid(sum));
   }
 
@@ -368,13 +368,13 @@ class WorkerFighter {
     const outputs = predict(this.genome.network, inputs);
 
     return {
-      left: outputs[MOVE_LEFT] > 0.5,
-      right: outputs[MOVE_RIGHT] > 0.5,
-      up: outputs[JUMP] > 0.5,
-      down: outputs[CROUCH] > 0.5,
-      action1: outputs[PUNCH] > 0.5,
-      action2: outputs[KICK] > 0.5,
-      action3: outputs[BLOCK] > 0.5,
+      left: (outputs[MOVE_LEFT] ?? 0) > 0.5,
+      right: (outputs[MOVE_RIGHT] ?? 0) > 0.5,
+      up: (outputs[JUMP] ?? 0) > 0.5,
+      down: (outputs[CROUCH] ?? 0) > 0.5,
+      action1: (outputs[PUNCH] ?? 0) > 0.5,
+      action2: (outputs[KICK] ?? 0) > 0.5,
+      action3: (outputs[BLOCK] ?? 0) > 0.5,
     };
   }
 

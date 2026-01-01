@@ -8,18 +8,18 @@ interface UseCustomScriptWorkersReturn {
     recompileCustomScript: () => Promise<void>;
 }
 
-export const useCustomScriptWorkers = (settings: Ref<TrainingSettings>, addToast: (type: string, message: string) => void): UseCustomScriptWorkersReturn => {
+export const useCustomScriptWorkers = (settings: Ref<TrainingSettings>, addToast: (type: 'success' | 'error' | 'info', message: string) => void): UseCustomScriptWorkersReturn => {
     const customScriptWorkerARef = ref<ScriptWorkerManager | null>(null);
     const customScriptWorkerBRef = ref<ScriptWorkerManager | null>(null);
 
     if (process.client) {
         watch(() => [settings.value.gameMode, settings.value.opponentType, settings.value.player1Type, settings.value.player2Type], () => {
             const compileWorker = async (slot: 'slot1' | 'slot2', workerRef: Ref<ScriptWorkerManager | null>) => {
-            const scriptCode = loadScript(slot);
+                const scriptCode = loadScript(slot);
 
-            if (!workerRef.value) {
-                workerRef.value = new ScriptWorkerManager();
-            }
+                if (!workerRef.value) {
+                    workerRef.value = new ScriptWorkerManager();
+                }
 
                 if (!workerRef.value.isReady()) {
                     const result = await workerRef.value.compile(scriptCode);
@@ -66,9 +66,9 @@ export const useCustomScriptWorkers = (settings: Ref<TrainingSettings>, addToast
         if (customScriptWorkerBRef.value) recompileSlot('slot2', customScriptWorkerBRef as Ref<ScriptWorkerManager | null>);
     };
 
-    return { 
-        customScriptWorkerARef: customScriptWorkerARef as Ref<ScriptWorkerManager | null>, 
-        customScriptWorkerBRef: customScriptWorkerBRef as Ref<ScriptWorkerManager | null>, 
-        recompileCustomScript 
+    return {
+        customScriptWorkerARef: customScriptWorkerARef as Ref<ScriptWorkerManager | null>,
+        customScriptWorkerBRef: customScriptWorkerBRef as Ref<ScriptWorkerManager | null>,
+        recompileCustomScript
     };
 };

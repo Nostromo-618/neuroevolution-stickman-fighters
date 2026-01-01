@@ -272,15 +272,18 @@ const render = () => {
     mirrorFighter.checkHit(chuckFighter);
     chuckFighter.checkHit(mirrorFighter);
 
-    // Simple collision
-    const dist = Math.abs(mirrorFighter.x - chuckFighter.x);
-    if (dist < 30 * SCALE) {
-      if (mirrorFighter.x < chuckFighter.x) {
-        mirrorFighter.x -= 2;
-        chuckFighter.x += 2;
+    // Collision push-apart (same logic as main arena in useMatchUpdate.ts)
+    const p1 = mirrorFighter;
+    const p2 = chuckFighter;
+    const verticalOverlap = (p1.y + p1.height > p2.y) && (p2.y + p2.height > p1.y);
+    
+    if (verticalOverlap) {
+      if (p1.x < p2.x) {
+        const overlap = (p1.x + p1.width) - p2.x;
+        if (overlap > 0) { p1.x -= overlap / 2; p2.x += overlap / 2; }
       } else {
-        mirrorFighter.x += 2;
-        chuckFighter.x -= 2;
+        const overlap = (p2.x + p2.width) - p1.x;
+        if (overlap > 0) { p2.x -= overlap / 2; p1.x += overlap / 2; }
       }
     }
 

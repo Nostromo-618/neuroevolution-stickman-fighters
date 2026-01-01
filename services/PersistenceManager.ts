@@ -50,11 +50,17 @@ export const loadSettings = (): Partial<TrainingSettings> | null => {
  * Serializes a Genome object, ensuring the NeuralNetwork class is properly handled.
  */
 const serializeGenome = (genome: Genome): SerializedGenome => {
+    // Check if network has toJSON method (FeedForwardNetwork instance)
+    // Otherwise treat it as plain NeuralNetworkData
+    const networkData = typeof (genome.network as unknown as { toJSON?: () => unknown }).toJSON === 'function'
+        ? (genome.network as unknown as FeedForwardNetwork).toJSON()
+        : genome.network;
+
     return {
         id: genome.id,
         fitness: genome.fitness,
         matchesWon: genome.matchesWon,
-        network: genome.network.toJSON()
+        network: networkData as ReturnType<FeedForwardNetwork['toJSON']>
     };
 };
 

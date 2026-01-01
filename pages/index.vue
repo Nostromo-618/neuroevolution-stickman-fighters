@@ -20,7 +20,7 @@
         <!-- Left Column: Game View -->
         <div class="lg:col-span-2 space-y-4">
           <GameArena
-            :active-match="activeMatchRef ?? null"
+            :active-match="(activeMatchRef ?? null) as any"
             :game-state="gameState"
             :settings="settings"
             :current-match-index="currentMatchIndex"
@@ -29,14 +29,14 @@
           <ControlsHelper />
 
           <!-- Mobile Touch Controls - only in Arcade mode -->
-          <TouchControls v-if="settings.gameMode === 'ARCADE'" :input-manager="{ value: inputManager }" />
+          <TouchControls v-if="settings.gameMode === 'ARCADE'" :input-manager="{ value: inputManager } as any" />
 
           <!-- Neural Network Visualization (Desktop Only) -->
           <NeuralNetworkVisualizer
             class="hidden md:block w-full"
             :width="800"
             :height="250"
-            :fighter="activeMatchRef ? activeMatchRef.p2 : null"
+            :fighter="(activeMatchRef ? activeMatchRef.p2 : null) as any"
           />
 
           <!-- Chuck Training Visualization (Desktop Only, Arcade Chuck Mode) -->
@@ -203,10 +203,26 @@ const initAndResetPopulation = (clearBest: boolean = true) => {
 
 // Local resetMatch that also handles settings
 const resetMatch = () => {
+  // Clear any pending timeouts first
+  clearMatchRestartTimeout();
+  
   setSettings(prev => ({ ...prev, isRunning: false }));
-  activeMatchRef.value = null;
   resetMatchTimer();
   evolutionResetMatch();
+  
+  // Reset arcade stats so initial spawn logic works
+  if (settings.value.gameMode === 'ARCADE') {
+    setGameState(prev => ({
+      ...prev,
+      matchActive: false,
+      roundStatus: 'WAITING',
+      arcadeStats: { matchesPlayed: 0, wins: 0, losses: 0 }
+    }));
+  }
+  
+  // Spawn new fighters immediately (don't leave activeMatchRef as null)
+  activeMatchRef.value = null;
+  startMatch();
 };
 
 const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout, startCountdown } = useGameLoop({
@@ -214,12 +230,12 @@ const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTi
   settingsRef,
   gameStateRef,
   setGameState,
-  activeMatchRef,
+  activeMatchRef: activeMatchRef as any,
   currentMatchIndex,
   populationRef,
   getBestGenome,
   matchTimerRef,
-  inputManager,
+  inputManager: inputManager as any,
   customScriptWorkerARef,
   customScriptWorkerBRef,
   evolve,
@@ -342,10 +358,13 @@ const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
     ...(mode === 'TRAINING' && { matchesUntilEvolution: evolutionInterval }),
     ...(mode === 'ARCADE' && { arcadeStats: { matchesPlayed: 0, wins: 0, losses: 0 } })
   }));
-  activeMatchRef.value = null;
-
+  
   // Reset match index for both modes
   currentMatchIndex.value = 0;
+  
+  // Spawn new fighters immediately (don't leave activeMatchRef as null)
+  activeMatchRef.value = null;
+  startMatch();
 };
 
 onMounted(() => {

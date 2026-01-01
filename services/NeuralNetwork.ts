@@ -229,10 +229,10 @@ export const predict = (network: NeuralNetworkData, inputs: number[]): number[] 
     let sum = 0;
     // Weighted sum of all inputs
     for (let i = 0; i < INPUT_NODES; i++) {
-      sum += inputs[i] * network.inputWeights[i][h];
+      sum += (inputs[i] ?? 0) * (network.inputWeights[i]?.[h] ?? 0);
     }
     // Add bias and apply ReLU activation
-    sum += network.biases[h];
+    sum += network.biases[h] ?? 0;
     hiddenOutputs.push(relu(sum));
   }
 
@@ -242,11 +242,11 @@ export const predict = (network: NeuralNetworkData, inputs: number[]): number[] 
     let sum = 0;
     // Weighted sum of hidden layer outputs
     for (let h = 0; h < hiddenNodes; h++) {
-      sum += hiddenOutputs[h] * network.outputWeights[h][o];
+      sum += (hiddenOutputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
     }
     // Add bias and apply Sigmoid activation
     // (biases for output layer start at index hiddenNodes)
-    sum += network.biases[hiddenNodes + o];
+    sum += network.biases[hiddenNodes + o] ?? 0;
     finalOutputs.push(sigmoid(sum));
   }
 
@@ -337,14 +337,14 @@ export const crossoverNetworks = (a: NeuralNetworkData, b: NeuralNetworkData): N
   const mix = (w1: number, w2: number) => Math.random() > 0.5 ? w1 : w2;
 
   const newInputWeights = a.inputWeights.map((row, i) =>
-    row.map((val, j) => mix(val, b.inputWeights[i][j]))
+    row.map((val, j) => mix(val, b.inputWeights[i]?.[j] ?? val))
   );
 
   const newOutputWeights = a.outputWeights.map((row, i) =>
-    row.map((val, j) => mix(val, b.outputWeights[i][j]))
+    row.map((val, j) => mix(val, b.outputWeights[i]?.[j] ?? val))
   );
 
-  const newBiases = a.biases.map((val, i) => mix(val, b.biases[i]));
+  const newBiases = a.biases.map((val, i) => mix(val, b.biases[i] ?? val));
 
   return {
     inputWeights: newInputWeights,

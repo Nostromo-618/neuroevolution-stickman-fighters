@@ -143,12 +143,27 @@ export function useEvolution(ctx: EvolutionContext) {
         const currentGen = ctx.gameStateRef.value.generation;
 
         // Create next generation with elitism (keep top 2)
-        const newPop: Genome[] = [
-            { ...pop[0], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-0` },
-        ];
+        const elite1 = pop[0];
+        const elite2 = pop[1];
 
-        if (pop[1]) {
-            newPop.push({ ...pop[1], fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-1` });
+        const newPop: Genome[] = [];
+
+        if (elite1) {
+            newPop.push({
+                id: `gen${currentGen + 1}-0`,
+                network: elite1.network,
+                fitness: 0,
+                matchesWon: 0
+            });
+        }
+
+        if (elite2) {
+            newPop.push({
+                id: `gen${currentGen + 1}-1`,
+                network: elite2.network,
+                fitness: 0,
+                matchesWon: 0
+            });
         }
 
         // Adaptive mutation rate (decays over generations)

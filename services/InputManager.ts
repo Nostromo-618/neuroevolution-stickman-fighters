@@ -159,25 +159,25 @@ export class InputManager {
       const gp = navigator.getGamepads()[this.gamepadIndex];
 
       if (gp) {
-        // Read analog stick values
+        // Read analog stick values (with null checks)
         // axes[0] = left stick X (-1 to 1)
         // axes[1] = left stick Y (-1 to 1)
-        const axisX = gp.axes[0];
-        const axisY = gp.axes[1];
+        const axisX = gp.axes[0] ?? 0;
+        const axisY = gp.axes[1] ?? 0;
 
         // Apply deadzone (0.5) to prevent drift
         // Combine with keyboard input (either source triggers action)
         return {
           // Directional: analog stick, D-pad, OR keyboard
-          left: kbState.left || axisX < -0.5 || gp.buttons[14].pressed,   // D-pad left
-          right: kbState.right || axisX > 0.5 || gp.buttons[15].pressed,  // D-pad right
-          up: kbState.up || axisY < -0.5 || gp.buttons[12].pressed,       // D-pad up
-          down: kbState.down || axisY > 0.5 || gp.buttons[13].pressed,    // D-pad down
+          left: kbState.left || axisX < -0.5 || (gp.buttons[14]?.pressed ?? false),   // D-pad left
+          right: kbState.right || axisX > 0.5 || (gp.buttons[15]?.pressed ?? false),  // D-pad right
+          up: kbState.up || axisY < -0.5 || (gp.buttons[12]?.pressed ?? false),       // D-pad up
+          down: kbState.down || axisY > 0.5 || (gp.buttons[13]?.pressed ?? false),    // D-pad down
 
           // Action buttons: multiple mappings for flexibility
-          action1: kbState.action1 || gp.buttons[2].pressed || gp.buttons[0].pressed, // X or A
-          action2: kbState.action2 || gp.buttons[3].pressed || gp.buttons[1].pressed, // Y or B
-          action3: kbState.action3 || gp.buttons[5].pressed || gp.buttons[4].pressed || gp.buttons[7].pressed, // RB, LB, or RT
+          action1: kbState.action1 || (gp.buttons[2]?.pressed ?? false) || (gp.buttons[0]?.pressed ?? false), // X or A
+          action2: kbState.action2 || (gp.buttons[3]?.pressed ?? false) || (gp.buttons[1]?.pressed ?? false), // Y or B
+          action3: kbState.action3 || (gp.buttons[5]?.pressed ?? false) || (gp.buttons[4]?.pressed ?? false) || (gp.buttons[7]?.pressed ?? false), // RB, LB, or RT
         };
       }
     }
