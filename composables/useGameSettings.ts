@@ -1,5 +1,6 @@
 import { ref, watch, type Ref } from 'vue';
 import type { TrainingSettings } from '~/types';
+import { FEATURE_FLAGS } from '~/services/Config';
 
 interface UseGameSettingsReturn {
     settings: Ref<TrainingSettings>;
@@ -27,7 +28,7 @@ export const useGameSettings = (): UseGameSettingsReturn => {
         intelligentMutation: true,                // Use adaptive mutation rate by default
         opponentType: 'SIMPLE_AI',
         player1Type: 'HUMAN',                     // Default to human player
-        player2Type: 'CHUCK_AI'                   // Default to Chuck AI opponent
+        player2Type: FEATURE_FLAGS.ENABLE_CHUCK_AI ? 'CHUCK_AI' : 'SIMPLE_AI'
     });
 
     const settingsRef = ref(settings.value);

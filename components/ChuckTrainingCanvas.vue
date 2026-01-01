@@ -56,7 +56,7 @@ import { Fighter, CANVAS_WIDTH as GAME_WIDTH, CANVAS_HEIGHT as GAME_HEIGHT } fro
 import { getChuckGenome, getChuckStats, isChuckInitialized, getMirrorGenome } from '~/services/ChuckAI';
 import { predict, createRandomNetwork } from '~/services/NeuralNetwork';
 import { renderStickman } from '~/utils/stickmanRenderer';
-import { COLORS } from '~/services/Config';
+import { COLORS, FEATURE_FLAGS } from '~/services/Config';
 
 interface Props {
   settings: TrainingSettings;
@@ -72,9 +72,10 @@ const CANVAS_HEIGHT = Math.floor(GAME_HEIGHT * SCALE);
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
-// Show only in Arcade mode with Chuck AI as P2 and running
+// Show only in Arcade mode with Chuck AI as P2 and running, and feature enabled
 const isVisible = computed(() => {
-  return props.settings.gameMode === 'ARCADE' && 
+  return FEATURE_FLAGS.ENABLE_CHUCK_AI &&
+         props.settings.gameMode === 'ARCADE' && 
          props.settings.player2Type === 'CHUCK_AI' &&
          props.settings.isRunning;
 });

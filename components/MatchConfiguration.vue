@@ -104,6 +104,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { FEATURE_FLAGS } from '~/services/Config';
 import type { TrainingSettings, GameState } from '~/types';
 
 interface Props {
@@ -123,8 +124,10 @@ const isMatchRunning = computed(() => isTrainingActive.value && props.settings.i
 // Training mode: No Human, No Chuck (Chuck is ARCADE-exclusive)
 const arcadePlayer1Types = ['HUMAN', 'SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
 const trainingPlayer1Types = ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
-// Player 2: Chuck only available in ARCADE mode
-const arcadePlayer2Types = ['SIMPLE_AI', 'CHUCK_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+// Player 2: Chuck only available in ARCADE mode when enabled
+const arcadePlayer2Types = FEATURE_FLAGS.ENABLE_CHUCK_AI
+    ? ['SIMPLE_AI', 'CHUCK_AI', 'CUSTOM_A', 'CUSTOM_B'] as const
+    : ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
 const trainingPlayer2Types = ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
 
 // Use computed to dynamically select available types based on mode
