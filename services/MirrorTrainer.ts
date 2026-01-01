@@ -84,23 +84,27 @@ function reluDerivative(x: number): number {
 // =============================================================================
 
 interface ForwardPassResult {
-    hiddenPreActivations: number[];   // Hidden layer values before ReLU
-    hiddenOutputs: number[];          // Hidden layer values after ReLU
-    outputPreActivations: number[];   // Output layer values before sigmoid
-    outputs: number[];                // Final outputs after sigmoid
+    hidden1PreActivations: number[];  // H1 values before ReLU
+    hidden1Outputs: number[];         // H1 values after ReLU
+    hidden2PreActivations: number[];  // H2 values before ReLU
+    hidden2Outputs: number[];         // H2 values after ReLU
+    outputPreActivations: number[];   // Output values before sigmoid
+    outputs: number[];                // Final outputs
 }
 
 /**
  * Runs forward pass and stores intermediate values for backpropagation.
  */
 function forwardPass(network: NeuralNetworkData, inputs: number[]): ForwardPassResult {
-    const hiddenNodes = network.outputWeights.length;
+    // Determine hidden node counts (assume symmetrical if hiddenWeights exists)
+    // Fallback logic for old networks handled here for robustness
+    const hiddenNodes = network.inputWeights[0]?.length || network.outputWeights.length;
     const inputNodes = NN_ARCH_CHUCK.INPUT_NODES;
     const outputNodes = NN_ARCH_CHUCK.OUTPUT_NODES;
 
-    // Hidden layer computation
-    const hiddenPreActivations: number[] = [];
-    const hiddenOutputs: number[] = [];
+    // --- LAYER 1: Input -> Hidden 1 ---
+    const hidden1PreActivations: number[] = [];
+    const hidden1Outputs: number[] = [];
 
     for (let h = 0; h < hiddenNodes; h++) {
         let sum = 0;
@@ -108,25 +112,58 @@ function forwardPass(network: NeuralNetworkData, inputs: number[]): ForwardPassR
             sum += (inputs[i] ?? 0) * (network.inputWeights[i]?.[h] ?? 0);
         }
         sum += network.biases[h] ?? 0;
-        hiddenPreActivations.push(sum);
-        hiddenOutputs.push(relu(sum));
+        hidden1PreActivations.push(sum);
+        hidden1Outputs.push(relu(sum));
     }
 
-    // Output layer computation
+    // --- LAYER 2: Hidden 1 -> Hidden 2 ---
+    const hidden2PreActivations: number[] = [];
+    const hidden2Outputs: number[] = [];
+
+    // Check if hiddenWeights exist (backward compatibility)
+    if (network.hiddenWeights) {
+        for (let h2 = 0; h2 < hiddenNodes; h2++) {
+            let sum = 0;
+            for (let h1 = 0; h1 < hiddenNodes; h1++) {
+                sum += (hidden1Outputs[h1] ?? 0) * (network.hiddenWeights[h1]?.[h2] ?? 0);
+            }
+            sum += network.biases[hiddenNodes + h2] ?? 0;
+            hidden2PreActivations.push(sum);
+            hidden2Outputs.push(relu(sum));
+        }
+    } else {
+        // Fallback: H2 = H1
+        // We push dummies to arrays to keep length consistent, but this branch 
+        // implies the network structure is old. We should probably force training 
+        // on new structure or fail gracefully. For now, pass-through.
+        for (let i = 0; i < hiddenNodes; i++) {
+            hidden2PreActivations.push(hidden1PreActivations[i]!);
+            hidden2Outputs.push(hidden1Outputs[i]!);
+        }
+    }
+
+    // --- LAYER 3: Hidden 2 -> Output ---
     const outputPreActivations: number[] = [];
     const outputs: number[] = [];
 
     for (let o = 0; o < outputNodes; o++) {
         let sum = 0;
         for (let h = 0; h < hiddenNodes; h++) {
-            sum += (hiddenOutputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
+            sum += (hidden2Outputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
         }
-        sum += network.biases[hiddenNodes + o] ?? 0;
+        // Bias offset: H1 biases (0..H-1) + H2 biases (H..2H-1) -> Output biases start at 2H
+        // NOTE: If old network, bias length is only H+O. If new, 2H+O.
+        const biasIndex = network.hiddenWeights ? (hiddenNodes * 2 + o) : (hiddenNodes + o);
+        sum += network.biases[biasIndex] ?? 0;
         outputPreActivations.push(sum);
         outputs.push(sigmoid(sum));
     }
 
-    return { hiddenPreActivations, hiddenOutputs, outputPreActivations, outputs };
+    return {
+        hidden1PreActivations, hidden1Outputs,
+        hidden2PreActivations, hidden2Outputs,
+        outputPreActivations, outputs
+    };
 }
 
 // =============================================================================
@@ -134,9 +171,10 @@ function forwardPass(network: NeuralNetworkData, inputs: number[]): ForwardPassR
 // =============================================================================
 
 interface Gradients {
-    inputWeightGrads: number[][];   // Gradients for input→hidden weights
-    outputWeightGrads: number[][];  // Gradients for hidden→output weights
-    biasGrads: number[];            // Gradients for all biases
+    inputWeightGrads: number[][];    // Input -> H1
+    hiddenWeightGrads: number[][];   // H1 -> H2 (NEW)
+    outputWeightGrads: number[][];   // H2 -> Output
+    biasGrads: number[];             // All biases
 }
 
 /**
@@ -154,14 +192,22 @@ function computeGradients(
     targets: number[],
     forwardResult: ForwardPassResult
 ): Gradients {
-    const hiddenNodes = network.outputWeights.length;
+    // If hiddenWeights is missing, effectively abort or return empty (compatibility mode)
+    // But we assume the caller ensures new network structure.
+    const hiddenNodes = network.inputWeights[0]?.length || network.outputWeights.length;
     const inputNodes = NN_ARCH_CHUCK.INPUT_NODES;
     const outputNodes = NN_ARCH_CHUCK.OUTPUT_NODES;
 
-    const { hiddenPreActivations, hiddenOutputs, outputs } = forwardResult;
+    const {
+        hidden1PreActivations, hidden1Outputs,
+        hidden2PreActivations, hidden2Outputs,
+        outputs
+    } = forwardResult;
 
-    // --- OUTPUT LAYER DELTAS ---
-    // δ_o = (output_o - target_o) * sigmoid'(output_o)
+    const hasHiddenWeights = !!network.hiddenWeights;
+
+    // --- 1. OUTPUT LAYER DELTAS (δ_o) ---
+    // δ_o = (output - target) * σ'(output)
     const outputDeltas: number[] = [];
     for (let o = 0; o < outputNodes; o++) {
         const error = (outputs[o] ?? 0) - (targets[o] ?? 0);
@@ -169,50 +215,83 @@ function computeGradients(
         outputDeltas.push(delta);
     }
 
-    // --- HIDDEN LAYER DELTAS ---
-    // δ_h = (Σ δ_o * w_ho) * relu'(pre_h)
-    const hiddenDeltas: number[] = [];
-    for (let h = 0; h < hiddenNodes; h++) {
+    // --- 2. HIDDEN LAYER 2 DELTAS (δ_h2) ---
+    // δ_h2 = (Σ δ_o * w_h2o) * relu'(pre_h2)
+    const hidden2Deltas: number[] = [];
+    for (let h2 = 0; h2 < hiddenNodes; h2++) {
         let sum = 0;
         for (let o = 0; o < outputNodes; o++) {
-            sum += (outputDeltas[o] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
+            sum += (outputDeltas[o] ?? 0) * (network.outputWeights[h2]?.[o] ?? 0);
         }
-        const delta = sum * reluDerivative(hiddenPreActivations[h] ?? 0);
-        hiddenDeltas.push(delta);
+        const delta = sum * reluDerivative(hidden2PreActivations[h2] ?? 0);
+        hidden2Deltas.push(delta);
     }
 
-    // --- COMPUTE GRADIENTS ---
-
-    // Input→Hidden weight gradients: ∂E/∂w_ih = δ_h * input_i
-    const inputWeightGrads: number[][] = [];
-    for (let i = 0; i < inputNodes; i++) {
-        const row: number[] = [];
-        for (let h = 0; h < hiddenNodes; h++) {
-            row.push((hiddenDeltas[h] ?? 0) * (inputs[i] ?? 0));
+    // --- 3. HIDDEN LAYER 1 DELTAS (δ_h1) ---
+    // δ_h1 = (Σ δ_h2 * w_h1h2) * relu'(pre_h1)
+    const hidden1Deltas: number[] = [];
+    if (hasHiddenWeights) {
+        for (let h1 = 0; h1 < hiddenNodes; h1++) {
+            let sum = 0;
+            for (let h2 = 0; h2 < hiddenNodes; h2++) {
+                sum += (hidden2Deltas[h2] ?? 0) * (network.hiddenWeights[h1]?.[h2] ?? 0);
+            }
+            const delta = sum * reluDerivative(hidden1PreActivations[h1] ?? 0);
+            hidden1Deltas.push(delta);
         }
-        inputWeightGrads.push(row);
+    } else {
+        // Fallback for 1-layer nets (δ_h1 = δ_h2 effectively, but structure is different)
+        // Just use h2 deltas? No, without weights it's undefined.
+        // We'll just fill with 0s to avoid crash.
+        for (let i = 0; i < hiddenNodes; i++) hidden1Deltas.push(0);
     }
 
-    // Hidden→Output weight gradients: ∂E/∂w_ho = δ_o * hidden_h
+    // --- 4. COMPUTE WEIGHT GRADIENTS ---
+
+    // A. Output Weights (H2 -> Output): ∂E/∂w = δ_o * h2_out
     const outputWeightGrads: number[][] = [];
     for (let h = 0; h < hiddenNodes; h++) {
         const row: number[] = [];
         for (let o = 0; o < outputNodes; o++) {
-            row.push((outputDeltas[o] ?? 0) * (hiddenOutputs[h] ?? 0));
+            row.push((outputDeltas[o] ?? 0) * (hidden2Outputs[h] ?? 0));
         }
         outputWeightGrads.push(row);
     }
 
-    // Bias gradients: ∂E/∂b = δ (bias input is always 1)
-    const biasGrads: number[] = [];
-    for (let h = 0; h < hiddenNodes; h++) {
-        biasGrads.push(hiddenDeltas[h] ?? 0);
-    }
-    for (let o = 0; o < outputNodes; o++) {
-        biasGrads.push(outputDeltas[o] ?? 0);
+    // B. Hidden Weights (H1 -> H2): ∂E/∂w = δ_h2 * h1_out
+    const hiddenWeightGrads: number[][] = [];
+    if (hasHiddenWeights) {
+        for (let h1 = 0; h1 < hiddenNodes; h1++) {
+            const row: number[] = [];
+            for (let h2 = 0; h2 < hiddenNodes; h2++) {
+                row.push((hidden2Deltas[h2] ?? 0) * (hidden1Outputs[h1] ?? 0));
+            }
+            hiddenWeightGrads.push(row);
+        }
     }
 
-    return { inputWeightGrads, outputWeightGrads, biasGrads };
+    // C. Input Weights (Input -> H1): ∂E/∂w = δ_h1 * input
+    const inputWeightGrads: number[][] = [];
+    for (let i = 0; i < inputNodes; i++) {
+        const row: number[] = [];
+        for (let h1 = 0; h1 < hiddenNodes; h1++) {
+            row.push((hidden1Deltas[h1] ?? 0) * (inputs[i] ?? 0));
+        }
+        inputWeightGrads.push(row);
+    }
+
+    // D. Bias Gradients
+    const biasGrads: number[] = [];
+    // H1 Biases (Indices 0..H-1)
+    for (const d of hidden1Deltas) biasGrads.push(d);
+    // H2 Biases (Indices H..2H-1)
+    if (hasHiddenWeights) {
+        for (const d of hidden2Deltas) biasGrads.push(d);
+    }
+    // Output Biases (Indices 2H..2H+O)
+    for (const d of outputDeltas) biasGrads.push(d);
+
+    return { inputWeightGrads, hiddenWeightGrads, outputWeightGrads, biasGrads };
 }
 
 // =============================================================================
@@ -243,9 +322,12 @@ export function trainMirrorNetwork(
     const inputNodes = NN_ARCH_CHUCK.INPUT_NODES;
     const outputNodes = NN_ARCH_CHUCK.OUTPUT_NODES;
 
+    const hasHiddenWeights = !!network.hiddenWeights;
+
     // Deep clone network for updates (Rule #9: immutability)
     const newNetwork: NeuralNetworkData = {
         inputWeights: network.inputWeights.map(row => [...row]),
+        hiddenWeights: hasHiddenWeights ? network.hiddenWeights!.map(row => [...row]) : [],
         outputWeights: network.outputWeights.map(row => [...row]),
         biases: [...network.biases]
     };
@@ -263,10 +345,14 @@ export function trainMirrorNetwork(
         let accInputGrads: number[][] = Array(inputNodes).fill(null).map(() =>
             Array(hiddenNodes).fill(0)
         );
+        let accHiddenGrads: number[][] = Array(hiddenNodes).fill(null).map(() =>
+            Array(hiddenNodes).fill(0)
+        );
         let accOutputGrads: number[][] = Array(hiddenNodes).fill(null).map(() =>
             Array(outputNodes).fill(0)
         );
-        let accBiasGrads: number[] = Array(hiddenNodes + outputNodes).fill(0);
+        // H1 + H2 + Out = 2H + O (or H+O if old)
+        let accBiasGrads: number[] = Array(newNetwork.biases.length).fill(0);
 
         for (const sample of normalizedSamples) {
             // Forward pass
@@ -281,25 +367,43 @@ export function trainMirrorNetwork(
             );
 
             // Accumulate weighted gradients
+            // Inputs
             for (let i = 0; i < inputNodes; i++) {
                 for (let h = 0; h < hiddenNodes; h++) {
                     accInputGrads[i]![h]! += (gradients.inputWeightGrads[i]?.[h] ?? 0) * sample.weight;
                 }
             }
+            // Hidden (H1->H2)
+            if (hasHiddenWeights) {
+                for (let h1 = 0; h1 < hiddenNodes; h1++) {
+                    for (let h2 = 0; h2 < hiddenNodes; h2++) {
+                        accHiddenGrads[h1]![h2]! += (gradients.hiddenWeightGrads[h1]?.[h2] ?? 0) * sample.weight;
+                    }
+                }
+            }
+            // Output
             for (let h = 0; h < hiddenNodes; h++) {
                 for (let o = 0; o < outputNodes; o++) {
                     accOutputGrads[h]![o]! += (gradients.outputWeightGrads[h]?.[o] ?? 0) * sample.weight;
                 }
             }
+            // Biases
             for (let b = 0; b < accBiasGrads.length; b++) {
                 accBiasGrads[b]! += (gradients.biasGrads[b] ?? 0) * sample.weight;
             }
         }
 
-        // Apply gradient descent: w = w - lr * gradient
+        // Apply updates
         for (let i = 0; i < inputNodes; i++) {
             for (let h = 0; h < hiddenNodes; h++) {
                 newNetwork.inputWeights[i]![h]! -= config.learningRate * (accInputGrads[i]?.[h] ?? 0);
+            }
+        }
+        if (hasHiddenWeights) {
+            for (let h1 = 0; h1 < hiddenNodes; h1++) {
+                for (let h2 = 0; h2 < hiddenNodes; h2++) {
+                    newNetwork.hiddenWeights[h1]![h2]! -= config.learningRate * (accHiddenGrads[h1]?.[h2] ?? 0);
+                }
             }
         }
         for (let h = 0; h < hiddenNodes; h++) {
