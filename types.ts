@@ -50,22 +50,24 @@ export enum FighterAction {
  * NeuralNetwork Interface
  * 
  * Represents the "brain" of an AI fighter. This is a simple feedforward
- * neural network with one hidden layer:
+ * neural network with TWO hidden layers:
  * 
- *   INPUT (9 nodes) → HIDDEN (13 nodes) → OUTPUT (8 nodes)
+ *   INPUT (9 nodes) → HIDDEN 1 (13 nodes) → HIDDEN 2 (13 nodes) → OUTPUT (8 nodes)
  * 
  * The weights determine how signals flow through the network:
- * - inputWeights: Connections from input layer to hidden layer [9x13 matrix]
- * - outputWeights: Connections from hidden layer to output [13x8 matrix]
- * - biases: Offset values added at each neuron [13 hidden + 8 output = 21 total]
+ * - inputWeights: Connections from input layer to hidden layer 1 [9x13 matrix]
+ * - hiddenWeights: Connections from hidden layer 1 to hidden layer 2 [13x13 matrix]
+ * - outputWeights: Connections from hidden layer 2 to output [13x8 matrix]
+ * - biases: Offset values added at each neuron [13 (H1) + 13 (H2) + 8 (Output) = 34 total]
  * 
  * During evolution, these weights are mutated and crossed over to create
  * new variations, allowing the AI to "learn" through natural selection.
  */
 export interface NeuralNetworkData {
-  inputWeights: number[][];   // 9 inputs × 16 hidden neurons
-  outputWeights: number[][];  // 16 hidden × 8 output neurons
-  biases: number[];           // 24 bias values (16 hidden + 8 output)
+  inputWeights: number[][];   // 9 inputs × 13 hidden1 neurons
+  hiddenWeights: number[][];  // 13 hidden1 × 13 hidden2 neurons
+  outputWeights: number[][];  // 13 hidden2 × 8 output neurons
+  biases: number[];           // 34 bias values (13 H1 + 13 H2 + 8 Output)
 }
 
 /**

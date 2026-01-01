@@ -47,6 +47,7 @@
  */
 interface NeuralNetwork {
   inputWeights: number[][];
+  hiddenWeights: number[][];
   outputWeights: number[][];
   biases: number[];
 }
@@ -128,25 +129,43 @@ const relu = (t: number) => Math.max(0, t);
  * Identical to NeuralNetwork.predict() but local to worker
  */
 function predict(network: NeuralNetwork, inputs: number[]): number[] {
-  // Hidden layer
-  const hiddenOutputs: number[] = [];
+  // Input → Hidden Layer 1
+  const hidden1Outputs: number[] = [];
   for (let h = 0; h < HIDDEN_NODES; h++) {
     let sum = 0;
     for (let i = 0; i < INPUT_NODES; i++) {
       sum += (inputs[i] ?? 0) * (network.inputWeights[i]?.[h] ?? 0);
     }
     sum += network.biases[h] ?? 0;
-    hiddenOutputs.push(relu(sum));
+    hidden1Outputs.push(relu(sum));
   }
 
-  // Output layer
+  // Hidden Layer 1 → Hidden Layer 2
+  let hidden2Outputs: number[];
+
+  if (network.hiddenWeights) {
+    hidden2Outputs = [];
+    for (let h2 = 0; h2 < HIDDEN_NODES; h2++) {
+      let sum = 0;
+      for (let h1 = 0; h1 < HIDDEN_NODES; h1++) {
+        sum += (hidden1Outputs[h1] ?? 0) * (network.hiddenWeights[h1]?.[h2] ?? 0);
+      }
+      sum += network.biases[HIDDEN_NODES + h2] ?? 0;
+      hidden2Outputs.push(relu(sum));
+    }
+  } else {
+    // BACKWARD COMPATIBILITY for old networks without 2nd hidden layer
+    hidden2Outputs = hidden1Outputs;
+  }
+
+  // Hidden Layer 2 → Output Layer
   const finalOutputs: number[] = [];
   for (let o = 0; o < OUTPUT_NODES; o++) {
     let sum = 0;
     for (let h = 0; h < HIDDEN_NODES; h++) {
-      sum += (hiddenOutputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
+      sum += (hidden2Outputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
     }
-    sum += network.biases[HIDDEN_NODES + o] ?? 0;
+    sum += network.biases[HIDDEN_NODES * 2 + o] ?? 0;
     finalOutputs.push(sigmoid(sum));
   }
 

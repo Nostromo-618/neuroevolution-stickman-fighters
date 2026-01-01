@@ -23,8 +23,8 @@
  * - Dynamic: Weights/activations rendered via direct canvas API (no reactivity)
  * 
  * Supports variable architectures:
- * - Simple AI: 9 → 13 → 8
- * - Chuck AI:  9 → 64 → 8
+ * - Simple AI: 9 → 13 → 13 → 8
+ * - Chuck AI:  9 → 32 → 32 → 8
  */
 
 import { ref, onMounted, onUnmounted } from 'vue';
@@ -118,22 +118,31 @@ const render = (): void => {
 
   // Dynamically detect hidden layer size from network structure
   const inputWeights = network.inputWeights;
+  const hiddenWeights = network.hiddenWeights;
   const outputWeights = network.outputWeights;
   const biases = network.biases;
   
-  // Hidden nodes = number of columns in inputWeights[0] or rows in outputWeights
-  const hiddenNodes = inputWeights[0]?.length ?? NN_ARCH.HIDDEN_NODES;
+  // H1 Size = columns in inputWeights (Input -> H1)
+  const hidden1Size = inputWeights[0]?.length ?? NN_ARCH.HIDDEN_NODES;
+  // H2 Size = rows in outputWeights (H2 -> Output)
+  // Or columns in hiddenWeights if it exists
+  const hidden2Size = outputWeights.length ?? NN_ARCH.HIDDEN_NODES; 
+  // Output Size = columns in outputWeights
   const outputNodes = outputWeights[0]?.length ?? NN_ARCH.OUTPUT_NODES;
 
+  // Use fallback if hiddenWeights is missing (e.g. old structure momentarily)
+  // But we enforce structure now, so we assume hiddenWeights exists.
+  
   // ==========================================================================
   // FORWARD PASS (compute activations for visualization)
   // ==========================================================================
   
-  const hiddenOutputs: number[] = new Array(hiddenNodes);
+  const hidden1Outputs: number[] = new Array(hidden1Size);
+  const hidden2Outputs: number[] = new Array(hidden2Size);
   const finalOutputs: number[] = new Array(outputNodes);
 
-  // Hidden layer
-  for (let h = 0; h < hiddenNodes; h++) {
+  // Input -> H1
+  for (let h = 0; h < hidden1Size; h++) {
     let sum = 0;
     for (let i = 0; i < inputs.length; i++) {
       const inputVal = inputs[i] ?? 0;
@@ -141,18 +150,30 @@ const render = (): void => {
       sum += inputVal * weight;
     }
     sum += biases[h] ?? 0;
-    hiddenOutputs[h] = relu(sum);
+    hidden1Outputs[h] = relu(sum);
   }
 
-  // Output layer
+  // H1 -> H2
+  for (let h2 = 0; h2 < hidden2Size; h2++) {
+    let sum = 0;
+    for (let h1 = 0; h1 < hidden1Size; h1++) {
+      const h1Val = hidden1Outputs[h1] ?? 0;
+      const weight = hiddenWeights?.[h1]?.[h2] ?? 0;
+      sum += h1Val * weight;
+    }
+    sum += biases[hidden1Size + h2] ?? 0;
+    hidden2Outputs[h2] = relu(sum);
+  }
+
+  // H2 -> Output
   for (let o = 0; o < outputNodes; o++) {
     let sum = 0;
-    for (let h = 0; h < hiddenNodes; h++) {
-      const hiddenVal = hiddenOutputs[h] ?? 0;
+    for (let h = 0; h < hidden2Size; h++) {
+      const h2Val = hidden2Outputs[h] ?? 0;
       const weight = outputWeights[h]?.[o] ?? 0;
-      sum += hiddenVal * weight;
+      sum += h2Val * weight;
     }
-    sum += biases[hiddenNodes + o] ?? 0;
+    sum += biases[hidden1Size + hidden2Size + o] ?? 0;
     finalOutputs[o] = sigmoid(sum);
   }
 
@@ -161,11 +182,13 @@ const render = (): void => {
   // ==========================================================================
   
   const inputX = 60;
-  const hiddenX = width / 2;
+  const hidden1X = width * 0.4;
+  const hidden2X = width * 0.7;
   const outputX = width - 60;
 
   const inputStep = height / (inputs.length + 1);
-  const hiddenStep = height / (hiddenNodes + 1);
+  const hidden1Step = height / (hidden1Size + 1);
+  const hidden2Step = height / (hidden2Size + 1);
   const outputStep = height / (outputNodes + 1);
 
   // ==========================================================================
@@ -174,20 +197,20 @@ const render = (): void => {
   
   ctx.globalCompositeOperation = 'screen';
 
-  // Input → Hidden connections
+  // Input → H1
   for (let i = 0; i < inputs.length; i++) {
     const y1 = (i + 1) * inputStep;
     const inputVal = inputs[i] ?? 0;
     
-    for (let h = 0; h < hiddenNodes; h++) {
-      const y2 = (h + 1) * hiddenStep;
+    for (let h = 0; h < hidden1Size; h++) {
+      const y2 = (h + 1) * hidden1Step;
       const weight = inputWeights[i]?.[h] ?? 0;
       const color = getLineColor(weight, Math.abs(inputVal));
 
       if (color) {
         ctx.beginPath();
         ctx.moveTo(inputX, y1);
-        ctx.lineTo(hiddenX, y2);
+        ctx.lineTo(hidden1X, y2);
         ctx.strokeStyle = color;
         ctx.lineWidth = Math.max(0.1, Math.abs(weight) * 0.5);
         ctx.stroke();
@@ -195,19 +218,40 @@ const render = (): void => {
     }
   }
 
-  // Hidden → Output connections
-  for (let h = 0; h < hiddenNodes; h++) {
-    const y1 = (h + 1) * hiddenStep;
-    const hiddenVal = hiddenOutputs[h] ?? 0;
+  // H1 → H2
+  for (let h1 = 0; h1 < hidden1Size; h1++) {
+    const y1 = (h1 + 1) * hidden1Step;
+    const h1Val = hidden1Outputs[h1] ?? 0;
     
-    for (let o = 0; o < outputNodes; o++) {
-      const y2 = (o + 1) * outputStep;
-      const weight = outputWeights[h]?.[o] ?? 0;
-      const color = getLineColor(weight, hiddenVal);
+    for (let h2 = 0; h2 < hidden2Size; h2++) {
+      const y2 = (h2 + 1) * hidden2Step;
+      const weight = hiddenWeights?.[h1]?.[h2] ?? 0;
+      const color = getLineColor(weight, h1Val);
 
       if (color) {
         ctx.beginPath();
-        ctx.moveTo(hiddenX, y1);
+        ctx.moveTo(hidden1X, y1);
+        ctx.lineTo(hidden2X, y2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(0.1, Math.abs(weight) * 0.5);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // H2 → Output
+  for (let h2 = 0; h2 < hidden2Size; h2++) {
+    const y1 = (h2 + 1) * hidden2Step;
+    const h2Val = hidden2Outputs[h2] ?? 0;
+    
+    for (let o = 0; o < outputNodes; o++) {
+      const y2 = (o + 1) * outputStep;
+      const weight = outputWeights[h2]?.[o] ?? 0;
+      const color = getLineColor(weight, h2Val);
+
+      if (color) {
+        ctx.beginPath();
+        ctx.moveTo(hidden2X, y1);
         ctx.lineTo(outputX, y2);
         ctx.strokeStyle = color;
         ctx.lineWidth = Math.max(0.1, Math.abs(weight) * 0.5);
@@ -242,14 +286,25 @@ const render = (): void => {
     ctx.fillText(INPUT_LABELS[i] ?? '', inputX - 10, y);
   }
 
-  // Hidden nodes (no labels - too many)
-  for (let h = 0; h < hiddenNodes; h++) {
-    const y = (h + 1) * hiddenStep;
-    const hiddenVal = hiddenOutputs[h] ?? 0;
+  // Hidden 1 nodes
+  for (let h = 0; h < hidden1Size; h++) {
+    const y = (h + 1) * hidden1Step;
+    const val = hidden1Outputs[h] ?? 0;
 
     ctx.beginPath();
-    ctx.arc(hiddenX, y, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = getNodeColor(hiddenVal);
+    ctx.arc(hidden1X, y, NODE_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = getNodeColor(val);
+    ctx.fill();
+  }
+
+  // Hidden 2 nodes
+  for (let h = 0; h < hidden2Size; h++) {
+    const y = (h + 1) * hidden2Step;
+    const val = hidden2Outputs[h] ?? 0;
+
+    ctx.beginPath();
+    ctx.arc(hidden2X, y, NODE_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = getNodeColor(val);
     ctx.fill();
   }
 

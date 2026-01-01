@@ -8,7 +8,9 @@
  * 
  *   INPUT LAYER (9 neurons)
  *        ↓ (weights + biases)
- *   HIDDEN LAYER (10 neurons, ReLU activation)
+ *   HIDDEN LAYER 1 (13 neurons, ReLU activation)
+ *        ↓ (weights + biases)
+ *   HIDDEN LAYER 2 (13 neurons, ReLU activation)
  *        ↓ (weights + biases)
  *   OUTPUT LAYER (8 neurons, Sigmoid activation)
  * 
@@ -118,20 +120,25 @@ export const createRandomNetwork = (): NeuralNetworkData => {
  * @returns A new NeuralNetwork with random weights and biases
  */
 export const createRandomNetworkWithArch = (hiddenNodes: number): NeuralNetworkData => {
-  // Input → Hidden weights
+  // Input → Hidden 1 weights
   const inputWeights = Array(INPUT_NODES).fill(0).map(() =>
     Array(hiddenNodes).fill(0).map(() => Math.random() * 2 - 1)
   );
 
-  // Hidden → Output weights
+  // Hidden 1 → Hidden 2 weights
+  const hiddenWeights = Array(hiddenNodes).fill(0).map(() =>
+    Array(hiddenNodes).fill(0).map(() => Math.random() * 2 - 1)
+  );
+
+  // Hidden 2 → Output weights
   const outputWeights = Array(hiddenNodes).fill(0).map(() =>
     Array(OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1)
   );
 
-  // Biases: one per neuron in hidden and output layers
-  const biases = Array(hiddenNodes + OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1);
+  // Biases: one per neuron in H1, H2, and output layers
+  const biases = Array(hiddenNodes * 2 + OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1);
 
-  return { inputWeights, outputWeights, biases };
+  return { inputWeights, hiddenWeights, outputWeights, biases };
 };
 
 /**
@@ -221,10 +228,10 @@ export const relu = (t: number) => Math.max(0, t);
 export const predict = (network: NeuralNetworkData, inputs: number[]): number[] => {
   // Dynamically read hidden node count from network structure
   // This allows the function to work with different architectures
-  const hiddenNodes = network.outputWeights.length;
+  const hiddenNodes = network.inputWeights[0]?.length || HIDDEN_NODES;
 
-  // --- STEP 1: Input → Hidden Layer ---
-  const hiddenOutputs: number[] = [];
+  // --- STEP 1: Input → Hidden Layer 1 ---
+  const hidden1Outputs: number[] = [];
   for (let h = 0; h < hiddenNodes; h++) {
     let sum = 0;
     // Weighted sum of all inputs
@@ -233,20 +240,44 @@ export const predict = (network: NeuralNetworkData, inputs: number[]): number[] 
     }
     // Add bias and apply ReLU activation
     sum += network.biases[h] ?? 0;
-    hiddenOutputs.push(relu(sum));
+    hidden1Outputs.push(relu(sum));
   }
 
-  // --- STEP 2: Hidden → Output Layer ---
+  // --- STEP 2: Hidden Layer 1 → Hidden Layer 2 ---
+  let hidden2Outputs: number[];
+
+  if (network.hiddenWeights) {
+    hidden2Outputs = [];
+    for (let h2 = 0; h2 < hiddenNodes; h2++) {
+      let sum = 0;
+      // Weighted sum of hidden layer 1 outputs
+      for (let h1 = 0; h1 < hiddenNodes; h1++) {
+        sum += (hidden1Outputs[h1] ?? 0) * (network.hiddenWeights[h1]?.[h2] ?? 0);
+      }
+      // Add bias (offset by hiddenNodes) and apply ReLU activation
+      sum += network.biases[hiddenNodes + h2] ?? 0;
+      hidden2Outputs.push(relu(sum));
+    }
+  } else {
+    // BACKWARD COMPATIBILITY:
+    // If hiddenWeights is missing, this is an old 1-hidden-layer network.
+    // Treat H1 outputs as H2 outputs directly (pass-through).
+    // The "outputWeights" in the old network connect H1 -> Output.
+    // Here we connect H2 (which is H1) -> Output, so it works.
+    hidden2Outputs = hidden1Outputs;
+  }
+
+  // --- STEP 3: Hidden Layer 2 → Output Layer ---
   const finalOutputs: number[] = [];
   for (let o = 0; o < OUTPUT_NODES; o++) {
     let sum = 0;
-    // Weighted sum of hidden layer outputs
+    // Weighted sum of hidden layer 2 outputs
     for (let h = 0; h < hiddenNodes; h++) {
-      sum += (hiddenOutputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
+      sum += (hidden2Outputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
     }
     // Add bias and apply Sigmoid activation
-    // (biases for output layer start at index hiddenNodes)
-    sum += network.biases[hiddenNodes + o] ?? 0;
+    // (biases for output layer start at index hiddenNodes * 2)
+    sum += network.biases[hiddenNodes * 2 + o] ?? 0;
     finalOutputs.push(sigmoid(sum));
   }
 
@@ -297,11 +328,13 @@ export const mutateNetwork = (network: NeuralNetworkData, rate: number): NeuralN
 
   // Apply mutation to all weights and biases
   const newInputWeights = network.inputWeights.map(row => row.map(mutateValue));
+  const newHiddenWeights = network.hiddenWeights.map(row => row.map(mutateValue));
   const newOutputWeights = network.outputWeights.map(row => row.map(mutateValue));
   const newBiases = network.biases.map(mutateValue);
 
   return {
     inputWeights: newInputWeights,
+    hiddenWeights: newHiddenWeights,
     outputWeights: newOutputWeights,
     biases: newBiases
   };
@@ -340,6 +373,10 @@ export const crossoverNetworks = (a: NeuralNetworkData, b: NeuralNetworkData): N
     row.map((val, j) => mix(val, b.inputWeights[i]?.[j] ?? val))
   );
 
+  const newHiddenWeights = a.hiddenWeights.map((row, i) =>
+    row.map((val, j) => mix(val, b.hiddenWeights[i]?.[j] ?? val))
+  );
+
   const newOutputWeights = a.outputWeights.map((row, i) =>
     row.map((val, j) => mix(val, b.outputWeights[i]?.[j] ?? val))
   );
@@ -348,6 +385,7 @@ export const crossoverNetworks = (a: NeuralNetworkData, b: NeuralNetworkData): N
 
   return {
     inputWeights: newInputWeights,
+    hiddenWeights: newHiddenWeights,
     outputWeights: newOutputWeights,
     biases: newBiases
   };
@@ -432,8 +470,19 @@ export const importGenome = (jsonString: string): ImportResult => {
     }
 
     // Check architecture compatibility
-    const fileHidden = data.network.outputWeights.length;
-    const fileBiases = data.network.biases.length;
+    const fileHidden = data.network.hiddenWeights?.length || data.network.outputWeights.length;
+    // Adaptation for old format (if hiddenWeights missing, effectively 0 hiddens in between? No, standard is 2 layers now)
+    // For now, if missing hiddenWeights, we fail or we could auto-upgrade. Let's auto-upgrade if possible.
+    const hasSecondLayer = !!data.network.hiddenWeights;
+
+    // If importing old V1 genome (1 hidden layer), we can't easily "upgrade" it without creating new random weights
+    // So for now, we'll strict check.
+    if (!hasSecondLayer) {
+      return {
+        success: false,
+        error: `Architecture mismatch: file uses old 1-hidden-layer format. App now requires 2 hidden layers.`
+      };
+    }
 
     if (data.network.inputWeights.length !== INPUT_NODES) {
       return {
@@ -444,13 +493,14 @@ export const importGenome = (jsonString: string): ImportResult => {
     if (fileHidden !== HIDDEN_NODES) {
       return {
         success: false,
-        error: `Architecture mismatch: file has ${fileHidden} hidden neurons, app expects ${HIDDEN_NODES}. This file was exported from an older version.`
+        error: `Architecture mismatch: file has ${fileHidden} hidden neurons, app expects ${HIDDEN_NODES}.`
       };
     }
-    if (fileBiases !== HIDDEN_NODES + OUTPUT_NODES) {
+    const expectedBiases = HIDDEN_NODES * 2 + OUTPUT_NODES;
+    if (data.network.biases.length !== expectedBiases) {
       return {
         success: false,
-        error: `Bias count mismatch: file has ${fileBiases}, app expects ${HIDDEN_NODES + OUTPUT_NODES}`
+        error: `Bias count mismatch: file has ${data.network.biases.length}, app expects ${expectedBiases}`
       };
     }
 
