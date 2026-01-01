@@ -10,7 +10,7 @@ import { ref, type Ref } from 'vue';
 import type { TrainingSettings, GameState } from '~/types';
 import { Fighter } from '~/services/GameEngine';
 import type { InputManager } from '~/services/InputManager';
-import { recordOpponentMove, runChuckTrainingCycle, runIncrementalTraining } from '~/services/ChuckAI';
+import { recordOpponentMove, runChuckTrainingCycle, runRealtimeMirrorTraining } from '~/services/ChuckAI';
 
 interface MatchUpdateContext {
     settingsRef: Ref<TrainingSettings>;
@@ -97,8 +97,12 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
 
             // Chuck AI: Record opponent (human) moves for pattern learning
             if (match.p2.isChuckAI && isP1Human && currentGameState.roundStatus === 'FIGHTING') {
-                recordOpponentMove(p1Input);
-                runIncrementalTraining();  // Real-time adaptation during fight
+                // Calculate P1's inputs relative to P2 (what the human "sees")
+                const p1Inputs = match.p1.computeAIInputs(match.p2);
+                recordOpponentMove(p1Input, p1Inputs);
+
+                // Trigger real-time training every frame (internally throttled)
+                runRealtimeMirrorTraining();
             }
 
             const p1 = match.p1;

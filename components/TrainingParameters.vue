@@ -20,7 +20,7 @@
         <USlider
           :model-value="isHumanOpponent ? 1 : settings.simulationSpeed"
           :min="1"
-          :max="5000"
+          :max="maxSimulationSpeed"
           :disabled="shouldDisableSpeed"
           @update:model-value="updateSpeed"
         />
@@ -213,6 +213,14 @@ const toggleIntelligentMutation = () => {
 const maxWorkers = computed(() =>
   typeof navigator !== 'undefined' ? Math.min(navigator.hardwareConcurrency || 4, 8) : 8
 );
+
+const maxSimulationSpeed = computed(() => props.settings.turboTraining ? 5000 : 100);
+
+watch(() => props.settings.turboTraining, (isTurbo) => {
+  if (!isTurbo && props.settings.simulationSpeed > 100) {
+    props.setSettings(s => ({ ...s, simulationSpeed: 100 }));
+  }
+});
 
 const updateWorkerCount = (value: number | undefined) => {
   if (value !== undefined) {

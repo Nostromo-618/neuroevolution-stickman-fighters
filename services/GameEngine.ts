@@ -341,6 +341,29 @@ export class Fighter {
     };
   }
 
+  /**
+   * Computes the normalized neural network inputs for this fighter against an opponent.
+   * Exposed publicly so we can record "what the human saw" for Mirror AI training.
+   */
+  public computeAIInputs(opponent: Fighter): number[] {
+    // === PREPARE NORMALIZED INPUTS ===
+    const dist = (opponent.x - this.x) / CANVAS_WIDTH;      // Horizontal distance (-1 to 1)
+    const distY = (opponent.y - this.y) / CANVAS_HEIGHT;    // Vertical distance
+    const selfH = this.health / 100;                         // Own health (0 to 1)
+    const oppH = opponent.health / 100;                      // Opponent health (0 to 1)
+    const oppAction = opponent.state / 7;                    // Opponent action (0 to 1)
+    const selfE = this.energy / ENERGY.MAX;                  // Own energy (0 to 1)
+    const facing = this.direction;                           // Facing direction (-1 or 1)
+    const oppCooldown = opponent.cooldown / 40;              // Opponent cooldown (0 to 1)
+    const oppEnergy = opponent.energy / ENERGY.MAX;          // Opponent energy (0 to 1)
+
+    // 9 inputs total
+    const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy];
+    this.lastInputs = inputs; // Store inputs for visualization
+    return inputs;
+  }
+
+
 
 
   /**

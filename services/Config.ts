@@ -77,3 +77,16 @@ export const TRAINING_DEFAULTS = {
     MUTATION_RATE: 0.1,
     FPS: 60,
 } as const;
+
+// =============================================================================
+// MIRROR AI TRAINING SETTINGS
+// =============================================================================
+export const MIRROR_CONFIG = {
+    HISTORY_SIZE: 150,           // Contextual history buffer size
+    UPDATE_INTERVAL_FRAMES: 60,  // Train every 1 second (60fps × 1)
+    LEARNING_RATE: 0.15,         // Aggressive for fast adaptation
+    EPOCHS_PER_UPDATE: 2,        // Training passes per cycle
+    RECENCY_DECAY: 0.95,         // Recent samples weighted higher
+    MIN_SAMPLES: 20,             // Minimum samples before training starts
+} as const;
+

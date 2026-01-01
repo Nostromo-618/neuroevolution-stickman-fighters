@@ -4,43 +4,103 @@
  * =============================================================================
  * 
  * Chuck AI is an advanced opponent that uses "Mirror Learning":
- * 1. Records and analyzes opponent moves
- * 2. Creates a "Mirror AI" that mimics opponent fighting style
+ * 1. Records opponent moves WITH game state context
+ * 2. Trains a "Mirror AI" via backpropagation to mimic opponent style
  * 3. Trains Chuck against this Mirror AI in background
  * 4. Chuck evolves strategies specifically countering the opponent
  * 
- * This creates an opponent that adapts to the player's fighting style,
- * making Chuck progressively harder as it learns their patterns.
+ * Real-Time Adaptation:
+ * - Uses Web Worker for training (no frame drops)
+ * - Updates every ~60 frames (1 second)
+ * - Recency-weighted samples (recent moves matter more)
+ * - Mirror adapts within 5-10 seconds to style changes
  * =============================================================================
  */
 
 import type { Genome, InputState, NeuralNetworkData } from '../types';
 import { createChuckNetwork, crossoverNetworks, mutateNetwork, predict } from './NeuralNetwork';
-import { NN_ARCH_CHUCK } from './Config';
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const HISTORY_BUFFER_SIZE = 100;       // Number of opponent moves to track
-const MIRROR_UPDATE_INTERVAL = 10;     // Update mirror after N new moves
-const BACKGROUND_TRAINING_MATCHES = 5; // Matches per training cycle
-
-// Real-time training constants (Rule #2: bounded iteration)
-const REALTIME_TRAINING_INTERVAL = 120;    // Train every 2 seconds (60fps × 2)
-const REALTIME_TRAINING_VARIANTS = 2;      // Fewer variants for speed
+import { NN_ARCH_CHUCK, MIRROR_CONFIG } from './Config';
+import type { TrainingConfig, TrainingSample } from './MirrorTrainer';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
+/**
+ * Contextual move recording - captures WHAT action AND WHEN it was taken.
+ * This enables the Mirror AI to learn input-output mappings.
+ */
+interface ContextualMove {
+    inputs: number[];     // The 9 normalized game state inputs at that moment
+    outputs: boolean[];   // What actions the player took [L, R, U, D, P, K, B]
+}
+
 interface ChuckAIState {
     chuckGenome: Genome;                  // Chuck's current neural network
     mirrorGenome: Genome | null;          // Generated opponent mimic
-    opponentHistory: InputState[];        // Sliding window of opponent actions
+    contextualHistory: ContextualMove[];  // Sliding window of moves with context
     trainingIterations: number;           // How many background matches run
-    movesSinceLastUpdate: number;         // Counter for mirror updates
     framesSinceTraining: number;          // Counter for real-time training
+    isTrainingInProgress: boolean;        // Prevent overlapping training requests
+}
+
+// =============================================================================
+// WORKER MANAGEMENT
+// =============================================================================
+
+let mirrorWorker: Worker | null = null;
+let workerReady = false;
+
+/**
+ * Initialize the Mirror training worker.
+ */
+function initializeWorker(): void {
+    if (mirrorWorker) return;
+
+    try {
+        mirrorWorker = new Worker(
+            new URL('./MirrorTrainerWorker.ts', import.meta.url),
+            { type: 'module' }
+        );
+
+        mirrorWorker.onmessage = (event) => {
+            const { data } = event;
+
+            if (data.type === 'ready') {
+                workerReady = true;
+                console.log('[ChuckAI] Mirror training worker ready');
+            } else if (data.type === 'trained') {
+                handleTrainedNetwork(data.network);
+            } else if (data.type === 'error') {
+                console.error('[ChuckAI] Training error:', data.message);
+                if (chuckState) {
+                    chuckState.isTrainingInProgress = false;
+                }
+            }
+        };
+
+        mirrorWorker.onerror = (error) => {
+            console.error('[ChuckAI] Worker error:', error.message);
+            workerReady = false;
+        };
+    } catch (error) {
+        console.error('[ChuckAI] Failed to create worker:', error);
+    }
+}
+
+/**
+ * Handle trained network received from worker.
+ */
+function handleTrainedNetwork(network: NeuralNetworkData): void {
+    if (!chuckState) return;
+
+    chuckState.mirrorGenome = {
+        id: 'mirror-ai',
+        network: network,
+        fitness: 0,
+        matchesWon: 0
+    };
+    chuckState.isTrainingInProgress = false;
 }
 
 // =============================================================================
@@ -58,6 +118,8 @@ let chuckState: ChuckAIState | null = null;
  * Call this when starting a new session or resetting Chuck.
  */
 export function initializeChuckAI(): void {
+    initializeWorker();
+
     chuckState = {
         chuckGenome: {
             id: 'chuck-ai',
@@ -66,10 +128,10 @@ export function initializeChuckAI(): void {
             matchesWon: 0
         },
         mirrorGenome: null,
-        opponentHistory: [],
+        contextualHistory: [],
         trainingIterations: 0,
-        movesSinceLastUpdate: 0,
-        framesSinceTraining: 0
+        framesSinceTraining: 0,
+        isTrainingInProgress: false
     };
 }
 
@@ -81,7 +143,6 @@ export function getChuckGenome(): Genome {
     if (!chuckState) {
         initializeChuckAI();
     }
-    // Assert chuckState is defined after initialization
     if (!chuckState) {
         throw new Error('ChuckAI: Failed to initialize state');
     }
@@ -100,35 +161,51 @@ export function getMirrorGenome(): NeuralNetworkData | null {
 }
 
 // =============================================================================
-// OPPONENT MONITORING
+// CONTEXTUAL OPPONENT MONITORING
 // =============================================================================
 
 /**
- * Record an opponent's move for pattern analysis.
- * Call this every frame with the opponent's current input state.
+ * Record an opponent's move WITH game state context.
+ * This is the key improvement - we now know WHEN each action was taken.
  * 
  * @param input - The opponent's input state this frame
+ * @param gameStateInputs - The 9 normalized inputs representing game state
  */
-export function recordOpponentMove(input: InputState): void {
+export function recordOpponentMove(input: InputState, gameStateInputs?: number[]): void {
     if (!chuckState) {
         initializeChuckAI();
     }
     if (!chuckState) return;
 
-    // Add to history buffer (sliding window)
-    chuckState.opponentHistory.push({ ...input });
-
-    // Maintain buffer size limit (Rule #2: bounded iteration)
-    if (chuckState.opponentHistory.length > HISTORY_BUFFER_SIZE) {
-        chuckState.opponentHistory.shift();
+    // Only record if we have game state context
+    if (!gameStateInputs || gameStateInputs.length !== 9) {
+        return;
     }
 
-    chuckState.movesSinceLastUpdate++;
+    // Convert InputState to outputs array [L, R, U, D, P, K, B]
+    const outputs: boolean[] = [
+        input.left,
+        input.right,
+        input.up,
+        input.down,
+        input.action1,  // Punch
+        input.action2,  // Kick
+        input.action3   // Block
+    ];
 
-    // Periodically update the Mirror AI
-    if (chuckState.movesSinceLastUpdate >= MIRROR_UPDATE_INTERVAL) {
-        updateMirrorAI();
-        chuckState.movesSinceLastUpdate = 0;
+    // Only record if player did something (not idle)
+    const didSomething = outputs.some(o => o);
+    if (!didSomething) return;
+
+    // Add to contextual history
+    chuckState.contextualHistory.push({
+        inputs: [...gameStateInputs],
+        outputs: outputs
+    });
+
+    // Maintain buffer size limit (Rule #2: bounded iteration)
+    if (chuckState.contextualHistory.length > MIRROR_CONFIG.HISTORY_SIZE) {
+        chuckState.contextualHistory.shift();
     }
 }
 
@@ -136,144 +213,70 @@ export function recordOpponentMove(input: InputState): void {
  * Get the number of recorded opponent moves.
  */
 export function getOpponentHistorySize(): number {
-    return chuckState?.opponentHistory.length ?? 0;
+    return chuckState?.contextualHistory.length ?? 0;
 }
 
 // =============================================================================
-// MIRROR AI GENERATION
+// REAL-TIME MIRROR TRAINING
 // =============================================================================
 
 /**
- * Generate or update the Mirror AI based on opponent behavior patterns.
- * 
- * The Mirror AI attempts to replicate the opponent's fighting style by:
- * 1. Analyzing action frequencies in the history
- * 2. Biasing network weights toward commonly used actions
- * 3. Creating an opponent proxy for Chuck to train against
+ * Trigger real-time Mirror AI training.
+ * Called every frame from the game loop - internally throttled.
  */
-function updateMirrorAI(): void {
+export function runRealtimeMirrorTraining(): void {
     if (!chuckState) return;
-    if (chuckState.opponentHistory.length < 20) return; // Need enough data
 
-    // Analyze opponent patterns
-    const patterns = analyzeOpponentPatterns(chuckState.opponentHistory);
+    // Throttle: only train every UPDATE_INTERVAL_FRAMES
+    chuckState.framesSinceTraining++;
+    if (chuckState.framesSinceTraining < MIRROR_CONFIG.UPDATE_INTERVAL_FRAMES) return;
+    chuckState.framesSinceTraining = 0;
 
-    // Create or update mirror genome
-    const mirrorNetwork = createMirrorNetwork(patterns);
+    // Skip if training already in progress or worker not ready
+    if (chuckState.isTrainingInProgress || !workerReady || !mirrorWorker) return;
 
-    chuckState.mirrorGenome = {
-        id: 'mirror-ai',
-        network: mirrorNetwork,
-        fitness: 0,
-        matchesWon: 0
+    // Skip if not enough samples
+    if (chuckState.contextualHistory.length < MIRROR_CONFIG.MIN_SAMPLES) return;
+
+    // Prepare training data
+    const samples: Omit<TrainingSample, 'weight'>[] = chuckState.contextualHistory.map(move => ({
+        inputs: move.inputs,
+        // Convert boolean outputs to target values (0.1 for false, 0.9 for true)
+        // We use 8 outputs to match network architecture (IDLE, L, R, U, D, P, K, B)
+        targets: [
+            0.1,  // IDLE - always low when player is doing something
+            move.outputs[0] ? 0.9 : 0.1,  // LEFT
+            move.outputs[1] ? 0.9 : 0.1,  // RIGHT
+            move.outputs[2] ? 0.9 : 0.1,  // UP (Jump)
+            move.outputs[3] ? 0.9 : 0.1,  // DOWN (Crouch)
+            move.outputs[4] ? 0.9 : 0.1,  // PUNCH
+            move.outputs[5] ? 0.9 : 0.1,  // KICK
+            move.outputs[6] ? 0.9 : 0.1,  // BLOCK
+        ]
+    }));
+
+    // Get or create base network for training
+    const baseNetwork = chuckState.mirrorGenome?.network ?? createChuckNetwork();
+
+    const config: TrainingConfig = {
+        learningRate: MIRROR_CONFIG.LEARNING_RATE,
+        epochs: MIRROR_CONFIG.EPOCHS_PER_UPDATE,
+        recencyDecay: MIRROR_CONFIG.RECENCY_DECAY,
+        minSamples: MIRROR_CONFIG.MIN_SAMPLES
     };
-}
 
-/**
- * Analyze opponent move history to extract patterns.
- * Returns frequency data for each action type.
- */
-function analyzeOpponentPatterns(history: InputState[]): ActionPatterns {
-    const patterns: ActionPatterns = {
-        leftFreq: 0,
-        rightFreq: 0,
-        jumpFreq: 0,
-        crouchFreq: 0,
-        punchFreq: 0,
-        kickFreq: 0,
-        blockFreq: 0,
-        aggressiveness: 0
-    };
-
-    const len = history.length;
-    if (len === 0) return patterns;
-
-    // Count action frequencies
-    for (const input of history) {
-        if (input.left) patterns.leftFreq++;
-        if (input.right) patterns.rightFreq++;
-        if (input.up) patterns.jumpFreq++;
-        if (input.down) patterns.crouchFreq++;
-        if (input.action1) patterns.punchFreq++;
-        if (input.action2) patterns.kickFreq++;
-        if (input.action3) patterns.blockFreq++;
-    }
-
-    // Normalize to 0-1
-    patterns.leftFreq /= len;
-    patterns.rightFreq /= len;
-    patterns.jumpFreq /= len;
-    patterns.crouchFreq /= len;
-    patterns.punchFreq /= len;
-    patterns.kickFreq /= len;
-    patterns.blockFreq /= len;
-
-    // Calculate aggressiveness (attack frequency)
-    patterns.aggressiveness = (patterns.punchFreq + patterns.kickFreq) / 2;
-
-    return patterns;
-}
-
-interface ActionPatterns {
-    leftFreq: number;
-    rightFreq: number;
-    jumpFreq: number;
-    crouchFreq: number;
-    punchFreq: number;
-    kickFreq: number;
-    blockFreq: number;
-    aggressiveness: number;
-}
-
-/**
- * Create a neural network that mimics the observed patterns.
- * 
- * Key improvements for accurate style matching:
- * 1. Strong positive bias for frequently used actions
- * 2. Strong negative bias to suppress rarely used actions
- * 3. Contrast enhancement to make dominant actions stand out
- */
-function createMirrorNetwork(patterns: ActionPatterns): NeuralNetworkData {
-    const network = createChuckNetwork();
-    const hiddenNodes = NN_ARCH_CHUCK.HIDDEN_NODES;
-
-    // Output indices: 0:IDLE 1:LEFT 2:RIGHT 3:JUMP 4:CROUCH 5:PUNCH 6:KICK 7:BLOCK
-    // Map patterns to output biases with STRONG influence
-    const actionFreqs = [
-        0,                      // IDLE - neutral
-        patterns.leftFreq,      // LEFT
-        patterns.rightFreq,     // RIGHT  
-        patterns.jumpFreq,      // JUMP
-        patterns.crouchFreq,    // CROUCH
-        patterns.punchFreq,     // PUNCH
-        patterns.kickFreq,      // KICK
-        patterns.blockFreq      // BLOCK
-    ];
-
-    // Find max frequency to compute relative weights
-    const maxFreq = Math.max(...actionFreqs.slice(1), 0.01);
-
-    // Apply strong biases: boost used actions, suppress unused ones
-    for (let i = 1; i < 8; i++) {
-        const freq = actionFreqs[i] ?? 0;
-        const biasIdx = hiddenNodes + i;
-
-        // Normalize to 0-1 range relative to most-used action
-        const normalized = freq / maxFreq;
-
-        // Strong bias scaling:
-        // - High freq (near 1.0) → +5 bias (strongly encouraged)
-        // - Low freq (near 0.0) → -3 bias (strongly suppressed)
-        const bias = (normalized * 8) - 3;
-
-        network.biases[biasIdx] = bias;
-    }
-
-    return network;
+    // Send training request to worker
+    chuckState.isTrainingInProgress = true;
+    mirrorWorker.postMessage({
+        type: 'train',
+        network: baseNetwork,
+        samples: samples,
+        config: config
+    });
 }
 
 // =============================================================================
-// BACKGROUND TRAINING
+// BACKGROUND TRAINING (Chuck vs Mirror)
 // =============================================================================
 
 /**
@@ -290,7 +293,7 @@ export function runChuckTrainingCycle(): void {
     const chuck = chuckState.chuckGenome;
     const chuckVariants: Genome[] = [chuck];
 
-    // Generate mutated variants
+    // Generate mutated variants (Rule #2: bounded loop)
     for (let i = 1; i < 5; i++) {
         chuckVariants.push({
             id: `chuck-variant-${i}`,
@@ -300,8 +303,7 @@ export function runChuckTrainingCycle(): void {
         });
     }
 
-    // Simulate matches against Mirror AI (simplified fitness)
-    // In a full implementation, this would run actual headless matches
+    // Simulate matches against Mirror AI
     for (const variant of chuckVariants) {
         variant.fitness = simulateMatchAgainstMirror(variant, chuckState.mirrorGenome);
     }
@@ -325,56 +327,10 @@ export function runChuckTrainingCycle(): void {
 
 /**
  * Run incremental real-time training during active fights.
- * This is a lightweight version of runChuckTrainingCycle that:
- * - Runs every ~2 seconds (120 frames at 60fps)
- * - Uses fewer variants (2 instead of 5) for performance
- * - Provides faster adaptation during the fight itself
- * 
- * Call this every frame from the game loop when fighting Chuck.
+ * Now redirects to runRealtimeMirrorTraining for the new system.
  */
 export function runIncrementalTraining(): void {
-    if (!chuckState) return;
-
-    // Throttle: only train every REALTIME_TRAINING_INTERVAL frames
-    chuckState.framesSinceTraining++;
-    if (chuckState.framesSinceTraining < REALTIME_TRAINING_INTERVAL) return;
-    chuckState.framesSinceTraining = 0;
-
-    // Skip if no mirror data yet (need pattern data first)
-    if (!chuckState.mirrorGenome) return;
-
-    // Create small training batch (Rule #2: bounded, fixed iteration)
-    const chuck = chuckState.chuckGenome;
-    const chuckVariants: Genome[] = [chuck];
-
-    // Generate only REALTIME_TRAINING_VARIANTS mutations for speed
-    for (let i = 1; i <= REALTIME_TRAINING_VARIANTS; i++) {
-        chuckVariants.push({
-            id: `chuck-realtime-${i}`,
-            network: mutateNetwork(chuck.network, 0.08), // Lower mutation for stability
-            fitness: 0,
-            matchesWon: 0
-        });
-    }
-
-    // Quick fitness evaluation against Mirror AI
-    for (const variant of chuckVariants) {
-        variant.fitness = simulateMatchAgainstMirror(variant, chuckState.mirrorGenome);
-    }
-
-    // Select best performer
-    chuckVariants.sort((a, b) => b.fitness - a.fitness);
-    const best = chuckVariants[0];
-
-    // Update Chuck if a better variant is found
-    if (best && best.fitness > chuck.fitness) {
-        chuckState.chuckGenome = {
-            id: 'chuck-ai',
-            network: crossoverNetworks(chuck.network, best.network),
-            fitness: best.fitness,
-            matchesWon: chuck.matchesWon
-        };
-    }
+    runRealtimeMirrorTraining();
 }
 
 /**
@@ -384,9 +340,9 @@ export function runIncrementalTraining(): void {
 function simulateMatchAgainstMirror(chuck: Genome, mirror: Genome): number {
     // Create sample inputs representing different game states
     const testInputs = [
-        [0.5, 0, 1, 1, 0, 1, 1, 0, 1],  // Mid distance, full resources
+        [0.5, 0, 1, 1, 0, 1, 1, 0, 1],        // Mid distance, full resources
         [0.1, 0, 0.5, 0.8, 0.3, 0.8, 1, 0.2, 0.7],  // Close, low health
-        [0.8, 0, 0.8, 0.3, 0.5, 0.5, -1, 0, 0.5],  // Far, advantage
+        [0.8, 0, 0.8, 0.3, 0.5, 0.5, -1, 0, 0.5],   // Far, advantage
         [-0.5, 0, 0.7, 0.7, 0.2, 0.6, 1, 0.5, 0.6], // Left side scenario
     ];
 
@@ -397,22 +353,19 @@ function simulateMatchAgainstMirror(chuck: Genome, mirror: Genome): number {
         const mirrorOutputs = predict(mirror.network, inputs);
 
         // Reward strategic countering
-        // If mirror attacks, reward blocking
         const mirrorAttacking = (mirrorOutputs[5] ?? 0) > 0.5 || (mirrorOutputs[6] ?? 0) > 0.5;
         const chuckBlocking = (chuckOutputs[7] ?? 0) > 0.5;
         if (mirrorAttacking && chuckBlocking) fitness += 10;
 
-        // If mirror blocks, reward waiting or repositioning
         const mirrorBlocking = (mirrorOutputs[7] ?? 0) > 0.5;
         const chuckMoving = (chuckOutputs[1] ?? 0) > 0.5 || (chuckOutputs[2] ?? 0) > 0.5;
         if (mirrorBlocking && chuckMoving) fitness += 5;
 
-        // Reward aggressive play when opponent is passive
         const mirrorPassive = !mirrorAttacking && !mirrorBlocking;
         const chuckAttacking = (chuckOutputs[5] ?? 0) > 0.5 || (chuckOutputs[6] ?? 0) > 0.5;
         if (mirrorPassive && chuckAttacking) fitness += 15;
 
-        // Punish predictable behavior (similar outputs)
+        // Punish predictable behavior
         const similarity = calculateOutputSimilarity(chuckOutputs, mirrorOutputs);
         fitness -= similarity * 5;
     }
@@ -439,11 +392,12 @@ function calculateOutputSimilarity(a: number[], b: number[]): number {
 /**
  * Get current training statistics for display.
  */
-export function getChuckStats(): { iterations: number; historySize: number; hasMirror: boolean } {
+export function getChuckStats(): { iterations: number; historySize: number; hasMirror: boolean; isTraining: boolean } {
     return {
         iterations: chuckState?.trainingIterations ?? 0,
-        historySize: chuckState?.opponentHistory.length ?? 0,
-        hasMirror: chuckState?.mirrorGenome !== null
+        historySize: chuckState?.contextualHistory.length ?? 0,
+        hasMirror: chuckState?.mirrorGenome !== null,
+        isTraining: chuckState?.isTrainingInProgress ?? false
     };
 }
 
@@ -460,4 +414,15 @@ export function resetChuckAI(): void {
  */
 export function isChuckInitialized(): boolean {
     return chuckState !== null;
+}
+
+/**
+ * Terminate the worker when no longer needed.
+ */
+export function terminateMirrorWorker(): void {
+    if (mirrorWorker) {
+        mirrorWorker.terminate();
+        mirrorWorker = null;
+        workerReady = false;
+    }
 }
