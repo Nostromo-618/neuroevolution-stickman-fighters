@@ -46,13 +46,6 @@
             :game-state="gameState"
           />
 
-          <!-- Simple Training Visualization (Desktop Only, Training Mode) -->
-          <SimpleTrainingCanvas
-            class="hidden md:block w-full"
-            :settings="settings"
-            :game-state="gameState"
-            :population="populationRef"
-          />
         </div>
 
         <!-- Right Column: Dashboards & Stats -->
@@ -187,6 +180,7 @@ const {
   evolve
 } = useEvolution({
   settingsRef,
+  setSettings,
   gameStateRef,
   setGameState,
   populationRef,
@@ -253,6 +247,7 @@ const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTi
 
 useBackgroundTraining({
   settings,
+  setSettings,
   setGameState,
   setFitnessHistory,
   populationRef,

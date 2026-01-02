@@ -15,6 +15,7 @@ import { clearGenomeStorage } from '~/services/PersistenceManager';
 
 interface EvolutionContext {
     settingsRef: Ref<TrainingSettings>;
+    setSettings: (updater: TrainingSettings | ((prev: TrainingSettings) => TrainingSettings)) => void;
     gameStateRef: Ref<GameState>;
     setGameState: (updater: GameState | ((prev: GameState) => GameState)) => void;
     populationRef: Ref<Genome[]>;
@@ -134,15 +135,22 @@ export function useEvolution(ctx: EvolutionContext) {
         );
 
         // Update game state
+        const newGeneration = ctx.gameStateRef.value.generation + 1;
         ctx.setGameState(prev => ({
             ...prev,
             bestFitness: best.fitness,
-            generation: prev.generation + 1,
+            generation: newGeneration,
             matchesUntilEvolution: nextEvolutionInterval,
             currentMutationRate: ctx.settingsRef.value.intelligentMutation
-                ? Math.max(0.05, 0.30 - ((prev.generation + 1) * 0.008))
+                ? Math.max(0.05, 0.30 - (newGeneration * 0.008))
                 : ctx.settingsRef.value.mutationRate
         }));
+
+        // Auto-stop training if enabled and limit reached
+        if (ctx.settingsRef.value.autoStopEnabled && newGeneration >= ctx.settingsRef.value.autoStopGeneration) {
+            ctx.setSettings(s => ({ ...s, isRunning: false }));
+            return;
+        }
 
         const currentGen = ctx.gameStateRef.value.generation;
 

@@ -5,6 +5,7 @@ import { crossoverNetworks, mutateNetwork } from '~/services/NeuralNetwork';
 
 interface UseBackgroundTrainingProps {
     settings: Ref<TrainingSettings>;
+    setSettings: (updater: TrainingSettings | ((prev: TrainingSettings) => TrainingSettings)) => void;
     setGameState: (updater: GameState | ((prev: GameState) => GameState)) => void;
     setFitnessHistory: (updater: { gen: number, fitness: number }[] | ((prev: { gen: number, fitness: number }[]) => { gen: number, fitness: number }[])) => void;
     populationRef: Ref<Genome[]>;
@@ -14,6 +15,7 @@ interface UseBackgroundTrainingProps {
 
 export const useBackgroundTraining = ({
     settings,
+    setSettings,
     setGameState,
     setFitnessHistory,
     populationRef,
@@ -58,19 +60,28 @@ export const useBackgroundTraining = ({
             }
 
             let currentGen = 0;
+            let newGeneration = 0;
             setGameState(prev => {
                 currentGen = prev.generation;
+                newGeneration = prev.generation + 1;
                 return {
                     ...prev,
                     bestFitness: best.fitness,
-                    generation: prev.generation + 1,
+                    generation: newGeneration,
                     currentMutationRate: settings.value.intelligentMutation
-                        ? Math.max(0.05, 0.30 - ((prev.generation + 1) * 0.008))
+                        ? Math.max(0.05, 0.30 - (newGeneration * 0.008))
                         : settings.value.mutationRate
                 };
             });
 
             setFitnessHistory(prev => [...prev.slice(-20), { gen: currentGen, fitness: best.fitness }]);
+
+            // Auto-stop training if enabled and limit reached
+            if (settings.value.autoStopEnabled && newGeneration >= settings.value.autoStopGeneration) {
+                setSettings(s => ({ ...s, isRunning: false }));
+                isWorkerTrainingRef.value = false;
+                return;
+            }
 
             const popSize = pop.length;
             if (pop.length < 2 || !pop[0]?.network || !pop[1]?.network) {

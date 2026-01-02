@@ -26,6 +26,8 @@ export const useGameSettings = (): UseGameSettingsReturn => {
         turboTraining: true,
         workerCount: getDefaultWorkerCount(),     // 50% of threads (e.g., 4 of 8)
         intelligentMutation: true,                // Use adaptive mutation rate by default
+        autoStopEnabled: true,                    // Auto-stop training after 1000 generations by default
+        autoStopGeneration: 1000,                 // Stop training at this generation
         opponentType: 'SIMPLE_AI',
         player1Type: 'HUMAN',                     // Default to human player
         player2Type: FEATURE_FLAGS.ENABLE_CHUCK_AI ? 'CHUCK_AI' : 'SIMPLE_AI'

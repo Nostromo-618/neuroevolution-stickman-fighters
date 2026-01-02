@@ -97,6 +97,39 @@
         </p>
       </div>
 
+      <!-- Auto-Stop Training Toggle - Only shown in TRAINING mode -->
+      <div v-if="isTrainingActive" class="pt-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-300">Auto-Stop Training</span>
+            <span v-if="settings.autoStopEnabled" class="w-2 h-2 bg-amber-500 rounded-full" title="Auto-stop enabled" />
+          </div>
+          <USwitch
+            :model-value="settings.autoStopEnabled"
+            @update:model-value="toggleAutoStop"
+            color="warning"
+          />
+        </div>
+        <p class="text-[10px] text-slate-500 mt-1">
+          {{ settings.autoStopEnabled ? `Training will stop at Gen ${settings.autoStopGeneration}` : 'Training will run indefinitely' }}
+        </p>
+      </div>
+
+      <!-- Auto-Stop Generation Limit - Only shown when Auto-Stop is enabled -->
+      <div v-if="isTrainingActive && settings.autoStopEnabled" class="space-y-2">
+        <div class="flex justify-between">
+          <label class="text-xs font-semibold text-slate-300">Stop At Generation</label>
+          <span class="text-xs font-mono text-amber-400">{{ settings.autoStopGeneration }}</span>
+        </div>
+        <USlider
+          :model-value="settings.autoStopGeneration"
+          :min="10"
+          :max="10000"
+          :step="10"
+          @update:model-value="updateAutoStopGeneration"
+        />
+      </div>
+
       <!-- Worker Threads Slider -->
       <div class="space-y-2">
         <div class="flex justify-between">
@@ -208,6 +241,16 @@ const toggleTurboTraining = () => {
 
 const toggleIntelligentMutation = () => {
   props.setSettings(s => ({ ...s, intelligentMutation: !s.intelligentMutation }));
+};
+
+const toggleAutoStop = () => {
+  props.setSettings(s => ({ ...s, autoStopEnabled: !s.autoStopEnabled }));
+};
+
+const updateAutoStopGeneration = (value: number | undefined) => {
+  if (value !== undefined) {
+    props.setSettings({ ...props.settings, autoStopGeneration: value });
+  }
 };
 
 const maxWorkers = computed(() =>
