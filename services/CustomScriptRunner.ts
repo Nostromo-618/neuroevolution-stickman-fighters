@@ -24,9 +24,20 @@ export { compileScript } from './CustomScriptCompiler';
 export { runScript } from './CustomScriptExecutor';
 export { saveScript, loadScript, exportScript, importScript } from './CustomScriptStorage';
 import { DEFAULT_FIGHTER_SCRIPT } from '../templates/defaultFighterScript';
+import { DEFAULT_FIGHTER_SCRIPT_B } from '../templates/defaultFighterScriptB';
 
-// Export getDefaultTemplate as a function for backward compatibility
-export function getDefaultTemplate(): string {
+/**
+ * Returns the default script template for a given slot.
+ * - slot1 (Script A): Strategic, logical fighter template
+ * - slot2 (Script B): Chaotic, randomized fighter template
+ * 
+ * @param slotId - Optional slot identifier (defaults to 'slot1')
+ * @returns The default script template for that slot
+ */
+export function getDefaultTemplate(slotId?: string): string {
+    if (slotId === 'slot2') {
+        return DEFAULT_FIGHTER_SCRIPT_B;
+    }
     return DEFAULT_FIGHTER_SCRIPT;
 }
 

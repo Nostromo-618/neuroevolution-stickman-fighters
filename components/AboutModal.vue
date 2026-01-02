@@ -70,7 +70,7 @@ const tabs = [
         </div>
         <div>
           <h2 class="text-lg font-semibold text-highlighted">
-            About NeuroEvolution
+            About NeuroEvolution: Stickman Fighters
           </h2>
           <p class="text-sm text-muted">
             AI learns to fight through natural selection
