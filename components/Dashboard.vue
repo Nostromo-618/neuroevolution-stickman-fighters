@@ -6,10 +6,6 @@
       @save="handleScriptSave"
     />
 
-    <InfoModal
-      v-model="infoModalOpen"
-    />
-
     <UCard class="bg-slate-800 border border-slate-700 shadow-2xl">
       <div class="space-y-6">
         <MatchConfiguration
@@ -17,7 +13,6 @@
           :set-settings="setSettings"
           :game-state="gameState"
           :on-open-script-editor="() => scriptEditorOpen = true"
-          :on-open-info="() => infoModalOpen = true"
         />
 
         <!-- ACTION BUTTONS (Start/Reset) -->
@@ -88,7 +83,6 @@ interface Props {
 const props = defineProps<Props>();
 
 const scriptEditorOpen = ref(false);
-const infoModalOpen = ref(false);
 
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
 

@@ -6,15 +6,6 @@
         <h2 class="text-xs font-bold text-slate-300 uppercase tracking-widest pl-2">
           Match Setup
         </h2>
-        <UButton
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          @click="onOpenInfo"
-          title="Game Info & Help"
-        >
-          i
-        </UButton>
       </div>
 
       <!-- Visual Training Toggle -->
@@ -112,7 +103,6 @@ interface Props {
   setSettings: (updater: TrainingSettings | ((prev: TrainingSettings) => TrainingSettings)) => void;
   gameState: GameState;
   onOpenScriptEditor: () => void;
-  onOpenInfo: () => void;
 }
 
 const props = defineProps<Props>();

@@ -30,6 +30,6 @@
     </svg>
     
     <!-- App Name -->
-    <span class="font-bold text-lg text-(--ui-text-highlighted)">NeuroEvolution</span>
+    <span class="font-bold text-lg text-(--ui-text-highlighted)">NeuroEvolution: Stickman Fighters</span>
   </div>
 </template>
