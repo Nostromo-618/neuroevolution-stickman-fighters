@@ -14,7 +14,7 @@
 // =============================================================================
 export const DEBUG_FLAGS = {
     /** Enable verbose console logging for diagnosing simulation freezes */
-    VERBOSE_LOGGING: true,  // Toggle this to enable/disable debug output
+    VERBOSE_LOGGING: false,  // Toggle this to enable/disable debug output
 } as const;
 
 // =============================================================================

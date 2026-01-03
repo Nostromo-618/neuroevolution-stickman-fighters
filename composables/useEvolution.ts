@@ -23,6 +23,7 @@ interface EvolutionContext {
     setFitnessHistory: (updater: { gen: number; fitness: number }[] | ((prev: { gen: number; fitness: number }[]) => { gen: number; fitness: number }[])) => void;
     currentMatchIndex: Ref<number>;
     addToast: (type: 'success' | 'error' | 'info', message: string) => void;
+    onAutoStop?: () => void;
 }
 
 /**
@@ -148,7 +149,12 @@ export function useEvolution(ctx: EvolutionContext) {
 
         // Auto-stop training if enabled and limit reached
         if (ctx.settingsRef.value.autoStopEnabled && newGeneration >= ctx.settingsRef.value.autoStopGeneration) {
-            ctx.setSettings(s => ({ ...s, isRunning: false }));
+            if (ctx.onAutoStop) {
+                ctx.onAutoStop();
+            } else {
+                // Fallback to silent pause if no callback provided
+                ctx.setSettings(s => ({ ...s, isRunning: false }));
+            }
             return;
         }
 

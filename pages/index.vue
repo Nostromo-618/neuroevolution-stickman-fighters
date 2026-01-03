@@ -71,6 +71,14 @@
             :on-confirm="handleImportChoice"
             :on-cancel="() => setPendingImport(null)"
           />
+
+          <AutoStopModal 
+            v-model="showAutoStopModal"
+            :current-gen="gameState.generation"
+            :on-continue="handleAutoStopContinue"
+            :on-disable="handleAutoStopDisable"
+            :on-stop="handleAutoStopStop"
+          />
         </div>
       </div>
       </div>
@@ -173,6 +181,41 @@ const inputManager = ref<InputManager | null>(null);
 
 const { customScriptWorkerARef, customScriptWorkerBRef, recompileCustomScript } = useCustomScriptWorkers(settings, addToast);
 
+// Auto-stop modal state and handlers (defined early for use in composables)
+const showAutoStopModal = ref(false);
+
+const handleAutoStopTriggered = () => {
+  showAutoStopModal.value = true;
+  setSettings(s => ({ ...s, isRunning: false }));
+};
+
+const handleAutoStopContinue = () => {
+  setSettings(s => ({ 
+    ...s, 
+    autoStopGeneration: s.autoStopGeneration + 1000, 
+    isRunning: true 
+  }));
+  showAutoStopModal.value = false;
+};
+
+const handleAutoStopDisable = () => {
+  setSettings(s => ({ 
+    ...s, 
+    autoStopEnabled: false, 
+    isRunning: true 
+  }));
+  showAutoStopModal.value = false;
+};
+
+const handleAutoStopStop = () => {
+  setSettings(s => ({ 
+    ...s, 
+    backgroundTraining: false, 
+    isRunning: true 
+  }));
+  showAutoStopModal.value = false;
+};
+
 // Evolution composable - handles population reset, evolution logic
 const {
   resetPopulation,
@@ -188,7 +231,8 @@ const {
   bestTrainedGenomeRef,
   setFitnessHistory,
   currentMatchIndex,
-  addToast
+  addToast,
+  onAutoStop: handleAutoStopTriggered
 });
 
 // Local resetPopulation wrapper that integrates with initPopulation
@@ -253,7 +297,8 @@ useBackgroundTraining({
   setFitnessHistory,
   populationRef,
   bestTrainedGenomeRef,
-  currentMatchIndex
+  currentMatchIndex,
+  onAutoStop: handleAutoStopTriggered
 });
 
 const prevPlayerTypesRef = ref<{ p1: string; p2: string } | null>(null);

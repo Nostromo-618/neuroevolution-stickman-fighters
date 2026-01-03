@@ -12,6 +12,7 @@ interface UseBackgroundTrainingProps {
     populationRef: Ref<Genome[]>;
     bestTrainedGenomeRef: Ref<Genome | null>;
     currentMatchIndex: Ref<number>;
+    onAutoStop?: () => void;
 }
 
 export const useBackgroundTraining = ({
@@ -21,7 +22,8 @@ export const useBackgroundTraining = ({
     setFitnessHistory,
     populationRef,
     bestTrainedGenomeRef,
-    currentMatchIndex
+    currentMatchIndex,
+    onAutoStop
 }: UseBackgroundTrainingProps) => {
     const workerPoolRef = ref<WorkerPool | null>(null);
     const isWorkerTrainingRef = ref<boolean>(false);
@@ -85,8 +87,14 @@ export const useBackgroundTraining = ({
             setFitnessHistory(prev => [...prev.slice(-20), { gen: currentGen, fitness: best.fitness }]);
 
             // Auto-stop training if enabled and limit reached
+            // Auto-stop training if enabled and limit reached
             if (settings.value.autoStopEnabled && newGeneration >= settings.value.autoStopGeneration) {
-                setSettings(s => ({ ...s, isRunning: false }));
+                if (onAutoStop) {
+                    onAutoStop();
+                } else {
+                    // Fallback to silent pause if no callback provided
+                    setSettings(s => ({ ...s, isRunning: false }));
+                }
                 isWorkerTrainingRef.value = false;
                 return;
             }
