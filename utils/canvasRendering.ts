@@ -86,148 +86,126 @@ function renderNightBackground(ctx: CanvasRenderingContext2D, frameCount: number
 }
 
 /**
- * Renders the day mode background (bright outdoor arena).
+ * Renders the day mode background with atmospheric perspective.
+ * 
+ * Design Principles Applied:
+ * 1. Atmospheric Perspective - distant objects are lighter/hazier
+ * 2. Reduced Visual Frequency - soft curves instead of sharp angles
+ * 3. Desaturated Palette - neutral grays so vibrant fighters pop
+ * 4. Figure-Ground Separation - low-contrast background, high-contrast fighters
  */
 function renderDayBackground(ctx: CanvasRenderingContext2D, frameCount: number): void {
-  // --- SKY GRADIENT (bright blue to lighter blue) ---
+  // --- SKY GRADIENT (Soft/Atmospheric) ---
   const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
-  gradient.addColorStop(0, '#38bdf8'); // sky-400
-  gradient.addColorStop(0.5, '#7dd3fc'); // sky-300
-  gradient.addColorStop(1, '#e0f2fe'); // sky-100
+  gradient.addColorStop(0, '#f1f5f9'); // slate-100 (near white/hazy)
+  gradient.addColorStop(0.6, '#e2e8f0'); // slate-200
+  gradient.addColorStop(1, '#cbd5e1'); // slate-300 (blends into mountains)
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  // --- CLOUDS ---
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-  for (let i = 0; i < 8; i++) {
-    const baseX = ((i * 120) + frameCount * 0.1) % (CANVAS_WIDTH + 100) - 50;
-    const baseY = 30 + (i % 3) * 40 + Math.sin(i * 2.5) * 20;
-    const scale = 0.6 + (i % 3) * 0.3;
+  // --- SOFT SUN GLOW (no harsh edges) ---
+  const sunGradient = ctx.createRadialGradient(
+    CANVAS_WIDTH * 0.75, 60, 0,
+    CANVAS_WIDTH * 0.75, 60, 100
+  );
+  sunGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+  sunGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.3)');
+  sunGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = sunGradient;
+  ctx.fillRect(CANVAS_WIDTH * 0.5, 0, CANVAS_WIDTH * 0.5, 200);
 
-    // Draw cloud puffs
-    ctx.beginPath();
-    ctx.arc(baseX, baseY, 20 * scale, 0, Math.PI * 2);
-    ctx.arc(baseX + 25 * scale, baseY - 5, 25 * scale, 0, Math.PI * 2);
-    ctx.arc(baseX + 50 * scale, baseY, 20 * scale, 0, Math.PI * 2);
-    ctx.arc(baseX + 35 * scale, baseY + 10, 15 * scale, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // --- DISTANT HILLS (Rolling curves - Layer 1, lightest) ---
+  ctx.fillStyle = '#94a3b8'; // slate-400
+  ctx.beginPath();
+  ctx.moveTo(0, CANVAS_HEIGHT);
+  ctx.lineTo(0, CANVAS_HEIGHT - 200);
+  // Bezier curves for smooth rolling hills
+  ctx.bezierCurveTo(
+    CANVAS_WIDTH * 0.15, CANVAS_HEIGHT - 250,
+    CANVAS_WIDTH * 0.25, CANVAS_HEIGHT - 180,
+    CANVAS_WIDTH * 0.4, CANVAS_HEIGHT - 220
+  );
+  ctx.bezierCurveTo(
+    CANVAS_WIDTH * 0.55, CANVAS_HEIGHT - 260,
+    CANVAS_WIDTH * 0.7, CANVAS_HEIGHT - 190,
+    CANVAS_WIDTH * 0.85, CANVAS_HEIGHT - 230
+  );
+  ctx.bezierCurveTo(
+    CANVAS_WIDTH * 0.95, CANVAS_HEIGHT - 250,
+    CANVAS_WIDTH, CANVAS_HEIGHT - 200,
+    CANVAS_WIDTH, CANVAS_HEIGHT - 180
+  );
+  ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
+  ctx.closePath();
+  ctx.fill();
 
-  // --- DISTANT MOUNTAIN RANGE (behind forest) ---
-  // Back mountains - bluish gray for atmospheric perspective
+  // --- MID-GROUND HILLS (Layer 2, slightly darker) ---
   ctx.fillStyle = '#64748b'; // slate-500
   ctx.beginPath();
-  ctx.moveTo(0, CANVAS_HEIGHT - 35);
-  for (let i = 0; i <= CANVAS_WIDTH; i += 40) {
-    const peakHeight = 180 + Math.sin(i * 0.015) * 60 + Math.cos(i * 0.008) * 40;
-    ctx.lineTo(i, CANVAS_HEIGHT - 35 - peakHeight);
-  }
-  ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT - 35);
+  ctx.moveTo(0, CANVAS_HEIGHT);
+  ctx.lineTo(0, CANVAS_HEIGHT - 140);
+  ctx.bezierCurveTo(
+    CANVAS_WIDTH * 0.1, CANVAS_HEIGHT - 180,
+    CANVAS_WIDTH * 0.2, CANVAS_HEIGHT - 120,
+    CANVAS_WIDTH * 0.35, CANVAS_HEIGHT - 160
+  );
+  ctx.bezierCurveTo(
+    CANVAS_WIDTH * 0.5, CANVAS_HEIGHT - 200,
+    CANVAS_WIDTH * 0.65, CANVAS_HEIGHT - 130,
+    CANVAS_WIDTH * 0.8, CANVAS_HEIGHT - 170
+  );
+  ctx.bezierCurveTo(
+    CANVAS_WIDTH * 0.9, CANVAS_HEIGHT - 190,
+    CANVAS_WIDTH * 0.95, CANVAS_HEIGHT - 150,
+    CANVAS_WIDTH, CANVAS_HEIGHT - 120
+  );
+  ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT);
   ctx.closePath();
   ctx.fill();
 
-  // Front mountains - slightly darker
+  // --- TREELINE SILHOUETTE (Soft canopy - rounded blobs) ---
   ctx.fillStyle = '#475569'; // slate-600
   ctx.beginPath();
-  ctx.moveTo(0, CANVAS_HEIGHT - 35);
-  for (let i = 0; i <= CANVAS_WIDTH; i += 30) {
-    const peakHeight = 140 + Math.cos(i * 0.02 + 1) * 50 + Math.sin(i * 0.01) * 30;
-    ctx.lineTo(i, CANVAS_HEIGHT - 35 - peakHeight);
+  ctx.moveTo(0, CANVAS_HEIGHT);
+  // Draw overlapping semicircles for soft tree canopy
+  for (let i = -30; i < CANVAS_WIDTH + 60; i += 50) {
+    const treeHeight = 70 + Math.sin(i * 0.05) * 20;
+    const treeWidth = 40 + (i % 20);
+    ctx.moveTo(i, CANVAS_HEIGHT - 35);
+    ctx.arc(i, CANVAS_HEIGHT - 35, treeWidth, Math.PI, 0, false);
   }
-  ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT - 35);
-  ctx.closePath();
   ctx.fill();
 
-  // --- DENSE PINE FOREST (behind buildings for contrast) ---
-  // Back layer - darker trees
-  ctx.fillStyle = '#166534'; // green-800
-  for (let i = 0; i < CANVAS_WIDTH; i += 25) {
-    const treeHeight = 100 + Math.sin(i * 0.08) * 30 + (i % 40);
-    const treeWidth = 20 + (i % 10);
-    const baseY = CANVAS_HEIGHT - 35;
-
-    // Pine tree triangle shape
-    ctx.beginPath();
-    ctx.moveTo(i + treeWidth / 2, baseY - treeHeight);
-    ctx.lineTo(i + treeWidth + 8, baseY);
-    ctx.lineTo(i - 8, baseY);
-    ctx.closePath();
-    ctx.fill();
+  // --- FOREGROUND VEGETATION (Soft bushes/hedge - closest layer) ---
+  ctx.fillStyle = '#334155'; // slate-700
+  ctx.beginPath();
+  for (let i = -20; i < CANVAS_WIDTH + 40; i += 35) {
+    const bushSize = 25 + Math.sin(i * 0.08) * 10;
+    ctx.moveTo(i + bushSize, CANVAS_HEIGHT - 35);
+    ctx.arc(i, CANVAS_HEIGHT - 35, bushSize, 0, Math.PI, true);
   }
+  ctx.fill();
 
-  // Front layer - slightly lighter trees for depth
-  ctx.fillStyle = '#15803d'; // green-700
-  for (let i = 12; i < CANVAS_WIDTH; i += 30) {
-    const treeHeight = 80 + Math.cos(i * 0.06) * 25 + (i % 35);
-    const treeWidth = 18 + (i % 8);
-    const baseY = CANVAS_HEIGHT - 35;
-
-    ctx.beginPath();
-    ctx.moveTo(i + treeWidth / 2, baseY - treeHeight);
-    ctx.lineTo(i + treeWidth + 6, baseY);
-    ctx.lineTo(i - 6, baseY);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // --- CITY SKYLINE (Background - light colors) ---
-  ctx.fillStyle = '#cbd5e1'; // slate-300
-  for (let i = 0; i < CANVAS_WIDTH; i += 60) {
-    const h = 80 + Math.sin(i * 0.02) * 40 + (i % 100);
-    ctx.fillRect(i, CANVAS_HEIGHT - 100 - h, 40, h + 100);
-
-    // Windows (bright/reflective)
-    ctx.fillStyle = '#f1f5f9'; // slate-100
-    if (i % 3 === 0) {
-      for (let w = 0; w < h; w += 20) {
-        if ((i + w) % 5 !== 0) ctx.fillRect(i + 10, CANVAS_HEIGHT - 100 - h + w + 10, 5, 8);
-      }
-    }
-    ctx.fillStyle = '#cbd5e1';
-  }
-
-  // --- CITY SKYLINE (Foreground - darker for contrast) ---
-  ctx.fillStyle = '#64748b'; // slate-500 (darker)
-  for (let i = 30; i < CANVAS_WIDTH; i += 80) {
-    const h = 40 + Math.cos(i * 0.03) * 30 + (i % 70);
-    ctx.fillRect(i, CANVAS_HEIGHT - 80 - h, 50, h + 80);
-
-    ctx.strokeStyle = '#475569'; // slate-600
-    ctx.lineWidth = 1;
-    ctx.strokeRect(i, CANVAS_HEIGHT - 80 - h, 50, h + 80);
-  }
-
-  // --- GROUND (grass/green field) ---
+  // --- GROUND (Neutral flat surface) ---
   const groundGradient = ctx.createLinearGradient(0, CANVAS_HEIGHT - 35, 0, CANVAS_HEIGHT);
-  groundGradient.addColorStop(0, '#22c55e'); // green-500
-  groundGradient.addColorStop(1, '#16a34a'); // green-600
+  groundGradient.addColorStop(0, '#cbd5e1'); // slate-300
+  groundGradient.addColorStop(1, '#94a3b8'); // slate-400
   ctx.fillStyle = groundGradient;
   ctx.fillRect(0, CANVAS_HEIGHT - 35, CANVAS_WIDTH, 35);
 
-  // Grass lines (subtle texture)
-  ctx.strokeStyle = '#15803d'; // green-700
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let i = 0; i < CANVAS_WIDTH; i += 8) {
-    const grassHeight = 3 + Math.sin(i * 0.5 + frameCount * 0.05) * 2;
-    ctx.moveTo(i, CANVAS_HEIGHT - 35);
-    ctx.lineTo(i + 2, CANVAS_HEIGHT - 35 - grassHeight);
-  }
-  ctx.stroke();
-
-  // Top edge highlight
-  ctx.fillStyle = '#4ade80'; // green-400
+  // Subtle top border
+  ctx.fillStyle = '#64748b'; // slate-500
   ctx.fillRect(0, CANVAS_HEIGHT - 35, CANVAS_WIDTH, 2);
 
-  // Field lines (sports arena feel)
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([10, 10]);
+  // Very subtle perspective lines (low opacity)
+  ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)'; // slate-500 with low opacity
+  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 35);
-  ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
+  for (let i = 0; i < CANVAS_WIDTH; i += 120) {
+    ctx.moveTo(i, CANVAS_HEIGHT - 35);
+    ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT + 50);
+  }
   ctx.stroke();
-  ctx.setLineDash([]);
 }
 
 /**
@@ -244,4 +222,3 @@ export function renderBackground(ctx: CanvasRenderingContext2D, frameCount: numb
     renderDayBackground(ctx, frameCount);
   }
 }
-
