@@ -12,10 +12,11 @@
       <div class="w-28 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
         <div class="h-full bg-amber-400 transition-all duration-75" :style="{ width: `${gameState.player1Energy}%` }" />
       </div>
-      <!-- P1 Win Counter -->
-      <span class="text-emerald-400 font-bold text-[10px] tracking-wider mt-1">
-        {{ gameState.arcadeStats.wins }}W
-      </span>
+      <!-- P1 Win/Loss Counter -->
+      <div class="flex gap-2 mt-1">
+        <span class="text-emerald-400 font-bold text-[10px] tracking-wider">{{ gameState.arcadeStats.p1Wins }}W</span>
+        <span class="text-rose-400 font-bold text-[10px] tracking-wider">{{ gameState.arcadeStats.p2Wins }}L</span>
+      </div>
     </div>
 
     <!-- Center Info -->
@@ -42,10 +43,11 @@
       <div class="w-28 h-2 bg-slate-800 rounded-sm border border-slate-600 overflow-hidden mt-1">
         <div class="h-full bg-amber-400 transition-all duration-75" :style="{ width: `${gameState.player2Energy}%` }" />
       </div>
-      <!-- P2 Win Counter -->
-      <span class="text-rose-400 font-bold text-[10px] tracking-wider mt-1">
-        {{ gameState.arcadeStats.losses }}W
-      </span>
+      <!-- P2 Win/Loss Counter -->
+      <div class="flex gap-2 mt-1">
+        <span class="text-emerald-400 font-bold text-[10px] tracking-wider">{{ gameState.arcadeStats.p2Wins }}W</span>
+        <span class="text-rose-400 font-bold text-[10px] tracking-wider">{{ gameState.arcadeStats.p1Wins }}L</span>
+      </div>
     </div>
   </div>
 </template>

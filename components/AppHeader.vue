@@ -1,7 +1,7 @@
 <template>
   <UHeader>
     <template #left>
-      <NuxtLink to="/" class="flex items-center gap-3">
+      <NuxtLink to="/" class="flex items-center gap-3 cursor-pointer">
         <AppLogo class="w-auto h-6 shrink-0" />
       </NuxtLink>
     </template>

@@ -28,15 +28,15 @@
           <span>Player 1 (Left)</span>
           <span v-if="settings.player1Type !== 'HUMAN'" class="text-[8px] bg-red-900/50 px-1 rounded text-red-200">AUTO</span>
         </h2>
-        <div :class="['flex flex-col gap-1 p-1 rounded-lg', isMatchRunning ? 'bg-slate-900/50 opacity-50' : 'bg-slate-900']">
+        <div :class="['flex flex-col gap-1 p-1 rounded-lg', !canChangeSettings ? 'bg-slate-900/50 opacity-50' : 'bg-slate-900']">
           <UButton
             v-for="type in currentPlayer1Types"
             :key="type"
             :color="settings.player1Type === type ? 'success' : 'neutral'"
             :variant="settings.player1Type === type ? 'solid' : 'outline'"
             size="xs"
-            :disabled="isMatchRunning"
-            @click="!isMatchRunning && setPlayer1Type(type)"
+            :disabled="!canChangeSettings"
+            @click="canChangeSettings && setPlayer1Type(type)"
             class="text-[10px] font-bold"
           >
             {{ getPlayerTypeLabel(type) }}
@@ -50,14 +50,15 @@
           <span>Player 2 (Right)</span>
           <span class="text-[8px] bg-blue-900/50 px-1 rounded text-blue-200">AUTO</span>
         </h2>
-        <div class="flex flex-col gap-1 bg-slate-900 p-1 rounded-lg">
+        <div :class="['flex flex-col gap-1 p-1 rounded-lg', !canChangeSettings ? 'bg-slate-900/50 opacity-50' : 'bg-slate-900']">
           <UButton
             v-for="type in currentPlayer2Types"
             :key="type"
             :color="settings.player2Type === type ? 'success' : 'neutral'"
             :variant="settings.player2Type === type ? 'solid' : 'outline'"
             size="xs"
-            @click="setPlayer2Type(type)"
+            :disabled="!canChangeSettings"
+            @click="canChangeSettings && setPlayer2Type(type)"
             class="text-[10px] font-bold"
           >
             {{ getPlayerTypeLabel(type) }}
@@ -108,7 +109,8 @@ interface Props {
 const props = defineProps<Props>();
 
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
-const isMatchRunning = computed(() => isTrainingActive.value && props.settings.isRunning);
+// Allow changes only when the match has not started yet (WAITING state)
+const canChangeSettings = computed(() => props.gameState.roundStatus === 'WAITING');
 
 // Arcade mode: Player 1 can be Human or AI (no Chuck - Chuck is opponent only)
 // Training mode: No Human, No Chuck (Chuck is ARCADE-exclusive)

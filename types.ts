@@ -106,12 +106,12 @@ export interface Genome {
 /**
  * ArcadeStats Interface
  *
- * Tracks player performance in Arcade mode across multiple matches.
+ * Tracks session performance across multiple matches (both Training and Arcade modes).
  */
 export interface ArcadeStats {
-  matchesPlayed: number;  // Total matches played in current arcade session
-  wins: number;           // Number of wins
-  losses: number;         // Number of losses
+  matchesPlayed: number;  // Total matches played in current session
+  p1Wins: number;         // Number of P1 (left fighter) wins
+  p2Wins: number;         // Number of P2 (right fighter) wins
 }
 
 export interface GameState {
