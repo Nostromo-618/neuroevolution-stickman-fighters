@@ -16,23 +16,23 @@
     />
     <div
       v-else
-      class="w-full h-[450px] flex items-center justify-center bg-slate-900 rounded-xl border border-slate-700"
+      class="w-full h-[450px] flex items-center justify-center bg-gray-100 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700"
     >
-      <span class="text-slate-400 font-mono">Initializing Arena...</span>
+      <span class="text-gray-500 dark:text-slate-400 font-mono">Initializing Arena...</span>
     </div>
 
     <!-- Turbo Training Overlay -->
     <div
       v-if="settings.gameMode === 'TRAINING' && settings.turboTraining && settings.isRunning"
-      class="absolute inset-0 flex items-center justify-center bg-slate-900/90 rounded-xl"
+      class="absolute inset-0 flex items-center justify-center bg-gray-100/90 dark:bg-slate-900/90 rounded-xl"
     >
       <div class="text-center">
-        <div class="text-3xl font-black text-emerald-400 tracking-tight mb-2">TURBO TRAINING</div>
-        <div class="text-xl font-mono text-slate-300">Generation {{ gameState.generation }}</div>
-        <div class="text-sm font-mono text-slate-400 mt-1">Best Fitness: {{ gameState.bestFitness.toFixed(0) }}</div>
+        <div class="text-3xl font-black text-emerald-500 dark:text-emerald-400 tracking-tight mb-2">TURBO TRAINING</div>
+        <div class="text-xl font-mono text-gray-700 dark:text-slate-300">Generation {{ gameState.generation }}</div>
+        <div class="text-sm font-mono text-gray-500 dark:text-slate-400 mt-1">Best Fitness: {{ gameState.bestFitness.toFixed(0) }}</div>
         <div class="mt-4 flex items-center justify-center gap-2">
           <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-          <span class="text-xs text-slate-500 uppercase tracking-wider">Training via Web Workers</span>
+          <span class="text-xs text-gray-500 dark:text-slate-500 uppercase tracking-wider">Training via Web Workers</span>
         </div>
       </div>
     </div>

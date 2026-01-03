@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-2 cursor-pointer">
     <!-- Brain Icon -->
     <div class="p-2 rounded-lg bg-primary/10">
       <UIcon

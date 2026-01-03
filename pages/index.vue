@@ -12,7 +12,8 @@
 
         <div
           :class="[
-            'min-h-screen bg-slate-950 text-white font-sans flex flex-col items-center py-8 transition-all duration-700',
+            'min-h-screen font-sans flex flex-col items-center py-8 transition-all duration-700',
+            'bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-white',
             disclaimerStatus === 'PENDING' ? 'blur-md pointer-events-none' : ''
           ]"
         >
@@ -76,10 +77,10 @@
     </div>
     </template>
     <template #fallback>
-      <div class="min-h-screen bg-slate-950 text-white font-sans flex items-center justify-center">
+      <div class="min-h-screen font-sans flex items-center justify-center bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-white">
         <div class="text-center">
           <div class="text-2xl font-bold mb-2">Loading...</div>
-          <div class="text-slate-400 text-sm">Initializing game engine</div>
+          <div class="text-gray-500 dark:text-slate-400 text-sm">Initializing game engine</div>
         </div>
       </div>
     </template>

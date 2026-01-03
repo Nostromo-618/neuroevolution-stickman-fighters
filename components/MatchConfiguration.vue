@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-4">
     <!-- Header & Training Toggle -->
-    <div class="flex justify-between items-center bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
+    <div class="flex justify-between items-center bg-gray-100 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700/50">
       <div class="flex items-center gap-2">
-        <h2 class="text-xs font-bold text-slate-300 uppercase tracking-widest pl-2">
+        <h2 class="text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-widest pl-2">
           Match Setup
         </h2>
       </div>
@@ -28,7 +28,7 @@
           <span>Player 1 (Left)</span>
           <span v-if="settings.player1Type !== 'HUMAN'" class="text-[8px] bg-red-900/50 px-1 rounded text-red-200">AUTO</span>
         </h2>
-        <div :class="['flex flex-col gap-1 p-1 rounded-lg', !canChangeSettings ? 'bg-slate-900/50 opacity-50' : 'bg-slate-900']">
+        <div :class="['flex flex-col gap-1 p-1 rounded-lg', !canChangeSettings ? 'bg-gray-100 dark:bg-slate-900/50 opacity-50' : 'bg-gray-100 dark:bg-slate-900']">
           <UButton
             v-for="type in currentPlayer1Types"
             :key="type"
@@ -50,7 +50,7 @@
           <span>Player 2 (Right)</span>
           <span class="text-[8px] bg-blue-900/50 px-1 rounded text-blue-200">AUTO</span>
         </h2>
-        <div :class="['flex flex-col gap-1 p-1 rounded-lg', !canChangeSettings ? 'bg-slate-900/50 opacity-50' : 'bg-slate-900']">
+        <div :class="['flex flex-col gap-1 p-1 rounded-lg', !canChangeSettings ? 'bg-gray-100 dark:bg-slate-900/50 opacity-50' : 'bg-gray-100 dark:bg-slate-900']">
           <UButton
             v-for="type in currentPlayer2Types"
             :key="type"
@@ -72,8 +72,8 @@
           <span>Player 2 (Right)</span>
           <span class="text-[8px] bg-blue-900/50 px-1 rounded text-blue-200">AI</span>
         </h2>
-        <div class="flex flex-col gap-1 bg-slate-900/50 p-1 rounded-lg border border-slate-700">
-          <div class="py-1.5 rounded-md text-[10px] font-bold text-slate-500 text-center">
+        <div class="flex flex-col gap-1 bg-gray-100 dark:bg-slate-900/50 p-1 rounded-lg border border-gray-200 dark:border-slate-700">
+          <div class="py-1.5 rounded-md text-[10px] font-bold text-gray-500 dark:text-slate-500 text-center">
             Always AI (Training)
           </div>
         </div>

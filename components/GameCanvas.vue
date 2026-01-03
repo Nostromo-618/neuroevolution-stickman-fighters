@@ -3,12 +3,15 @@
     ref="canvasRef"
     :width="CANVAS_WIDTH"
     :height="CANVAS_HEIGHT"
-    class="rounded-lg shadow-2xl border-2 border-slate-600 w-full max-w-4xl bg-black"
+    :class="[
+      'rounded-lg shadow-2xl border-2 w-full max-w-4xl',
+      isDarkMode ? 'border-slate-600 bg-black' : 'border-slate-300 bg-white'
+    ]"
   />
 </template>
 
 <script setup lang="ts">
-import { ref, watchEffect, markRaw } from 'vue';
+import { ref, watchEffect, computed } from 'vue';
 import { Fighter, CANVAS_WIDTH, CANVAS_HEIGHT } from '~/services/GameEngine';
 import { FighterAction } from '~/types';
 import { renderBackground } from '~/utils/canvasRendering';
@@ -29,6 +32,10 @@ const props = withDefaults(defineProps<Props>(), {
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const frameRef = ref(0);
 
+// Get color mode from Nuxt
+const colorMode = useColorMode();
+const isDarkMode = computed(() => colorMode.value === 'dark');
+
 watchEffect(() => {
   const canvas = canvasRef.value;
   if (!canvas) return;
@@ -39,7 +46,7 @@ watchEffect(() => {
 
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  renderBackground(ctx, frameRef.value);
+  renderBackground(ctx, frameRef.value, isDarkMode.value);
 
   const swapSides = props.isTraining && props.roundNumber % 2 === 1;
 
@@ -67,4 +74,5 @@ watchEffect(() => {
   }
 });
 </script>
+
 

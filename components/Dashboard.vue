@@ -6,7 +6,7 @@
       @save="handleScriptSave"
     />
 
-    <UCard class="bg-slate-800 border border-slate-700 shadow-2xl">
+    <UCard class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-2xl">
       <div class="space-y-6">
         <MatchConfiguration
           :settings="settings"
@@ -52,7 +52,7 @@
         />
 
         <!-- Usage Hint -->
-        <p v-if="isTrainingActive" class="text-[10px] text-slate-500 text-center italic">
+        <p v-if="isTrainingActive" class="text-[10px] text-gray-500 dark:text-slate-500 text-center italic">
           Visualizing evolution... Uncheck "TRAINING" to play manually.
         </p>
       </div>

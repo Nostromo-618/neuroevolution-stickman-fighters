@@ -1,7 +1,11 @@
 <template>
-  <div :class="['bg-black/80 backdrop-blur-sm border border-white/10 rounded-lg p-4 shadow-2xl relative', className]">
+  <div :class="[
+    'backdrop-blur-sm border rounded-lg p-4 shadow-2xl relative',
+    isDarkMode ? 'bg-black/80 border-white/10' : 'bg-white/90 border-gray-200',
+    className
+  ]">
     <div class="absolute top-2 left-0 right-0 text-center pointer-events-none">
-      <span class="text-xs text-white/30 uppercase tracking-[0.2em] font-bold">Neural Network Architecture</span>
+      <span :class="['text-xs uppercase tracking-[0.2em] font-bold', isDarkMode ? 'text-white/30' : 'text-gray-400']">Neural Network Architecture</span>
     </div>
     <canvas
       ref="canvasRef"
@@ -27,9 +31,13 @@
  * - Chuck AI:  9 → 32 → 32 → 8
  */
 
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import type { Fighter } from '~/services/GameEngine';
 import { NN_ARCH } from '~/services/Config';
+
+// Get color mode
+const colorMode = useColorMode();
+const isDarkMode = computed(() => colorMode.value === 'dark');
 
 interface Props {
   fighter: Fighter | null;
@@ -65,18 +73,30 @@ const sigmoid = (x: number): number => 1 / (1 + Math.exp(-x));
 // COLOR HELPERS
 // =============================================================================
 
-const getNodeColor = (value: number): string => {
+const getNodeColor = (value: number, isDark: boolean): string => {
   const brightness = Math.min(1, Math.max(0.2, value));
-  return `rgba(0, 255, 255, ${brightness})`;
+  if (isDark) {
+    return `rgba(0, 255, 255, ${brightness})`;
+  } else {
+    // Blue-ish color for light mode for better visibility
+    return `rgba(14, 116, 144, ${brightness})`;
+  }
 };
 
-const getLineColor = (weight: number, activation: number): string => {
+const getLineColor = (weight: number, activation: number, isDark: boolean): string => {
   const strength = Math.abs(weight) * activation;
   const opacity = Math.min(1, Math.pow(strength, 1.5) * 0.8);
   if (opacity < 0.02) return '';
-  return weight > 0
-    ? `rgba(0, 240, 255, ${opacity})`
-    : `rgba(255, 40, 40, ${opacity})`;
+  if (isDark) {
+    return weight > 0
+      ? `rgba(0, 240, 255, ${opacity})`
+      : `rgba(255, 40, 40, ${opacity})`;
+  } else {
+    // Darker colors for light mode
+    return weight > 0
+      ? `rgba(6, 182, 212, ${opacity * 1.2})`
+      : `rgba(220, 38, 38, ${opacity * 1.2})`;
+  }
 };
 
 // =============================================================================
@@ -205,7 +225,7 @@ const render = (): void => {
     for (let h = 0; h < hidden1Size; h++) {
       const y2 = (h + 1) * hidden1Step;
       const weight = inputWeights[i]?.[h] ?? 0;
-      const color = getLineColor(weight, Math.abs(inputVal));
+      const color = getLineColor(weight, Math.abs(inputVal), isDarkMode.value);
 
       if (color) {
         ctx.beginPath();
@@ -226,7 +246,7 @@ const render = (): void => {
     for (let h2 = 0; h2 < hidden2Size; h2++) {
       const y2 = (h2 + 1) * hidden2Step;
       const weight = hiddenWeights?.[h1]?.[h2] ?? 0;
-      const color = getLineColor(weight, h1Val);
+      const color = getLineColor(weight, h1Val, isDarkMode.value);
 
       if (color) {
         ctx.beginPath();
@@ -247,7 +267,7 @@ const render = (): void => {
     for (let o = 0; o < outputNodes; o++) {
       const y2 = (o + 1) * outputStep;
       const weight = outputWeights[h2]?.[o] ?? 0;
-      const color = getLineColor(weight, h2Val);
+      const color = getLineColor(weight, h2Val, isDarkMode.value);
 
       if (color) {
         ctx.beginPath();
@@ -277,12 +297,12 @@ const render = (): void => {
 
     ctx.beginPath();
     ctx.arc(inputX, y, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = getNodeColor(Math.abs(inputVal));
+    ctx.fillStyle = getNodeColor(Math.abs(inputVal), isDarkMode.value);
     ctx.fill();
-    ctx.strokeStyle = '#333';
+    ctx.strokeStyle = isDarkMode.value ? '#333' : '#9ca3af';
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillStyle = isDarkMode.value ? 'rgba(255, 255, 255, 0.7)' : 'rgba(55, 65, 81, 0.9)';
     ctx.fillText(INPUT_LABELS[i] ?? '', inputX - 10, y);
   }
 
@@ -293,7 +313,7 @@ const render = (): void => {
 
     ctx.beginPath();
     ctx.arc(hidden1X, y, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = getNodeColor(val);
+    ctx.fillStyle = getNodeColor(val, isDarkMode.value);
     ctx.fill();
   }
 
@@ -304,7 +324,7 @@ const render = (): void => {
 
     ctx.beginPath();
     ctx.arc(hidden2X, y, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = getNodeColor(val);
+    ctx.fillStyle = getNodeColor(val, isDarkMode.value);
     ctx.fill();
   }
 
@@ -318,12 +338,12 @@ const render = (): void => {
 
     ctx.beginPath();
     ctx.arc(outputX, y, NODE_RADIUS + (isActive ? 2 : 0), 0, Math.PI * 2);
-    ctx.fillStyle = isActive ? '#00FFFF' : getNodeColor(outputVal);
+    ctx.fillStyle = isActive ? (isDarkMode.value ? '#00FFFF' : '#0891b2') : getNodeColor(outputVal, isDarkMode.value);
     ctx.fill();
-    ctx.strokeStyle = '#333';
+    ctx.strokeStyle = isDarkMode.value ? '#333' : '#9ca3af';
     ctx.stroke();
 
-    ctx.fillStyle = isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)';
+    ctx.fillStyle = isActive ? (isDarkMode.value ? '#FFFFFF' : '#111827') : (isDarkMode.value ? 'rgba(255, 255, 255, 0.5)' : 'rgba(75, 85, 99, 0.7)');
     ctx.font = isActive ? 'bold 10px Inter, monospace' : '10px Inter, monospace';
     ctx.fillText(OUTPUT_LABELS[o] ?? '', outputX + 10, y);
   }

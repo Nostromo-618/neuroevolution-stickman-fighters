@@ -1,5 +1,5 @@
 <template>
-  <div class="border-t border-slate-700 pt-4">
+  <div class="border-t border-gray-200 dark:border-slate-700 pt-4">
     <UButton
       @click="showTrainingParams = !showTrainingParams"
       color="neutral"
@@ -14,7 +14,7 @@
       <!-- Speed Slider - Only shown in TRAINING mode when Turbo is OFF -->
       <div v-if="isTrainingActive && !settings.turboTraining" class="space-y-2">
         <div class="flex justify-between">
-          <label class="text-xs font-semibold text-slate-300">Simulation Speed</label>
+          <label class="text-xs font-semibold text-gray-700 dark:text-slate-300">Simulation Speed</label>
           <span class="text-xs font-mono text-teal-400">{{ isHumanOpponent ? '1x' : `${settings.simulationSpeed}x` }}</span>
         </div>
         <USlider
@@ -24,7 +24,7 @@
           :disabled="shouldDisableSpeed"
           @update:model-value="updateSpeed"
         />
-        <p v-if="isHumanOpponent" class="text-[10px] text-slate-500 italic">
+        <p v-if="isHumanOpponent" class="text-[10px] text-gray-500 dark:text-slate-500 italic">
           Speed locked to 1x for Human opponent
         </p>
       </div>
@@ -33,7 +33,7 @@
       <div v-if="isTrainingActive" class="pt-2">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-300">Intelligent Mutation</span>
+            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Intelligent Mutation</span>
             <span v-if="settings.intelligentMutation" class="w-2 h-2 bg-purple-500 rounded-full animate-pulse" title="Adaptive mutation active" />
           </div>
           <USwitch
@@ -42,7 +42,7 @@
             color="secondary"
           />
         </div>
-        <p class="text-[10px] text-slate-500 mt-1">
+        <p class="text-[10px] text-gray-500 dark:text-slate-500 mt-1">
           {{ settings.intelligentMutation ? 'Mutation auto-adjusts: high initially, decreases over time' : 'Manual mutation rate control' }}
         </p>
       </div>
@@ -50,7 +50,7 @@
       <!-- Mutation Rate Slider - Only in TRAINING mode when Intelligent Mutation is OFF -->
       <div v-if="isTrainingActive && !settings.intelligentMutation" class="space-y-2">
         <div class="flex justify-between">
-          <label class="text-xs font-semibold text-slate-300">Mutation Rate</label>
+          <label class="text-xs font-semibold text-gray-700 dark:text-slate-300">Mutation Rate</label>
           <span class="text-xs font-mono text-purple-400">{{ (settings.mutationRate * 100).toFixed(0) }}%</span>
         </div>
         <USlider
@@ -65,7 +65,7 @@
       <div v-if="!isTrainingActive" class="pt-2">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-300">Background Training</span>
+            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Background Training</span>
             <span v-if="settings.backgroundTraining" class="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Training active in background" />
           </div>
           <USwitch
@@ -74,7 +74,7 @@
             color="success"
           />
         </div>
-        <p class="text-[10px] text-slate-500 mt-1">
+        <p class="text-[10px] text-gray-500 dark:text-slate-500 mt-1">
           AI keeps learning while you play Arcade (uses intelligent mutation)
         </p>
       </div>
@@ -83,7 +83,7 @@
       <div v-if="isTrainingActive" class="pt-2">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-300">Turbo Training</span>
+            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Turbo Training</span>
             <span v-if="settings.turboTraining && settings.isRunning" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" title="Turbo training active" />
           </div>
           <USwitch
@@ -92,7 +92,7 @@
             color="success"
           />
         </div>
-        <p class="text-[10px] text-slate-500 mt-1">
+        <p class="text-[10px] text-gray-500 dark:text-slate-500 mt-1">
           Parallel workers, no visualization (faster)
         </p>
       </div>
@@ -101,7 +101,7 @@
       <div v-if="isTrainingActive" class="pt-2">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-300">Auto-Stop Training</span>
+            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Auto-Stop Training</span>
             <span v-if="settings.autoStopEnabled" class="w-2 h-2 bg-amber-500 rounded-full" title="Auto-stop enabled" />
           </div>
           <USwitch
@@ -110,7 +110,7 @@
             color="warning"
           />
         </div>
-        <p class="text-[10px] text-slate-500 mt-1">
+        <p class="text-[10px] text-gray-500 dark:text-slate-500 mt-1">
           {{ settings.autoStopEnabled ? `Training will stop at Gen ${settings.autoStopGeneration}` : 'Training will run indefinitely' }}
         </p>
       </div>
@@ -118,7 +118,7 @@
       <!-- Auto-Stop Generation Limit - Only shown when Auto-Stop is enabled -->
       <div v-if="isTrainingActive && settings.autoStopEnabled" class="space-y-2">
         <div class="flex justify-between">
-          <label class="text-xs font-semibold text-slate-300">Stop At Generation</label>
+          <label class="text-xs font-semibold text-gray-700 dark:text-slate-300">Stop At Generation</label>
           <span class="text-xs font-mono text-amber-400">{{ settings.autoStopGeneration }}</span>
         </div>
         <USlider
@@ -133,7 +133,7 @@
       <!-- Worker Threads Slider -->
       <div class="space-y-2">
         <div class="flex justify-between">
-          <label class="text-xs font-semibold text-slate-300">Worker Threads</label>
+          <label class="text-xs font-semibold text-gray-700 dark:text-slate-300">Worker Threads</label>
           <span class="text-xs font-mono text-cyan-400">{{ settings.workerCount }}</span>
         </div>
         <USlider
@@ -142,7 +142,7 @@
           :max="8"
           @update:model-value="updateWorkerCount"
         />
-        <p class="text-[10px] text-slate-500">
+        <p class="text-[10px] text-gray-500 dark:text-slate-500">
           Fewer workers = less CPU usage ({{ maxWorkers }} cores detected)
         </p>
       </div>

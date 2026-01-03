@@ -20,24 +20,52 @@
     padding: 0;
     overflow-x: hidden;
     font-family: 'Ubuntu', sans-serif;
-    @apply bg-slate-950 text-white;
+    @apply bg-gray-50 text-gray-900;
+    @apply dark:bg-slate-950 dark:text-white;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* Custom Scrollbar */
+  /* Custom Scrollbar - Dark Mode */
+  .dark ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    @apply bg-slate-900;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+
+  /* Custom Scrollbar - Light Mode */
   ::-webkit-scrollbar {
     width: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-slate-900;
+    @apply bg-gray-100;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-700 rounded;
+    @apply bg-gray-300 rounded;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-600;
+    @apply bg-gray-400;
+  }
+
+  /* Ensure router links always show pointer cursor */
+  a.router-link-active,
+  a.router-link-exact-active,
+  .router-link-active,
+  .router-link-exact-active {
+    cursor: pointer !important;
   }
 }
+
 
