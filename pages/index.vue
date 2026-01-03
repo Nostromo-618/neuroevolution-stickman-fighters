@@ -2,6 +2,9 @@
   <ClientOnly>
     <template #default>
       <div>
+        <!-- Hide header when disclaimer is declined (Farewell screen) -->
+        <AppHeader v-if="disclaimerStatus !== 'DECLINED'" />
+        
         <GoodbyeScreen v-if="disclaimerStatus === 'DECLINED'" :on-return="handleReturnToDisclaimer" />
 
         <DisclaimerModal

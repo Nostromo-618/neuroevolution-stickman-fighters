@@ -1,24 +1,44 @@
 <template>
   <div class="space-y-4">
-    <!-- Header & Training Toggle -->
-    <div class="flex justify-between items-center bg-gray-100 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700/50">
-      <div class="flex items-center gap-2">
-        <h2 class="text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-widest pl-2">
-          Match Setup
-        </h2>
-      </div>
+    <!-- Mode Toggle Buttons -->
+    <div class="flex gap-2 bg-gray-100 dark:bg-slate-900/50 p-2 rounded-lg border border-gray-200 dark:border-slate-700/50">
+      <UButton
+        :color="!isTrainingActive ? 'success' : 'neutral'"
+        :variant="!isTrainingActive ? 'solid' : 'outline'"
+        size="xs"
+        class="flex-1 font-bold text-xs"
+        @click="setArcadeMode"
+      >
+        ARCADE
+      </UButton>
+      <UButton
+        :color="isTrainingActive ? 'success' : 'neutral'"
+        :variant="isTrainingActive ? 'solid' : 'outline'"
+        size="xs"
+        class="flex-1 font-bold text-xs"
+        @click="setTrainingMode"
+      >
+        TRAINING
+      </UButton>
+    </div>
 
-      <!-- Visual Training Toggle -->
-      <div class="flex items-center gap-2">
-        <span :class="['text-[10px] font-bold', isTrainingActive ? 'text-success' : 'text-muted']">
-          {{ isTrainingActive ? 'TRAINING' : 'ARCADE' }}
-        </span>
-        <USwitch
-          :model-value="isTrainingActive"
-          @update:model-value="toggleTrainingMode"
-          color="success"
-        />
-      </div>
+    <!-- ACTION BUTTONS (Start/Reset) - Directly below mode buttons -->
+    <div class="grid grid-cols-2 gap-2">
+      <UButton
+        :color="isRunning ? 'warning' : 'success'"
+        @click="onToggleRunning"
+        class="flex items-center justify-center gap-2"
+      >
+        <UIcon :name="isRunning ? 'i-heroicons-pause' : 'i-heroicons-play'" class="w-4 h-4" />
+        {{ startButtonText }}
+      </UButton>
+      <UButton
+        color="neutral"
+        variant="outline"
+        @click="onResetMatch"
+      >
+        RESET MATCH
+      </UButton>
     </div>
 
     <div :class="['grid gap-4', isTrainingActive ? 'grid-cols-1' : 'grid-cols-2']">
@@ -80,7 +100,7 @@
       </div>
     </div>
 
-    <!-- Edit Script Button - Always visible -->
+    <!-- Edit Script Button -->
     <UButton
       @click="onOpenScriptEditor"
       color="secondary"
@@ -104,6 +124,9 @@ interface Props {
   setSettings: (updater: TrainingSettings | ((prev: TrainingSettings) => TrainingSettings)) => void;
   gameState: GameState;
   onOpenScriptEditor: () => void;
+  onToggleRunning: () => void;
+  onResetMatch: () => void;
+  isRunning: boolean;
 }
 
 const props = defineProps<Props>();
@@ -111,6 +134,17 @@ const props = defineProps<Props>();
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
 // Allow changes only when the match has not started yet (WAITING state)
 const canChangeSettings = computed(() => props.gameState.roundStatus === 'WAITING');
+
+// Button text: START (never started) -> PAUSE (running) -> RESUME (paused after start)
+const startButtonText = computed(() => {
+  if (props.isRunning) return 'PAUSE';
+  // If roundStatus is WAITING, the match hasn't started yet
+  if (props.gameState.roundStatus === 'WAITING') {
+    return isTrainingActive.value ? 'START TRAINING' : 'START MATCH';
+  }
+  // Match was started and is now paused
+  return 'RESUME';
+});
 
 // Arcade mode: Player 1 can be Human or AI (no Chuck - Chuck is opponent only)
 // Training mode: No Human, No Chuck (Chuck is ARCADE-exclusive)
@@ -136,16 +170,23 @@ const hasCustomScript = computed(() => {
          props.settings.opponentType.includes('CUSTOM');
 });
 
-const toggleTrainingMode = () => {
-  const newMode = props.settings.gameMode === 'ARCADE' ? 'TRAINING' : 'ARCADE';
+const setArcadeMode = () => {
+  if (props.settings.gameMode === 'ARCADE') return;
   props.setSettings(prev => ({
     ...prev,
-    gameMode: newMode,
+    gameMode: 'ARCADE',
+    isRunning: false
+  }));
+};
+
+const setTrainingMode = () => {
+  if (props.settings.gameMode === 'TRAINING') return;
+  props.setSettings(prev => ({
+    ...prev,
+    gameMode: 'TRAINING',
     isRunning: false,
-    ...(newMode === 'TRAINING' && {
-      player1Type: prev.player1Type === 'HUMAN' ? 'SIMPLE_AI' : prev.player1Type,
-      player2Type: 'SIMPLE_AI'
-    })
+    player1Type: prev.player1Type === 'HUMAN' ? 'SIMPLE_AI' : prev.player1Type,
+    player2Type: 'SIMPLE_AI'
   }));
 };
 
@@ -158,7 +199,12 @@ const setPlayer1Type = (type: (typeof arcadePlayer1Types)[number] | (typeof trai
 };
 
 const setPlayer2Type = (type: (typeof arcadePlayer2Types)[number] | (typeof trainingPlayer2Types)[number]) => {
-  props.setSettings(s => ({ ...s, player2Type: type }));
+  props.setSettings(s => ({
+    ...s,
+    player2Type: type,
+    // Auto-enable background training when Simple AI is selected
+    ...(type === 'SIMPLE_AI' && { backgroundTraining: true })
+  }));
 };
 
 /** Get human-readable label for player type */

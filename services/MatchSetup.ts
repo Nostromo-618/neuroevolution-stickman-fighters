@@ -40,12 +40,10 @@ export class MatchSetup {
         // 4. CUSTOM SCRIPT A
         if (type === 'CUSTOM_A') {
             const f = new Fighter(x, COLORS.CUSTOM_A, false);
-            const worker = workers.workerA;
-            if (worker && worker.isReady()) {
-                f.isCustom = true;
-                f.scriptWorker = worker;
-            } else {
-                f.isCustom = true; // Fallback
+            f.isCustom = true;
+            // Assign worker even if still compiling - it will start working once ready
+            if (workers.workerA) {
+                f.scriptWorker = workers.workerA;
             }
             return f;
         }
@@ -53,12 +51,10 @@ export class MatchSetup {
         // 5. CUSTOM SCRIPT B
         if (type === 'CUSTOM_B') {
             const f = new Fighter(x, COLORS.CUSTOM_B, false);
-            const worker = workers.workerB;
-            if (worker && worker.isReady()) {
-                f.isCustom = true;
-                f.scriptWorker = worker;
-            } else {
-                f.isCustom = true; // Fallback
+            f.isCustom = true;
+            // Assign worker even if still compiling - it will start working once ready
+            if (workers.workerB) {
+                f.scriptWorker = workers.workerB;
             }
             return f;
         }

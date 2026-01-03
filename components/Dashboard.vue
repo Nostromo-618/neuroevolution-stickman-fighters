@@ -13,26 +13,10 @@
           :set-settings="setSettings"
           :game-state="gameState"
           :on-open-script-editor="() => scriptEditorOpen = true"
+          :on-toggle-running="toggleRunning"
+          :on-reset-match="props.onResetMatch"
+          :is-running="settings.isRunning"
         />
-
-        <!-- ACTION BUTTONS (Start/Reset) -->
-        <div class="grid grid-cols-2 gap-2">
-          <UButton
-            :color="settings.isRunning ? 'warning' : 'success'"
-            @click="toggleRunning"
-            class="flex items-center justify-center gap-2"
-          >
-            <UIcon :name="settings.isRunning ? 'i-heroicons-pause' : 'i-heroicons-play'" class="w-4 h-4" />
-            {{ settings.isRunning ? 'PAUSE' : 'START' }}
-          </UButton>
-          <UButton
-            color="neutral"
-            variant="outline"
-            @click="props.onResetMatch"
-          >
-            RESET
-          </UButton>
-        </div>
 
         <TrainingParameters
           :settings="settings"

@@ -93,23 +93,19 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             } else if (p1Type === 'CUSTOM_A') {
                 p1Color = COLORS.CUSTOM_A;
                 p1Fighter = new Fighter(280 + spawnOffset1, p1Color, false);
-                const worker = ctx.customScriptWorkerARef.value;
-                if (worker && worker.isReady()) {
-                    p1Fighter.isCustom = true;
-                    p1Fighter.scriptWorker = worker;
-                } else {
-                    p1Fighter.isCustom = true;
+                p1Fighter.isCustom = true;
+                // Assign worker even if still compiling - it will start working once ready
+                if (ctx.customScriptWorkerARef.value) {
+                    p1Fighter.scriptWorker = ctx.customScriptWorkerARef.value;
                 }
                 p1GenomeIdx = -1;
             } else if (p1Type === 'CUSTOM_B') {
                 p1Color = COLORS.CUSTOM_B;
                 p1Fighter = new Fighter(280 + spawnOffset1, p1Color, false);
-                const worker = ctx.customScriptWorkerBRef.value;
-                if (worker && worker.isReady()) {
-                    p1Fighter.isCustom = true;
-                    p1Fighter.scriptWorker = worker;
-                } else {
-                    p1Fighter.isCustom = true;
+                p1Fighter.isCustom = true;
+                // Assign worker even if still compiling - it will start working once ready
+                if (ctx.customScriptWorkerBRef.value) {
+                    p1Fighter.scriptWorker = ctx.customScriptWorkerBRef.value;
                 }
                 p1GenomeIdx = -1;
             } else {

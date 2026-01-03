@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '2.0.2',
+        date: '2026-01-03',
+        changes: {
+            fixed: [
+                'Script fighters now work correctly on first match load in Arcade mode',
+                'Resolved async race condition in custom script worker initialization'
+            ]
+        }
+    },
+    {
         version: '2.0.1',
         date: '2026-01-03',
         changes: {

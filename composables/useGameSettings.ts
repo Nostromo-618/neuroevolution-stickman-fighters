@@ -22,7 +22,7 @@ export const useGameSettings = (): UseGameSettingsReturn => {
         simulationSpeed: 1,
         gameMode: 'ARCADE',                      // Default to ARCADE mode
         isRunning: false,
-        backgroundTraining: hasMultipleThreads(), // Auto-enable when multiple threads available
+        backgroundTraining: false,                // Disabled by default; auto-enables with Simple AI
         turboTraining: true,
         workerCount: getDefaultWorkerCount(),     // 50% of threads (e.g., 4 of 8)
         intelligentMutation: true,                // Use adaptive mutation rate by default
@@ -30,7 +30,7 @@ export const useGameSettings = (): UseGameSettingsReturn => {
         autoStopGeneration: 1000,                 // Stop training at this generation
         opponentType: 'SIMPLE_AI',
         player1Type: 'HUMAN',                     // Default to human player
-        player2Type: FEATURE_FLAGS.ENABLE_CHUCK_AI ? 'CHUCK_AI' : 'SIMPLE_AI'
+        player2Type: 'CUSTOM_A'                   // Default to Script A opponent
     });
 
     const settingsRef = ref(settings.value);

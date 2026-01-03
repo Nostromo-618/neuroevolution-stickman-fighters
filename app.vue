@@ -1,7 +1,5 @@
 <template>
   <UApp>
-    <AppHeader />
-    
     <UMain>
       <NuxtPage />
     </UMain>
