@@ -48,14 +48,12 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
 
         // Start match if no active match exists
         // Training: auto-start when population ready
-        // Arcade: only spawn initial fighters on page load (isRunning=false), 
-        //         NOT after match ends (that's handled by restart timeout)
+        // Arcade: always spawn if no active match (reset/mode-change clears match ref)
         if (!ctx.activeMatchRef.value) {
             const isTraining = currentSettings.gameMode === 'TRAINING';
-            const isArcadeInitialSpawn = !isTraining && !currentSettings.isRunning && currentGameState.arcadeStats.matchesPlayed === 0;
             const canStart = isTraining
                 ? ctx.populationRef.value.length > 0
-                : isArcadeInitialSpawn;  // Arcade: only initial spawn, restart timeout handles subsequent
+                : true;  // Arcade: always ready to spawn fighters
             if (canStart) {
                 ctx.startMatch();
             }
@@ -153,19 +151,31 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                         if (p2.genome) p2.genome.fitness -= 100;
                     }
 
+                    // Track session wins for HUD display
+                    const p1Won = (p1.health > 0 && p2.health <= 0) || (isTimeout && p1.health > p2.health);
+                    const p2Won = (p2.health > 0 && p1.health <= 0) || (isTimeout && p2.health > p1.health);
+                    ctx.setGameState(prev => ({
+                        ...prev,
+                        arcadeStats: {
+                            matchesPlayed: prev.arcadeStats.matchesPlayed + 1,
+                            p1Wins: prev.arcadeStats.p1Wins + (p1Won ? 1 : 0),
+                            p2Wins: prev.arcadeStats.p2Wins + (p2Won ? 1 : 0)
+                        }
+                    }));
+
                     ctx.currentMatchIndex.value++;
                     ctx.startMatch();
                 } else {
                     // ARCADE mode match end
-                    const playerWon = p1.health > p2.health;
+                    const p1Won = p1.health > p2.health;
                     ctx.setGameState(prev => ({
                         ...prev,
                         matchActive: false,
                         roundStatus: 'ROUND_END',  // Keep arena visible, show result
                         arcadeStats: {
                             matchesPlayed: prev.arcadeStats.matchesPlayed + 1,
-                            wins: prev.arcadeStats.wins + (playerWon ? 1 : 0),
-                            losses: prev.arcadeStats.losses + (playerWon ? 0 : 1)
+                            p1Wins: prev.arcadeStats.p1Wins + (p1Won ? 1 : 0),
+                            p2Wins: prev.arcadeStats.p2Wins + (p1Won ? 0 : 1)
                         }
                     }));
 

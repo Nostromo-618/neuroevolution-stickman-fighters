@@ -204,10 +204,10 @@ const initAndResetPopulation = (clearBest: boolean = true) => {
   }
 };
 
-// Local resetMatch that also handles settings
 const resetMatch = () => {
   // Clear any pending timeouts first
   clearMatchRestartTimeout();
+  clearCountdownInterval();
   
   setSettings(prev => ({ ...prev, isRunning: false }));
   resetMatchTimer();
@@ -219,7 +219,7 @@ const resetMatch = () => {
       ...prev,
       matchActive: false,
       roundStatus: 'WAITING',
-      arcadeStats: { matchesPlayed: 0, wins: 0, losses: 0 }
+      arcadeStats: { matchesPlayed: 0, p1Wins: 0, p2Wins: 0 }
     }));
   }
   
@@ -228,7 +228,7 @@ const resetMatch = () => {
   startMatch();
 };
 
-const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout, startCountdown } = useGameLoop({
+const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout, startCountdown, clearCountdownInterval } = useGameLoop({
   settings,
   settingsRef,
   gameStateRef,
@@ -339,6 +339,7 @@ const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
   // Clear any pending timeouts
   clearWaitingTimeout();
   clearMatchRestartTimeout();
+  clearCountdownInterval();
 
   setSettings(prev => ({
     ...prev,
@@ -360,7 +361,7 @@ const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
     winner: null,
     matchActive: false,
     ...(mode === 'TRAINING' && { matchesUntilEvolution: evolutionInterval }),
-    ...(mode === 'ARCADE' && { arcadeStats: { matchesPlayed: 0, wins: 0, losses: 0 } })
+    ...(mode === 'ARCADE' && { arcadeStats: { matchesPlayed: 0, p1Wins: 0, p2Wins: 0 } })
   }));
   
   // Reset match index for both modes

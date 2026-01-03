@@ -57,7 +57,8 @@ export const useGameLoop = (ctx: MatchContext) => {
         }
         clearWaitingTimeout();
         clearMatchRestartTimeout();
+        clearCountdownInterval();
     });
 
-    return { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout, startCountdown };
+    return { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout, startCountdown, clearCountdownInterval };
 };
