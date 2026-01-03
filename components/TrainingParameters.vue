@@ -11,8 +11,8 @@
     </UButton>
 
     <div :class="['space-y-4 transition-all duration-300 overflow-hidden', showTrainingParams ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0']">
-      <!-- Speed Slider - Only shown in TRAINING mode -->
-      <div v-if="isTrainingActive" class="space-y-2">
+      <!-- Speed Slider - Only shown in TRAINING mode when Turbo is OFF -->
+      <div v-if="isTrainingActive && !settings.turboTraining" class="space-y-2">
         <div class="flex justify-between">
           <label class="text-xs font-semibold text-slate-300">Simulation Speed</label>
           <span class="text-xs font-mono text-teal-400">{{ isHumanOpponent ? '1x' : `${settings.simulationSpeed}x` }}</span>
