@@ -2,7 +2,7 @@
 
 A real-time neuroevolution fighting game where AI fighters learn combat through genetic algorithms and neural networks. Watch artificial intelligence evolve from random behavior into skilled combatants!
 
-**Supports Xbox Gamepad! But you need to connect it via bluetooth. Cable not supported.**
+**Supports Xbox Gamepad!** Connect via Bluetooth only (the browser's Gamepad API doesn't support wired connections). Troubleshooting: ensure your gamepad is paired in system settings before launching the game.
 
 > **Educational Project**: This codebase is extensively documented to help you understand and learn. Author learns too! So please kindly forgive any errors or typos.
 
@@ -48,11 +48,8 @@ Open `http://localhost:3000/neuroevolution-stickman-fighters/` in your browser.
 ### Training Mode
 1. Click **START TRAINING**
 2. Watch AI fighters battle each other
-3. Adjust **Simulation Speed** (up to 5000x) for faster training
+3. Adjust **Simulation Speed** or activate Turbo Mode for faster training
 4. Monitor the **Fitness Chart** to see learning progress
-5. After ~50+ generations, switch to Arcade Mode to fight your AI!
-
-> **Tip**: Reaching generation >1500 with a 9% mutation rate observed resulted in more "reasonable" fighter behavior during training.
 
 
 ### Arcade Mode (Human vs AI)
@@ -67,6 +64,75 @@ Open `http://localhost:3000/neuroevolution-stickman-fighters/` in your browser.
 - **Custom Player Slots**: Choose who fights - Human, Neural AI, Script A, or Script B.
 - **Script vs Script**: Pit two different custom scripts against each other to test strategies.
 - **Immediate Feedback**: Canvas updates instantly when you change fighter settings.
+
+---
+
+## 📜 Custom Script API
+
+Write your own fighter AI in JavaScript using the Script Editor! Your script is executed in a sandboxed Web Worker and receives the current game state.
+
+### Game State Properties
+```javascript
+{
+  // Your fighter's position and status
+  selfX: number,              // X position (0-800)
+  selfY: number,              // Y position (0-450)
+  selfHealth: number,         // Health (0-100)
+  selfEnergy: number,         // Energy (0-100)
+
+  // Opponent's position and status
+  enemyX: number,             // Opponent's X position
+  enemyY: number,             // Opponent's Y position
+  enemyHealth: number,        // Opponent's health (0-100)
+  enemyEnergy: number,        // Opponent's energy (0-100)
+
+  // Arena info
+  canvasWidth: number,        // Arena width (800)
+  canvasHeight: number,       // Arena height (450)
+  gravity: number             // Physics constant (0.8)
+}
+```
+
+### Available Actions
+Return an array of action IDs (multiple actions can be active simultaneously):
+
+| ID | Action |
+|----|----|
+| 0 | IDLE (recover energy) |
+| 1 | MOVE_LEFT |
+| 2 | MOVE_RIGHT |
+| 3 | JUMP (costs 15 energy) |
+| 4 | CROUCH (defensive, counters kicks) |
+| 5 | PUNCH (5 damage, 10 energy) |
+| 6 | KICK (10 damage, 20 energy) |
+| 7 | BLOCK (defensive, counters punches) |
+
+### Example Script
+
+```javascript
+function fighter(gameState) {
+  const distX = gameState.enemyX - gameState.selfX;
+  const distY = gameState.enemyY - gameState.selfY;
+  const distance = Math.sqrt(distX * distX + distY * distY);
+
+  // Chase enemy if far away
+  if (distance > 150) {
+    return distX > 0 ? [2] : [1];  // Move toward opponent
+  }
+
+  // Fight when close
+  if (gameState.selfEnergy > 50) {
+    if (Math.abs(distY) < 50) {
+      return [5];  // Punch at same height
+    } else {
+      return [6];  // Kick if height difference
+    }
+  }
+
+  // Recover energy
+  return [0];
+}
+```
 
 ---
 
@@ -122,10 +188,9 @@ neuroevolution-stickman-fighters/
 │  2. EVALUATE                                                 │
 │     └── Pair genomes and simulate fights                     │
 │         └── Each fight awards fitness based on:              │
-│             • Winning (+500)                                 │
-│             • Landing hits (+50 each)                        │
-│             • Staying close to opponent                      │
-│             • Controlling center of arena                    │
+│             • Winning (+300)                                 │
+│             • Landing hits & proximity rewards               │
+│             • Health preservation & strategic positioning    │
 │                                                              │
 │  3. SELECT                                                   │
 │     └── Sort genomes by total fitness                        │
@@ -187,4 +252,18 @@ MIT License - feel free to use this code for learning and projects.
 
 | Audit Result | Date |
 |--------------|------|
-| ✅ No vulnerabilities found | December 2024 |
+| ✅ No vulnerabilities found | January 2026 |
+```
+Sonabot here, beep boop beep boop, here are your Sonatype OSS Index results:
+Total dependencies audited: 8
+
+--------------------------------------------------------------------------------------------------------------
+[1/8] - pkg:npm/@monaco-editor/loader@1.7.0 - No vulnerabilities found!
+[2/8] - pkg:npm/@nuxt/ui@4.3.0 - No vulnerabilities found!
+[3/8] - pkg:npm/echarts@6.0.0 - No vulnerabilities found!
+[4/8] - pkg:npm/monaco-editor@0.55.1 - No vulnerabilities found!
+[5/8] - pkg:npm/nuxt@4.2.2 - No vulnerabilities found!
+[6/8] - pkg:npm/vue-echarts@8.0.1 - No vulnerabilities found!
+[7/8] - pkg:npm/vue@3.5.26 - No vulnerabilities found!
+[8/8] - pkg:npm/zod@4.3.4 - No vulnerabilities found!
+```

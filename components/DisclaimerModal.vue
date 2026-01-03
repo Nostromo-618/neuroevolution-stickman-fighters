@@ -18,7 +18,7 @@
         <h2 class="text-xl sm:text-2xl font-bold text-primary">
           Disclaimer & Terms of Use
         </h2>
-        <p class="text-muted text-sm">Last Updated: December 21, 2025</p>
+        <p class="text-muted text-sm">Last Updated: January 3, 2026</p>
       </div>
     </template>
 

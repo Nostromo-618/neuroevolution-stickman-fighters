@@ -142,9 +142,9 @@ export const createRandomNetworkWithArch = (hiddenNodes: number): NeuralNetworkD
 };
 
 /**
- * Creates a Chuck AI network with 64 hidden nodes.
+ * Creates a Chuck AI network with 32 hidden nodes.
  * Chuck AI uses a larger architecture for advanced adaptive learning.
- * 
+ *
  * @returns A NeuralNetwork configured for Chuck AI
  */
 export const createChuckNetwork = (): NeuralNetworkData => {

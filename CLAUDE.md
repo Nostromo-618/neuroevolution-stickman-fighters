@@ -10,7 +10,7 @@ A neuroevolution fighting game where AI fighters learn combat through genetic al
 
 ```bash
 pnpm install          # Install dependencies
-pnpm dev              # Start dev server (port 3003, http://localhost:3000/neuroevolution-stickman-fighters/)
+pnpm dev              # Start dev server (http://localhost:3000/neuroevolution-stickman-fighters/)
 pnpm build            # Production build
 pnpm test             # Run all Playwright tests
 pnpm test:ui          # Run tests with UI

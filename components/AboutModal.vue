@@ -1,8 +1,16 @@
 <script setup lang="ts">
+// Props for external control
+const props = withDefaults(defineProps<{
+  /** When false, hides the internal trigger button for external-only control */
+  showTrigger?: boolean
+}>(), {
+  showTrigger: true
+})
+
 const open = defineModel<boolean>('open', { default: false })
 const { changelog } = useChangelog()
 
-const version = '2.0.0'
+const version = '2.0.1'
 
 // Get latest 5 changelog entries for display
 const recentChangelog = computed(() => changelog.slice(0, 5))
@@ -94,8 +102,9 @@ const renderingLayers = [
       body: 'flex-1 overflow-y-auto'
     }"
   >
-    <!-- Trigger: Info button -->
+    <!-- Trigger: Info button (only shown when showTrigger is true) -->
     <UButton
+      v-if="props.showTrigger"
       icon="i-lucide-info"
       aria-label="About NeuroEvolution"
       color="neutral"
@@ -104,21 +113,33 @@ const renderingLayers = [
     />
 
     <template #header>
-      <div class="flex items-center gap-3">
-        <div class="p-2 rounded-lg bg-primary/10">
-          <UIcon
-            name="i-lucide-brain"
-            class="size-6 text-primary"
-          />
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-primary/10">
+            <UIcon
+              name="i-lucide-brain"
+              class="size-6 text-primary"
+            />
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-highlighted">
+              About NeuroEvolution: Stickman Fighters
+            </h2>
+            <p class="text-sm text-muted">
+              AI learns to fight through natural selection
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 class="text-lg font-semibold text-highlighted">
-            About NeuroEvolution: Stickman Fighters
-          </h2>
-          <p class="text-sm text-muted">
-            AI learns to fight through natural selection
-          </p>
-        </div>
+        <!-- Close button for mobile accessibility -->
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          aria-label="Close modal"
+          class="shrink-0"
+          @click="open = false"
+        />
       </div>
     </template>
 
@@ -161,7 +182,7 @@ const renderingLayers = [
                   Neural Network
                 </p>
                 <p class="text-xs text-muted">
-                  Each fighter has a neural network brain with 16 hidden neurons
+                  Each fighter has a neural network brain with 13 neurons per hidden layer (26 total across 2 layers)
                 </p>
               </div>
             </div>
@@ -253,7 +274,7 @@ const renderingLayers = [
                   </div>
                   <div class="dark:bg-slate-800 bg-gray-50 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
                      <div class="text-xs dark:text-slate-400 text-gray-500 uppercase">Ground Y</div>
-                     <div class="text-xl font-mono font-bold text-default">380</div>
+                     <div class="text-xl font-mono font-bold text-default">415</div>
                      <div class="text-xs text-muted">pixels</div>
                   </div>
                   <div class="dark:bg-slate-800 bg-gray-50 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
@@ -369,7 +390,7 @@ const renderingLayers = [
                     <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
                     <div class="h-12 border-l border-dashed border-slate-700"></div>
                     <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
-                    <span class="text-xs font-mono text-purple-500 mt-2">16 Hidden</span>
+                    <span class="text-xs font-mono text-purple-500 mt-2">13 × 2</span>
                   </div>
 
                   <!-- Connections -->
