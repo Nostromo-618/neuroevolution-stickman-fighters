@@ -11,6 +11,7 @@ import type { TrainingSettings, GameState } from '~/types';
 import { Fighter } from '~/services/GameEngine';
 import type { InputManager } from '~/services/InputManager';
 import { recordOpponentMove, runChuckTrainingCycle, runRealtimeMirrorTraining } from '~/services/ChuckAI';
+import { debugFrame, debugCritical, debugLog } from '~/utils/debug';
 
 interface MatchUpdateContext {
     settingsRef: Ref<TrainingSettings>;
@@ -37,11 +38,14 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
     };
 
     const update = () => {
+        debugFrame('LOOP', `mode=${ctx.settingsRef.value.gameMode} running=${ctx.settingsRef.value.isRunning}`);
+
         const currentSettings = ctx.settingsRef.value;
         const currentGameState = ctx.gameStateRef.value;
 
         // Skip sequential loop when turbo training handles it via workers
         if (currentSettings.gameMode === 'TRAINING' && currentSettings.turboTraining && currentSettings.isRunning) {
+            debugLog('LOOP', 'Skipping - turbo training active');
             requestRef.value = requestAnimationFrame(update);
             return;
         }
@@ -50,24 +54,30 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
         // Training: auto-start when population ready
         // Arcade: always spawn if no active match (reset/mode-change clears match ref)
         if (!ctx.activeMatchRef.value) {
+            debugLog('LOOP', 'No active match - attempting to start');
             const isTraining = currentSettings.gameMode === 'TRAINING';
             const canStart = isTraining
                 ? ctx.populationRef.value.length > 0
                 : true;  // Arcade: always ready to spawn fighters
             if (canStart) {
+                debugCritical('MATCH', 'Starting new match');
                 ctx.startMatch();
+            } else {
+                debugLog('LOOP', 'Cannot start match yet - waiting for population');
             }
             requestRef.value = requestAnimationFrame(update);
             return;
         }
 
         if (!currentSettings.isRunning || !ctx.activeMatchRef.value) {
+            debugLog('LOOP', `Paused - isRunning=${currentSettings.isRunning} hasMatch=${!!ctx.activeMatchRef.value}`);
             requestRef.value = requestAnimationFrame(update);
             return;
         }
 
         // Freeze BOTH players during countdown - ensures fair simultaneous start
         if (currentGameState.roundStatus === 'COUNTDOWN') {
+            debugLog('LOOP', `Countdown - value=${currentGameState.countdownValue}`);
             requestRef.value = requestAnimationFrame(update);
             return;
         }
@@ -129,6 +139,7 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
 
             if (isKO || isTimeout) {
                 matchEnded = true;
+                debugCritical('MATCH', `Match ended: isKO=${isKO} isTimeout=${isTimeout} p1Health=${p1.health} p2Health=${p2.health}`);
 
                 if (currentSettings.gameMode === 'TRAINING') {
                     const p1Damage = 100 - p2.health;
@@ -164,9 +175,11 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                     }));
 
                     ctx.currentMatchIndex.value++;
+                    debugLog('TRAINING', `Starting next match #${ctx.currentMatchIndex.value}`);
                     ctx.startMatch();
                 } else {
                     // ARCADE mode match end
+                    debugCritical('ARCADE', 'Match ended - transitioning to ROUND_END');
                     const p1Won = p1.health > p2.health;
                     ctx.setGameState(prev => ({
                         ...prev,
@@ -187,7 +200,9 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                     // Keep activeMatchRef populated so arena stays visible
                     // (Don't set to null - that causes "Initializing Arena..." flash)
                     clearMatchRestartTimeout();
+                    debugLog('ARCADE', 'Scheduling match restart in 1000ms');
                     matchRestartTimeoutRef.value = setTimeout(() => {
+                        debugCritical('ARCADE', 'Match restart timeout fired - starting new match');
                         ctx.startMatch();  // This will respawn fighters and start countdown
                         matchRestartTimeoutRef.value = null;
                     }, 1000);

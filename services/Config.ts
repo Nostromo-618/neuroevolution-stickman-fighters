@@ -10,6 +10,14 @@
  */
 
 // =============================================================================
+// DEBUG FLAGS
+// =============================================================================
+export const DEBUG_FLAGS = {
+    /** Enable verbose console logging for diagnosing simulation freezes */
+    VERBOSE_LOGGING: true,  // Toggle this to enable/disable debug output
+} as const;
+
+// =============================================================================
 // FEATURE FLAGS
 // =============================================================================
 export const FEATURE_FLAGS = {

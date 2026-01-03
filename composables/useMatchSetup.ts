@@ -14,6 +14,7 @@ import type { ScriptWorkerManager } from '~/services/CustomScriptRunner';
 import { createRandomNetwork } from '~/services/NeuralNetwork';
 import { calculateEvolutionInterval } from './useEvolution';
 import { COLORS } from '~/services/Config';
+import { debugLog, debugCritical, debugReset } from '~/utils/debug';
 
 interface MatchSetupContext {
     settingsRef: Ref<TrainingSettings>;
@@ -48,6 +49,9 @@ export function useMatchSetup(ctx: MatchSetupContext) {
     };
 
     const startMatch = () => {
+        debugCritical('SETUP', `startMatch called - mode=${ctx.settingsRef.value.gameMode} p1Type=${ctx.settingsRef.value.player1Type} p2Type=${ctx.settingsRef.value.player2Type}`);
+        debugReset();  // Reset frame counters for new match
+
         clearWaitingTimeout();
         clearCountdownInterval();  // Clear any existing countdown
         ctx.matchTimerRef.value = 90;
@@ -181,7 +185,12 @@ export function useMatchSetup(ctx: MatchSetupContext) {
      * @param fast - If true, uses 3x faster timing (for subsequent rounds)
      */
     const startCountdown = (fast: boolean = false) => {
-        if (ctx.settingsRef.value.gameMode !== 'ARCADE') return;
+        debugLog('COUNTDOWN', `startCountdown called - fast=${fast} mode=${ctx.settingsRef.value.gameMode}`);
+
+        if (ctx.settingsRef.value.gameMode !== 'ARCADE') {
+            debugLog('COUNTDOWN', 'Skipping - not ARCADE mode');
+            return;
+        }
 
         clearCountdownInterval();
         let count = 3;
@@ -189,6 +198,7 @@ export function useMatchSetup(ctx: MatchSetupContext) {
         // First round: 700ms per step (~2.8s total)
         // Subsequent rounds: 233ms per step (~0.9s total) - keeps user in flow
         const interval = fast ? 233 : 700;
+        debugLog('COUNTDOWN', `Starting countdown with interval=${interval}ms`);
 
         ctx.setGameState(prev => ({
             ...prev,
@@ -198,11 +208,14 @@ export function useMatchSetup(ctx: MatchSetupContext) {
 
         countdownIntervalRef.value = setInterval(() => {
             count--;
+            debugLog('COUNTDOWN', `Tick: count=${count}`);
+
             if (count > 0) {
                 ctx.setGameState(prev => ({ ...prev, countdownValue: count }));
             } else if (count === 0) {
                 ctx.setGameState(prev => ({ ...prev, countdownValue: 0 }));
             } else {
+                debugCritical('COUNTDOWN', 'Countdown complete - starting FIGHTING');
                 clearCountdownInterval();
                 ctx.setGameState(prev => ({
                     ...prev,

@@ -21,6 +21,7 @@ A real-time neuroevolution fighting game where AI fighters learn combat through 
 - **Export/Import**: Save and share your trained AI weights.
 - **Real-time Visualization**: See fitness progress on live charts.
 - **Parallel Training**: Uses Web Workers for multi-core CPU utilization.
+- **Debug Verbosity**: Toggleable verbose logging for simulation diagnostics.
 
 ---
 
@@ -173,6 +174,16 @@ Over generations, networks that produce winning behaviors are preserved and refi
 - **Web Workers** - Parallel training and secure script execution
 - **Monaco Editor** - VS Code-based code editor for custom scripts
 - **Recharts** - Fitness visualization graphs
+
+---
+
+## 🛠️ Debugging
+
+The application includes a built-in debug verbosity system to help diagnose simulation freezes or logic issues.
+
+- **Config Location**: `services/Config.ts` → `DEBUG_FLAGS.VERBOSE_LOGGING`
+- **Output**: Console logs with timing and categories like `[LOOP]`, `[MATCH]`, `[BG_TRAIN]`.
+- **Throttling**: Frame and loop logs are automatically throttled to prevent performance degradation when enabled.
 
 ## 📄 License
 

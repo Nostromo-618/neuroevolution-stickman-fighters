@@ -2,6 +2,7 @@ import { ref, watch, onUnmounted, type Ref } from 'vue';
 import { WorkerPool } from '~/services/WorkerPool';
 import type { Genome, TrainingSettings, GameState } from '~/types';
 import { crossoverNetworks, mutateNetwork } from '~/services/NeuralNetwork';
+import { debugLog, debugCritical } from '~/utils/debug';
 
 interface UseBackgroundTrainingProps {
     settings: Ref<TrainingSettings>;
@@ -26,21 +27,28 @@ export const useBackgroundTraining = ({
     const isWorkerTrainingRef = ref<boolean>(false);
 
     const runWorkerTrainingGeneration = async () => {
-        if (isWorkerTrainingRef.value) return;
+        if (isWorkerTrainingRef.value) {
+            debugLog('BG_TRAIN', 'Skipping - already running');
+            return;
+        }
         isWorkerTrainingRef.value = true;
+        debugLog('BG_TRAIN', 'Starting worker training generation');
 
         const pop = populationRef.value;
         if (pop.length === 0) {
+            debugLog('BG_TRAIN', 'No population - aborting');
             isWorkerTrainingRef.value = false;
             return;
         }
 
         if (!workerPoolRef.value) {
+            debugLog('BG_TRAIN', `Creating worker pool with ${settings.value.workerCount} workers`);
             workerPoolRef.value = new WorkerPool(settings.value.workerCount);
             await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         const pool = workerPoolRef.value;
+        debugLog('BG_TRAIN', `Running matches with ${pop.length} genomes`);
 
         try {
             const jobs = WorkerPool.createJobsFromPopulation(pop);
@@ -114,12 +122,15 @@ export const useBackgroundTraining = ({
 
             populationRef.value = newPop;
             currentMatchIndex.value = 0;
+            debugLog('BG_TRAIN', `Generation complete - gen=${currentGen + 1} bestFitness=${best.fitness}`);
 
         } catch (error) {
+            debugCritical('BG_TRAIN', 'Worker training error', error);
             console.error('Worker training error:', error);
         }
 
         isWorkerTrainingRef.value = false;
+        debugLog('BG_TRAIN', 'Training generation finished');
     };
 
     // Training cycle ID to prevent overlapping runs
