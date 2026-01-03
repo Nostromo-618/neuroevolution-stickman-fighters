@@ -43,13 +43,6 @@
             :fighter="(activeMatchRef ? activeMatchRef.p2 : null) as any"
           />
 
-          <!-- Chuck Training Visualization (Desktop Only, Arcade Chuck Mode) -->
-          <ChuckTrainingCanvas
-            class="hidden md:block w-full"
-            :settings="settings"
-            :game-state="gameState"
-          />
-
         </div>
 
         <!-- Right Column: Dashboards & Stats -->

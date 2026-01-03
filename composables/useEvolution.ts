@@ -34,7 +34,7 @@ export function calculateEvolutionInterval(
     populationSize: number
 ): number {
     const isHumanOpponent = player1Type === 'HUMAN';
-    const isAIOpponent = player1Type === 'SIMPLE_AI' || player1Type === 'CHUCK_AI';
+    const isAIOpponent = player1Type === 'SIMPLE_AI';
 
     return isHumanOpponent
         ? 3

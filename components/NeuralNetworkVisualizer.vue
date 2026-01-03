@@ -21,14 +21,12 @@
  * =============================================================================
  * NEURAL NETWORK VISUALIZER - Optimized for 60FPS
  * =============================================================================
- * 
+ *
  * Hybrid approach:
  * - Static: Canvas element managed by Vue
  * - Dynamic: Weights/activations rendered via direct canvas API (no reactivity)
- * 
- * Supports variable architectures:
- * - Simple AI: 9 → 13 → 13 → 8
- * - Chuck AI:  9 → 32 → 32 → 8
+ *
+ * Architecture: 9 → 13 → 13 → 8
  */
 
 import { ref, onMounted, onUnmounted, computed } from 'vue';

@@ -61,14 +61,14 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             workerB: ctx.customScriptWorkerBRef.value
         };
 
-        const spawnFighter = (type: 'HUMAN' | 'SIMPLE_AI' | 'CHUCK_AI' | 'CUSTOM_A' | 'CUSTOM_B', x: number, color: string, isP2: boolean) =>
+        const spawnFighter = (type: 'HUMAN' | 'SIMPLE_AI' | 'CUSTOM_A' | 'CUSTOM_B', x: number, color: string, isP2: boolean) =>
             MatchSetup.createFighter(type, x, color, isP2, ctx.settingsRef.value, workers, ctx.getBestGenome());
 
         if (ctx.settingsRef.value.gameMode === 'TRAINING') {
             const popSize = ctx.populationRef.value.length;
             const p1Type = ctx.settingsRef.value.player1Type;
             const p2Type = 'SIMPLE_AI'; // Training always uses Simple AI for P2
-            const isP1AI = p1Type === 'SIMPLE_AI' || p1Type === 'CHUCK_AI';
+            const isP1AI = p1Type === 'SIMPLE_AI';
             const EVOLUTION_INTERVAL = calculateEvolutionInterval(p1Type, popSize);
 
             if (ctx.currentMatchIndex.value > 0 && ctx.currentMatchIndex.value % EVOLUTION_INTERVAL === 0) {
@@ -109,8 +109,8 @@ export function useMatchSetup(ctx: MatchSetupContext) {
                 }
                 p1GenomeIdx = -1;
             } else {
-                // p1Type is SIMPLE_AI or CHUCK_AI
-                p1Color = p1Type === 'CHUCK_AI' ? COLORS.CHUCK_AI : COLORS.SIMPLE_AI;
+                // p1Type is SIMPLE_AI
+                p1Color = COLORS.SIMPLE_AI;
                 if (isP1AI) {
                     const p1Idx = ctx.currentMatchIndex.value * 2;
                     let p2Idx = p1Idx + 1;
@@ -144,8 +144,8 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             const p2Type = ctx.settingsRef.value.player2Type;
             const spawnOffset = Math.random() * 60 - 30;
 
-            const p1Color = p1Type === 'HUMAN' ? COLORS.HUMAN : (p1Type === 'CHUCK_AI' ? COLORS.CHUCK_AI : COLORS.SIMPLE_AI);
-            const p2Color = p2Type === 'CHUCK_AI' ? COLORS.CHUCK_AI : COLORS.SIMPLE_AI;
+            const p1Color = p1Type === 'HUMAN' ? COLORS.HUMAN : COLORS.SIMPLE_AI;
+            const p2Color = COLORS.SIMPLE_AI;
 
             const f1 = spawnFighter(p1Type, 280 + spawnOffset, p1Color, false);
             const f2 = spawnFighter(p2Type, 470 - spawnOffset, p2Color, true);

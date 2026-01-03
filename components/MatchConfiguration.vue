@@ -116,7 +116,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { FEATURE_FLAGS } from '~/services/Config';
 import type { TrainingSettings, GameState } from '~/types';
 
 interface Props {
@@ -146,14 +145,11 @@ const startButtonText = computed(() => {
   return 'RESUME';
 });
 
-// Arcade mode: Player 1 can be Human or AI (no Chuck - Chuck is opponent only)
-// Training mode: No Human, No Chuck (Chuck is ARCADE-exclusive)
+// Arcade mode: Player 1 can be Human or AI
+// Training mode: No Human
 const arcadePlayer1Types = ['HUMAN', 'SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
 const trainingPlayer1Types = ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
-// Player 2: Chuck only available in ARCADE mode when enabled
-const arcadePlayer2Types = FEATURE_FLAGS.ENABLE_CHUCK_AI
-    ? ['SIMPLE_AI', 'CHUCK_AI', 'CUSTOM_A', 'CUSTOM_B'] as const
-    : ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
+const arcadePlayer2Types = ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
 const trainingPlayer2Types = ['SIMPLE_AI', 'CUSTOM_A', 'CUSTOM_B'] as const;
 
 // Use computed to dynamically select available types based on mode
@@ -212,7 +208,6 @@ const getPlayerTypeLabel = (type: string): string => {
   switch (type) {
     case 'HUMAN': return 'HUMAN';
     case 'SIMPLE_AI': return 'SIMPLE AI';
-    case 'CHUCK_AI': return 'CHUCK AI';
     case 'CUSTOM_A': return 'SCRIPT A';
     case 'CUSTOM_B': return 'SCRIPT B';
     default: return type;

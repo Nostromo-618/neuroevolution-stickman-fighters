@@ -51,7 +51,7 @@
 
 import type { NeuralNetworkData } from '../types';
 
-import { NN_ARCH, NN_ARCH_CHUCK } from './Config';
+import { NN_ARCH } from './Config';
 
 // =============================================================================
 // NETWORK ARCHITECTURE CONSTANTS
@@ -114,8 +114,7 @@ export const createRandomNetwork = (): NeuralNetworkData => {
 
 /**
  * Creates a neural network with a configurable number of hidden nodes.
- * Used for different AI architectures (Simple AI vs Chuck AI).
- * 
+ *
  * @param hiddenNodes - Number of hidden layer neurons
  * @returns A new NeuralNetwork with random weights and biases
  */
@@ -139,16 +138,6 @@ export const createRandomNetworkWithArch = (hiddenNodes: number): NeuralNetworkD
   const biases = Array(hiddenNodes * 2 + OUTPUT_NODES).fill(0).map(() => Math.random() * 2 - 1);
 
   return { inputWeights, hiddenWeights, outputWeights, biases };
-};
-
-/**
- * Creates a Chuck AI network with 32 hidden nodes.
- * Chuck AI uses a larger architecture for advanced adaptive learning.
- *
- * @returns A NeuralNetwork configured for Chuck AI
- */
-export const createChuckNetwork = (): NeuralNetworkData => {
-  return createRandomNetworkWithArch(NN_ARCH_CHUCK.HIDDEN_NODES);
 };
 
 // =============================================================================

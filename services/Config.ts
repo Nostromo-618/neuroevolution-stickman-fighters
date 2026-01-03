@@ -21,7 +21,6 @@ export const DEBUG_FLAGS = {
 // FEATURE FLAGS
 // =============================================================================
 export const FEATURE_FLAGS = {
-    ENABLE_CHUCK_AI: false,    // Set to true to enable Chuck AI mode
 } as const;
 
 // =============================================================================
@@ -37,22 +36,12 @@ export const NN_ARCH = {
     OUTPUT_NODES: 8,
 } as const;
 
-/**
- * Chuck AI architecture (32 hidden nodes for balanced performance)
- */
-export const NN_ARCH_CHUCK = {
-    INPUT_NODES: 9,
-    HIDDEN_NODES: 32,
-    OUTPUT_NODES: 8,
-} as const;
-
 // =============================================================================
 // FIGHTER COLORS
 // =============================================================================
 export const COLORS = {
     HUMAN: '#22c55e',       // Green (Tailwind green-500)
     SIMPLE_AI: '#3b82f6',   // Blue (Tailwind blue-500)
-    CHUCK_AI: '#f97316',    // Orange (Tailwind orange-500)
     CUSTOM_A: '#a855f7',    // Purple (Tailwind purple-500)
     CUSTOM_B: '#14b8a6',    // Teal (Tailwind teal-500)
 } as const;
@@ -93,15 +82,4 @@ export const TRAINING_DEFAULTS = {
     FPS: 60,
 } as const;
 
-// =============================================================================
-// MIRROR AI TRAINING SETTINGS
-// =============================================================================
-export const MIRROR_CONFIG = {
-    HISTORY_SIZE: 150,           // Contextual history buffer size
-    UPDATE_INTERVAL_FRAMES: 60,  // Train every 1 second (60fps × 1)
-    LEARNING_RATE: 0.15,         // Aggressive for fast adaptation
-    EPOCHS_PER_UPDATE: 2,        // Training passes per cycle
-    RECENCY_DECAY: 0.95,         // Recent samples weighted higher
-    MIN_SAMPLES: 20,             // Minimum samples before training starts
-} as const;
 

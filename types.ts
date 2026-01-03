@@ -146,13 +146,12 @@ export type GameMode = 'TRAINING' | 'ARCADE';
 
 /**
  * OpponentType - Who the player/AI fights against in TRAINING mode
- * 
+ *
  * - 'SIMPLE_AI': Standard 13-node neural network opponent
- * - 'CHUCK_AI': Advanced 64-node adaptive AI with Mirror learning
  * - 'CUSTOM_A': User-written custom Script A
  * - 'CUSTOM_B': User-written custom Script B
  */
-export type OpponentType = 'SIMPLE_AI' | 'CHUCK_AI' | 'CUSTOM_A' | 'CUSTOM_B';
+export type OpponentType = 'SIMPLE_AI' | 'CUSTOM_A' | 'CUSTOM_B';
 
 /**
  * TrainingSettings Interface
@@ -167,10 +166,10 @@ export interface TrainingSettings {
   fps: number;
   simulationSpeed: number;           // Physics steps per frame (1 = normal, >1 = fast forward)
   gameMode: GameMode;                // 'TRAINING' or 'ARCADE'
-  opponentType: 'SIMPLE_AI' | 'CHUCK_AI' | 'CUSTOM_A' | 'CUSTOM_B'; // For Training Mode: Who does the AI fight against?
+  opponentType: 'SIMPLE_AI' | 'CUSTOM_A' | 'CUSTOM_B'; // For Training Mode: Who does the AI fight against?
   // Arcade Mode Settings
-  player1Type: 'HUMAN' | 'SIMPLE_AI' | 'CHUCK_AI' | 'CUSTOM_A' | 'CUSTOM_B';
-  player2Type: 'SIMPLE_AI' | 'CHUCK_AI' | 'CUSTOM_A' | 'CUSTOM_B';
+  player1Type: 'HUMAN' | 'SIMPLE_AI' | 'CUSTOM_A' | 'CUSTOM_B';
+  player2Type: 'SIMPLE_AI' | 'CUSTOM_A' | 'CUSTOM_B';
   isRunning: boolean;                // Is the evolution/game loop running?
   backgroundTraining: boolean;       // Continue training in background while playing arcade?
   turboTraining: boolean;            // Use parallel workers for training (no visualization)

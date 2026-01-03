@@ -26,7 +26,6 @@ pnpm test:desktop     # Desktop viewport tests only
 - **NeuralNetwork.ts** - Feedforward neural network (9 inputs → 13 hidden × 2 layers → 8 outputs). Handles forward propagation, mutation, and crossover for genetic algorithms.
 - **GameEngine.ts** - Fighter physics, combat mechanics, collision detection, damage calculation.
 - **TrainingWorker.ts / WorkerPool.ts** - Web Workers for parallel neuroevolution training. Population competes in fights, winners reproduce.
-- **MirrorTrainer.ts** - Real-time AI that adapts to player behavior during arcade matches.
 - **CustomScriptRunner.ts / CustomScriptWorker.js** - Sandboxed execution of user-written fighter AI scripts via Web Workers.
 - **Config.ts** - All magic numbers, physics constants, and feature flags. Single source of truth for configuration.
 - **InputManager.ts** - Keyboard and gamepad input handling.
@@ -68,5 +67,5 @@ This project follows strict stability rules (see `STANDARD.md` and `.cursor/rule
 
 - **Vue reactivity with game state**: Game engine uses object pooling internally, but `structuredClone` or spreads for Vue state updates
 - **Web Workers**: Training and custom scripts run in workers for parallelism and sandboxing
-- **Neural network architecture**: Standard AI uses 13 hidden nodes, Chuck AI uses 32 hidden nodes (configured in `Config.ts`)
-- **Player types**: Human, Simple AI (neural network), Chuck AI (larger network, feature-flagged off by default), Custom Script A/B
+- **Neural network architecture**: 9 inputs → 13 hidden nodes × 2 layers → 8 outputs (configured in `Config.ts`)
+- **Player types**: Human, Simple AI (neural network), Custom Script A/B
