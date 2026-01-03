@@ -12,20 +12,29 @@ export interface ChangelogEntry {
 export const changelogData: ChangelogEntry[] = [
     {
         version: '2.0.0',
-        date: '2025-12-29',
+        date: '2026-01-03',
         changes: {
-            changed: [
-                'Complete rewrite from React to Nuxt 4 with Vue 3 Composition API',
-                'UI Library: Replaced custom components with Nuxt UI',
-                'Integrated Tailwind CSS with Nuxt UI theme tokens'
-            ],
             added: [
-                'AppHeader: Sticky header with app logo, version badge, and GitHub link',
-                'Simplified Controls: J/K/L for Punch/Kick/Block with Xbox controller mappings'
+                'Dual hidden layer neural network architecture for smarter AI',
+                'Training auto-stop feature when target generation is reached',
+                'Debug verbosity toggle for simulation diagnostics',
+                'Dark and light theme modes with system preference detection'
+            ],
+            changed: [
+                'Complete rewrite from React to Nuxt 4 with Vue 3',
+                'UI rebuilt with Nuxt UI component library',
+                'Darker arena colors for better fighter visibility',
+                'Improved mutation and simulation parameter controls',
+                'Enhanced script editor user experience',
+                'Refreshed game HUD design',
+                'ECharts replaces Recharts for fitness visualization'
             ],
             fixed: [
-                'Monaco Editor initialization timing when modal opens',
-                'Script Editor now properly reinitializes when reopened'
+                'Arcade mode intermittent freezes resolved',
+                'Background training stability improvements',
+                'Worker thread blocking issues fixed',
+                'Monaco Editor initialization timing',
+                'Match state management and control flow'
             ]
         }
     },

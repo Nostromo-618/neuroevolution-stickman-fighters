@@ -24,6 +24,11 @@ const tabs = [
     slot: 'network' as const
   },
   {
+    label: 'Rendering',
+    icon: 'i-lucide-palette',
+    slot: 'rendering' as const
+  },
+  {
     label: 'Controls',
     icon: 'i-lucide-gamepad-2',
     slot: 'controls' as const
@@ -47,6 +52,34 @@ const tabs = [
     label: 'Disclaimer',
     icon: 'i-lucide-file-text',
     slot: 'disclaimer' as const
+  }
+
+]
+
+const renderingLayers = [
+  {
+    label: 'Layer 1: Clear Canvas',
+    content: 'Wipes the entire 1920x1080 frame to transparency to prevent smearing artifacts.'
+  },
+  {
+    label: 'Layer 2: Background',
+    content: 'Draws static elements: Sky gradient, stars, moon, and distant mountains. Uses parallax scrolling for depth.'
+  },
+  {
+    label: 'Layer 3: Ground',
+    content: 'Renders the floor and foreground trees. Uses simplified geometry for performance.'
+  },
+  {
+    label: 'Layer 4: Fighters',
+    content: 'The core layer. Draws procedural skeletons based on physics state, applies "stickman" styling, and renders weapons.'
+  },
+  {
+    label: 'Layer 5: Visual Effects',
+    content: 'Particle system layer: blood splashes, hit sparks, and energy auras. Uses additive blending for glow effects.'
+  },
+  {
+    label: 'Layer 6: UI Overlay',
+    content: 'Heads-up display: Health bars, energy meters, timer, and round result text. Drawn last to appear on top.'
   }
 ]
 </script>
@@ -191,9 +224,9 @@ const tabs = [
             </div>
 
             <!-- Loop Architecture -->
-            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800">
-              <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Game Loop Architecture</h4>
-              <div class="font-mono text-xs text-slate-300 bg-slate-900 p-4 rounded border border-slate-800 overflow-x-auto whitespace-pre">
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h4 class="text-sm font-bold dark:text-slate-400 text-gray-500 uppercase tracking-wider mb-4">Game Loop Architecture</h4>
+              <div class="font-mono text-xs dark:text-slate-300 text-gray-700 dark:bg-slate-900 bg-white p-4 rounded border dark:border-slate-800 border-gray-200 overflow-x-auto whitespace-pre">
 1. CHECK MATCH  → Start new match if needed
 2. PHYSICS STEP → Process Inputs (Human/AI)
                 → Apply Velocity & Gravity
@@ -206,37 +239,37 @@ const tabs = [
 
             <!-- Physics Constants -->
             <div>
-               <h3 class="text-lg font-bold text-white mb-4 border-l-4 border-purple-500 pl-3">Physics Constants</h3>
+               <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-purple-500 pl-3">Physics Constants</h3>
                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
-                     <div class="text-xs text-slate-400 uppercase">Gravity</div>
-                     <div class="text-xl font-mono font-bold text-white">0.8</div>
-                     <div class="text-xs text-slate-500">px/frame²</div>
+                  <div class="dark:bg-slate-800 bg-gray-50 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
+                     <div class="text-xs dark:text-slate-400 text-gray-500 uppercase">Gravity</div>
+                     <div class="text-xl font-mono font-bold text-default">0.8</div>
+                     <div class="text-xs text-muted">px/frame²</div>
                   </div>
-                  <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
-                     <div class="text-xs text-slate-400 uppercase">Friction</div>
-                     <div class="text-xl font-mono font-bold text-white">0.85</div>
-                     <div class="text-xs text-slate-500">velocity mult</div>
+                  <div class="dark:bg-slate-800 bg-gray-50 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
+                     <div class="text-xs dark:text-slate-400 text-gray-500 uppercase">Friction</div>
+                     <div class="text-xl font-mono font-bold text-default">0.85</div>
+                     <div class="text-xs text-muted">velocity mult</div>
                   </div>
-                  <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
-                     <div class="text-xs text-slate-400 uppercase">Ground Y</div>
-                     <div class="text-xl font-mono font-bold text-white">380</div>
-                     <div class="text-xs text-slate-500">pixels</div>
+                  <div class="dark:bg-slate-800 bg-gray-50 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
+                     <div class="text-xs dark:text-slate-400 text-gray-500 uppercase">Ground Y</div>
+                     <div class="text-xl font-mono font-bold text-default">380</div>
+                     <div class="text-xs text-muted">pixels</div>
                   </div>
-                  <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
-                     <div class="text-xs text-slate-400 uppercase">Speed Limit</div>
-                     <div class="text-xl font-mono font-bold text-white">20</div>
-                     <div class="text-xs text-slate-500">px/frame</div>
+                  <div class="dark:bg-slate-800 bg-gray-50 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
+                     <div class="text-xs dark:text-slate-400 text-gray-500 uppercase">Speed Limit</div>
+                     <div class="text-xl font-mono font-bold text-default">20</div>
+                     <div class="text-xs text-muted">px/frame</div>
                   </div>
                </div>
             </div>
 
             <!-- Combat Data -->
             <div>
-              <h3 class="text-lg font-bold text-white mb-4 border-l-4 border-red-500 pl-3">Combat Data</h3>
-              <div class="overflow-hidden rounded-lg border border-slate-800">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-red-500 pl-3">Combat Data</h3>
+              <div class="overflow-hidden rounded-lg border dark:border-slate-800 border-gray-200">
                 <table class="w-full text-left text-sm">
-                  <thead class="bg-slate-950 text-slate-400">
+                  <thead class="dark:bg-slate-950 bg-gray-100 dark:text-slate-400 text-gray-500">
                     <tr>
                       <th class="p-3 font-medium">Move</th>
                       <th class="p-3 font-medium">Damage</th>
@@ -245,27 +278,27 @@ const tabs = [
                       <th class="p-3 font-medium">Effect</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-slate-800 bg-slate-900/50">
+                  <tbody class="divide-y dark:divide-slate-800 divide-gray-200 dark:bg-slate-900/50 bg-white">
                     <tr>
-                       <td class="p-3 font-bold text-white">Punch</td>
-                       <td class="p-3 text-red-400">5</td>
-                       <td class="p-3 text-yellow-400 font-mono">10</td>
-                       <td class="p-3 text-slate-400">30f cooldown</td>
-                       <td class="p-3 text-slate-400 text-xs">Blocked = 0 dmg + Stun</td>
+                       <td class="p-3 font-bold text-default">Punch</td>
+                       <td class="p-3 text-red-500 dark:text-red-400">5</td>
+                       <td class="p-3 text-yellow-600 dark:text-yellow-400 font-mono">10</td>
+                       <td class="p-3 text-muted">30f cooldown</td>
+                       <td class="p-3 text-muted text-xs">Blocked = 0 dmg + Stun</td>
                     </tr>
                     <tr>
-                       <td class="p-3 font-bold text-white">Kick</td>
-                       <td class="p-3 text-red-400">10</td>
-                       <td class="p-3 text-yellow-400 font-mono">20</td>
-                       <td class="p-3 text-slate-400">20f cooldown</td>
-                       <td class="p-3 text-slate-400 text-xs">Crouched = 0 dmg + Stun</td>
+                       <td class="p-3 font-bold text-default">Kick</td>
+                       <td class="p-3 text-red-500 dark:text-red-400">10</td>
+                       <td class="p-3 text-yellow-600 dark:text-yellow-400 font-mono">20</td>
+                       <td class="p-3 text-muted">20f cooldown</td>
+                       <td class="p-3 text-muted text-xs">Crouched = 0 dmg + Stun</td>
                     </tr>
                     <tr>
-                       <td class="p-3 font-bold text-white">Block</td>
-                       <td class="p-3 text-slate-500">-</td>
-                       <td class="p-3 text-yellow-400 font-mono">0.5/f</td>
-                       <td class="p-3 text-slate-400">Instant</td>
-                       <td class="p-3 text-slate-400 text-xs">Negates Punches</td>
+                       <td class="p-3 font-bold text-default">Block</td>
+                       <td class="p-3 text-muted">-</td>
+                       <td class="p-3 text-yellow-600 dark:text-yellow-400 font-mono">0.5/f</td>
+                       <td class="p-3 text-muted">Instant</td>
+                       <td class="p-3 text-muted text-xs">Negates Punches</td>
                     </tr>
                   </tbody>
                 </table>
@@ -273,26 +306,26 @@ const tabs = [
             </div>
 
             <!-- RPS System -->
-            <div class="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-xl border border-slate-700">
-               <h3 class="text-lg font-bold text-white mb-4">Strategic Counters (Rock-Paper-Scissors)</h3>
+            <div class="bg-gradient-to-br dark:from-slate-900 dark:to-slate-800 from-gray-50 to-gray-100 p-6 rounded-xl border dark:border-slate-700 border-gray-200">
+               <h3 class="text-lg font-bold text-highlighted mb-4">Strategic Counters (Rock-Paper-Scissors)</h3>
                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
                   <div class="space-y-2">
-                     <div class="text-red-400 font-bold text-xl">BLOCK</div>
-                     <div class="text-slate-500 text-sm">counters</div>
-                     <div class="text-white font-bold">PUNCH</div>
-                     <p class="text-xs text-slate-400">Arm blocks fist perfectly. 0 Damage.</p>
+                     <div class="text-red-500 dark:text-red-400 font-bold text-xl">BLOCK</div>
+                     <div class="text-muted text-sm">counters</div>
+                     <div class="text-default font-bold">PUNCH</div>
+                     <p class="text-xs text-muted">Arm blocks fist perfectly. 0 Damage.</p>
                   </div>
                   <div class="space-y-2">
-                     <div class="text-blue-400 font-bold text-xl">CROUCH</div>
-                     <div class="text-slate-500 text-sm">counters</div>
-                     <div class="text-white font-bold">KICK</div>
-                     <p class="text-xs text-slate-400">Duck under high kicks. 0 Damage.</p>
+                     <div class="text-blue-500 dark:text-blue-400 font-bold text-xl">CROUCH</div>
+                     <div class="text-muted text-sm">counters</div>
+                     <div class="text-default font-bold">KICK</div>
+                     <p class="text-xs text-muted">Duck under high kicks. 0 Damage.</p>
                   </div>
                   <div class="space-y-2">
-                     <div class="text-green-400 font-bold text-xl">TIMING</div>
-                     <div class="text-slate-500 text-sm">counters</div>
-                     <div class="text-white font-bold">DEFENSE</div>
-                     <p class="text-xs text-slate-400">Attacking during cooldowns or from behind.</p>
+                     <div class="text-green-500 dark:text-green-400 font-bold text-xl">TIMING</div>
+                     <div class="text-muted text-sm">counters</div>
+                     <div class="text-default font-bold">DEFENSE</div>
+                     <p class="text-xs text-muted">Attacking during cooldowns or from behind.</p>
                   </div>
                </div>
             </div>
@@ -304,14 +337,14 @@ const tabs = [
           <div class="space-y-8 animate-fade-in pt-4">
             <!-- Into -->
             <div class="prose prose-invert max-w-none">
-              <p class="text-lg text-slate-300">
+              <p class="text-lg text-muted">
                 The AI brain is a <strong>Feed-Forward Neural Network</strong> that processes game state inputs to determine the best action 60 times per second.
               </p>
             </div>
 
             <!-- Diagrams -->
-            <div class="bg-slate-950 rounded-xl p-6 border border-slate-800">
-               <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-6 text-center">Network Architecture</h4>
+            <div class="dark:bg-slate-950 bg-gray-50 rounded-xl p-6 border dark:border-slate-800 border-gray-200">
+               <h4 class="text-sm font-bold dark:text-slate-400 text-gray-500 uppercase tracking-wider mb-6 text-center">Network Architecture</h4>
                <div class="flex justify-between items-center max-w-lg mx-auto relative">
                   <!-- Input Layer -->
                   <div class="flex flex-col gap-2 items-center">
@@ -319,7 +352,7 @@ const tabs = [
                     <div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_theme(colors.blue.500)]"></div>
                      <div class="h-8 border-l border-dashed border-slate-700"></div>
                     <div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_theme(colors.blue.500)]"></div>
-                    <span class="text-xs font-mono text-blue-400 mt-2">9 Inputs</span>
+                    <span class="text-xs font-mono text-blue-500 mt-2">9 Inputs</span>
                   </div>
 
                   <!-- Connections -->
@@ -336,7 +369,7 @@ const tabs = [
                     <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
                     <div class="h-12 border-l border-dashed border-slate-700"></div>
                     <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
-                    <span class="text-xs font-mono text-purple-400 mt-2">16 Hidden</span>
+                    <span class="text-xs font-mono text-purple-500 mt-2">16 Hidden</span>
                   </div>
 
                   <!-- Connections -->
@@ -351,29 +384,29 @@ const tabs = [
                     <div class="w-3 h-3 rounded-full bg-teal-500 shadow-[0_0_10px_theme(colors.teal.500)]"></div>
                     <div class="h-8 border-l border-dashed border-slate-700"></div>
                     <div class="w-3 h-3 rounded-full bg-teal-500 shadow-[0_0_10px_theme(colors.teal.500)]"></div>
-                    <span class="text-xs font-mono text-teal-400 mt-2">8 Outputs</span>
+                    <span class="text-xs font-mono text-teal-500 mt-2">8 Outputs</span>
                   </div>
                </div>
             </div>
 
             <!-- Inputs Table -->
             <div>
-              <h3 class="text-lg font-bold text-white mb-4 border-l-4 border-blue-500 pl-3">Network Inputs (Sensors)</h3>
-              <div class="overflow-hidden rounded-lg border border-slate-800">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-blue-500 pl-3">Network Inputs (Sensors)</h3>
+              <div class="overflow-hidden rounded-lg border dark:border-slate-800 border-gray-200">
                 <table class="w-full text-left text-sm">
-                  <thead class="bg-slate-950 text-slate-400">
+                  <thead class="dark:bg-slate-950 bg-gray-100 dark:text-slate-400 text-gray-500">
                     <tr>
                       <th class="p-3 font-medium">Input</th>
                       <th class="p-3 font-medium">Description</th>
                       <th class="p-3 font-medium">Range</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-slate-800 bg-slate-900/50">
-                    <tr><td class="p-3 font-mono text-blue-400">distanceX</td><td class="p-3 text-slate-300">Horiz distance to opponent</td><td class="p-3 font-mono text-slate-500">-1 to 1</td></tr>
-                    <tr><td class="p-3 font-mono text-blue-400">distanceY</td><td class="p-3 text-slate-300">Vert distance to opponent</td><td class="p-3 font-mono text-slate-500">-1 to 1</td></tr>
-                    <tr><td class="p-3 font-mono text-blue-400">selfHealth</td><td class="p-3 text-slate-300">Own health percentage</td><td class="p-3 font-mono text-slate-500">0 to 1</td></tr>
-                    <tr><td class="p-3 font-mono text-blue-400">enemyHealth</td><td class="p-3 text-slate-300">Enemy health percentage</td><td class="p-3 font-mono text-slate-500">0 to 1</td></tr>
-                    <tr><td class="p-3 font-mono text-blue-400">facing</td><td class="p-3 text-slate-300">Direction facing (L/R)</td><td class="p-3 font-mono text-slate-500">-1 or 1</td></tr>
+                  <tbody class="divide-y dark:divide-slate-800 divide-gray-200 dark:bg-slate-900/50 bg-white">
+                    <tr><td class="p-3 font-mono text-blue-500">distanceX</td><td class="p-3 text-muted">Horiz distance to opponent</td><td class="p-3 font-mono text-muted">-1 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-500">distanceY</td><td class="p-3 text-muted">Vert distance to opponent</td><td class="p-3 font-mono text-muted">-1 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-500">selfHealth</td><td class="p-3 text-muted">Own health percentage</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-500">enemyHealth</td><td class="p-3 text-muted">Enemy health percentage</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-500">facing</td><td class="p-3 text-muted">Direction facing (L/R)</td><td class="p-3 font-mono text-muted">-1 or 1</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -381,44 +414,119 @@ const tabs = [
 
             <!-- Outputs Table -->
             <div>
-              <h3 class="text-lg font-bold text-white mb-4 border-l-4 border-teal-500 pl-3">Network Outputs (Actions)</h3>
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-teal-500 pl-3">Network Outputs (Actions)</h3>
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div v-for="(action, i) in ['IDLE', 'LEFT', 'RIGHT', 'JUMP', 'CROUCH', 'PUNCH', 'KICK', 'BLOCK']" :key="action" class="bg-slate-800 p-3 rounded border border-slate-700 flex items-center gap-3">
-                   <span class="bg-slate-950 w-6 h-6 rounded flex items-center justify-center text-xs font-mono text-slate-500">{{ i }}</span>
-                   <span class="font-bold text-slate-200">{{ action }}</span>
+                <div v-for="(action, i) in ['IDLE', 'LEFT', 'RIGHT', 'JUMP', 'CROUCH', 'PUNCH', 'KICK', 'BLOCK']" :key="action" class="dark:bg-slate-800 bg-gray-50 p-3 rounded border dark:border-slate-700 border-gray-200 flex items-center gap-3">
+                   <span class="dark:bg-slate-950 bg-white w-6 h-6 rounded flex items-center justify-center text-xs font-mono text-muted">{{ i }}</span>
+                   <span class="font-bold text-default">{{ action }}</span>
                 </div>
               </div>
-              <p class="text-xs text-slate-500 mt-2 italic">* Multiple outputs can be active simultaneously (e.g., JUMP + KICK)</p>
+              <p class="text-xs text-muted mt-2 italic">* Multiple outputs can be active simultaneously (e.g., JUMP + KICK)</p>
             </div>
 
              <!-- Genetic Algo -->
-             <div class="bg-slate-800/20 p-6 rounded-xl border border-slate-800">
-                <h3 class="text-lg font-bold text-white mb-4">🧬 Genetic Algorithm</h3>
-                <p class="mb-4">Instead of backpropagation, we use <strong>Neuroevolution</strong> to train inputs:</p>
+             <div class="dark:bg-slate-800/20 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+                <h3 class="text-lg font-bold text-highlighted mb-4">🧬 Genetic Algorithm</h3>
+                <p class="mb-4 text-muted">Instead of backpropagation, we use <strong>Neuroevolution</strong> to train inputs:</p>
                 <ol class="space-y-4">
                   <li class="flex gap-4">
-                     <span class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 border border-slate-700">1</span>
+                     <span class="flex-shrink-0 w-8 h-8 rounded-full dark:bg-slate-800 bg-white flex items-center justify-center font-bold text-muted border dark:border-slate-700 border-gray-200">1</span>
                      <div>
-                        <strong class="text-teal-400 block">Selection</strong>
-                        <span class="text-slate-400">Top performers are chosen as parents using Tournament Selection.</span>
+                        <strong class="text-teal-500 block">Selection</strong>
+                        <span class="text-muted">Top performers are chosen as parents using Tournament Selection.</span>
                      </div>
                   </li>
                   <li class="flex gap-4">
-                     <span class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 border border-slate-700">2</span>
+                     <span class="flex-shrink-0 w-8 h-8 rounded-full dark:bg-slate-800 bg-white flex items-center justify-center font-bold text-muted border dark:border-slate-700 border-gray-200">2</span>
                      <div>
-                        <strong class="text-teal-400 block">Crossover</strong>
-                        <span class="text-slate-400">Child networks inherit weights from two parents.</span>
+                        <strong class="text-teal-500 block">Crossover</strong>
+                        <span class="text-muted">Child networks inherit weights from two parents.</span>
                      </div>
                   </li>
                   <li class="flex gap-4">
-                     <span class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 border border-slate-700">3</span>
+                     <span class="flex-shrink-0 w-8 h-8 rounded-full dark:bg-slate-800 bg-white flex items-center justify-center font-bold text-muted border dark:border-slate-700 border-gray-200">3</span>
                      <div>
-                        <strong class="text-teal-400 block">Mutation</strong>
-                        <span class="text-slate-400">Random small changes (±0.04) are applied to weights to discover new strategies.</span>
+                        <strong class="text-teal-500 block">Mutation</strong>
+                        <span class="text-muted">Random small changes (±0.04) are applied to weights to discover new strategies.</span>
                      </div>
                   </li>
                 </ol>
              </div>
+          </div>
+        </template>
+
+        <!-- Rendering Tab -->
+        <template #rendering>
+          <div class="space-y-8 animate-fade-in pt-4">
+            <!-- Pipeline -->
+            <div>
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-pink-500 pl-3">Rendering Pipeline</h3>
+              <p class="text-muted mb-4">The game uses the <code class="text-pink-500 dark:bg-slate-800 bg-gray-100 px-1 rounded">HTML5 Canvas 2D API</code> in immediate mode, redrawing the entire frame 60 times per second.</p>
+              
+              <UAccordion
+                :items="renderingLayers"
+                color="primary"
+                variant="soft"
+                size="sm"
+              >
+                <template #item="{ item }">
+                  <p class="text-sm text-muted p-2">
+                    {{ item.content }}
+                  </p>
+                </template>
+              </UAccordion>
+            </div>
+
+            <!-- Frame Budget -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+               <h3 class="text-lg font-bold text-highlighted mb-4">16.6ms Frame Budget</h3>
+               <div class="space-y-2">
+                  <div class="flex h-6 w-full rounded-full overflow-hidden dark:bg-slate-900 bg-gray-200 border dark:border-slate-800 border-gray-300">
+                     <div class="bg-blue-500 h-full" style="width: 30%"></div> <!-- Physics -->
+                     <div class="bg-purple-500 h-full" style="width: 20%"></div> <!-- AI -->
+                     <div class="bg-pink-500 h-full" style="width: 40%"></div> <!-- Render -->
+                     <div class="bg-green-500 h-full" style="width: 10%"></div> <!-- Idle -->
+                  </div>
+                  <div class="flex justify-between text-xs font-mono text-muted pt-1">
+                     <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-blue-500"></div> Physics (5ms)</span>
+                     <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-purple-500"></div> AI (3ms)</span>
+                     <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-pink-500"></div> Render (7ms)</span>
+                     <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-green-500"></div> Idle</span>
+                  </div>
+               </div>
+            </div>
+
+            <!-- Skeleton System -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h3 class="text-lg font-bold text-highlighted mb-4">Skeleton Animation System</h3>
+              <div class="flex flex-col md:flex-row gap-8 items-center">
+                <div class="font-mono text-xs dark:bg-slate-900 bg-white p-4 rounded text-muted whitespace-pre leading-tight shrink-0 border dark:border-slate-800 border-gray-200">
+        O  ← HEAD
+        │
+    ────┼──── SHOULDER
+        │
+        ║  ← TORSO
+        ║
+    ────┼──── HIPS
+   /    │    \ 
+  ○     │     ○
+ KNEE   │    KNEE
+        │ 
+       FOOT
+                </div>
+                <div class="flex-1 text-sm text-muted space-y-3">
+                  <p>
+                    Fighters are not static sprites. They are <strong>procedurally animated skeletons</strong> defined by joint positions.
+                  </p>
+                  <p>
+                    Each frame, logic calculates the position of elbows, hands, knees, and feet based on the current <code>ActionState</code> (e.g., PUNCH, KICK, RUN).
+                  </p>
+                  <p>
+                    This allows for fluid transitions and dynamic posing (e.g., looking at opponent, leaning).
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </template>
 
@@ -676,7 +784,7 @@ const tabs = [
 
         <!-- Changelog Tab -->
         <template #changelog>
-          <div class="space-y-4 pt-4 max-h-64 overflow-y-auto">
+          <div class="space-y-4 pt-4">
             <div
               v-for="entry in recentChangelog"
               :key="entry.version"

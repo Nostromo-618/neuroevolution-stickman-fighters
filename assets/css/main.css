@@ -50,6 +50,28 @@
   ::-webkit-scrollbar-track {
     @apply bg-gray-100;
   }
+  
+  /* Improved scrolling for all modals */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.slate.700') theme('colors.slate.900');
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-slate-900;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-700 rounded;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
 
   ::-webkit-scrollbar-thumb {
     @apply bg-gray-300 rounded;
@@ -65,6 +87,16 @@
   .router-link-active,
   .router-link-exact-active {
     cursor: pointer !important;
+  }
+
+  /* Modal-specific improvements */
+  .disclaimer-modal-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+    backdrop-filter: blur(8px) !important;
+    z-index: 10 !important;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
   }
 }
 

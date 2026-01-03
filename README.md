@@ -1,4 +1,4 @@
-# 🧠 NeuroFight Evolution
+# 🧠 NeuroEvolution: Stickman Fighters
 
 A real-time neuroevolution fighting game where AI fighters learn combat through genetic algorithms and neural networks. Watch artificial intelligence evolve from random behavior into skilled combatants!
 
@@ -70,18 +70,6 @@ Open `http://localhost:3000/neuroevolution-stickman-fighters/` in your browser.
 
 ---
 
-## 📖 Deep Dive Documentation
-
-For detailed explanations of how everything works:
-
-| Document | Description |
-|----------|-------------|
-| [Neural Network & Genetic Algorithm](docs/NEURAL_NETWORK.md) | How the AI brain works and evolves |
-| [Game Engine & Physics](docs/GAME_ENGINE.md) | Combat mechanics, fitness shaping, rules |
-| [Visual Rendering](docs/RENDERING.md) | Canvas graphics and animation system |
-
----
-
 ## 🏗️ Project Structure
 
 ```
@@ -115,13 +103,8 @@ neuroevolution-stickman-fighters/
 ├── composables/
 │   └── useToast.ts            # Toast notification composable
 │
-├── assets/css/
-│   └── main.css               # Global styles and Tailwind imports
-│
-└── docs/
-    ├── NEURAL_NETWORK.md      # AI and evolution deep dive
-    ├── GAME_ENGINE.md         # Physics and combat mechanics
-    └── RENDERING.md           # Graphics and animation
+└── assets/css/
+    └── main.css               # Global styles and Tailwind imports
 ```
 
 ---
@@ -173,7 +156,7 @@ Over generations, networks that produce winning behaviors are preserved and refi
 - **Canvas 2D API** - Game rendering
 - **Web Workers** - Parallel training and secure script execution
 - **Monaco Editor** - VS Code-based code editor for custom scripts
-- **Recharts** - Fitness visualization graphs
+- **ECharts** - Fitness visualization graphs
 
 ---
 
