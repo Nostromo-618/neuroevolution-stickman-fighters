@@ -14,6 +14,16 @@ const tabs = [
     slot: 'features' as const
   },
   {
+    label: 'Game Engine',
+    icon: 'i-lucide-cog',
+    slot: 'engine' as const
+  },
+  {
+    label: 'Neural Network',
+    icon: 'i-lucide-network',
+    slot: 'network' as const
+  },
+  {
     label: 'Controls',
     icon: 'i-lucide-gamepad-2',
     slot: 'controls' as const
@@ -47,7 +57,7 @@ const tabs = [
     title="About NeuroEvolution"
     description="AI learns to fight through natural selection"
     :ui="{
-      content: 'sm:max-w-[80vw] sm:h-[80vh]',
+      content: 'max-w-full h-[100dvh] sm:max-w-[80vw] sm:h-[90vh]',
       body: 'flex-1 overflow-y-auto'
     }"
   >
@@ -167,6 +177,248 @@ const tabs = [
                 </p>
               </div>
             </div>
+          </div>
+        </template>
+
+        <!-- Game Engine Tab -->
+        <template #engine>
+          <div class="space-y-8 animate-fade-in pt-4">
+            <!-- Intro -->
+            <div class="prose prose-invert max-w-none">
+              <p class="text-lg text-slate-300">
+                The engine runs a deterministic physics simulation at <strong>60 FPS</strong> using a fixed time-step loop to ensure fairness and reproducibility.
+              </p>
+            </div>
+
+            <!-- Loop Architecture -->
+            <div class="bg-slate-950 p-6 rounded-xl border border-slate-800">
+              <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Game Loop Architecture</h4>
+              <div class="font-mono text-xs text-slate-300 bg-slate-900 p-4 rounded border border-slate-800 overflow-x-auto whitespace-pre">
+1. CHECK MATCH  → Start new match if needed
+2. PHYSICS STEP → Process Inputs (Human/AI)
+                → Apply Velocity & Gravity
+                → Resolve Collisions
+                → Update Hitboxes & Timers
+3. RENDER       → Draw frame to Canvas
+4. REPEAT       → requestAnimationFrame
+              </div>
+            </div>
+
+            <!-- Physics Constants -->
+            <div>
+               <h3 class="text-lg font-bold text-white mb-4 border-l-4 border-purple-500 pl-3">Physics Constants</h3>
+               <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
+                     <div class="text-xs text-slate-400 uppercase">Gravity</div>
+                     <div class="text-xl font-mono font-bold text-white">0.8</div>
+                     <div class="text-xs text-slate-500">px/frame²</div>
+                  </div>
+                  <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
+                     <div class="text-xs text-slate-400 uppercase">Friction</div>
+                     <div class="text-xl font-mono font-bold text-white">0.85</div>
+                     <div class="text-xs text-slate-500">velocity mult</div>
+                  </div>
+                  <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
+                     <div class="text-xs text-slate-400 uppercase">Ground Y</div>
+                     <div class="text-xl font-mono font-bold text-white">380</div>
+                     <div class="text-xs text-slate-500">pixels</div>
+                  </div>
+                  <div class="bg-slate-800 p-3 rounded text-center border border-slate-700">
+                     <div class="text-xs text-slate-400 uppercase">Speed Limit</div>
+                     <div class="text-xl font-mono font-bold text-white">20</div>
+                     <div class="text-xs text-slate-500">px/frame</div>
+                  </div>
+               </div>
+            </div>
+
+            <!-- Combat Data -->
+            <div>
+              <h3 class="text-lg font-bold text-white mb-4 border-l-4 border-red-500 pl-3">Combat Data</h3>
+              <div class="overflow-hidden rounded-lg border border-slate-800">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-slate-950 text-slate-400">
+                    <tr>
+                      <th class="p-3 font-medium">Move</th>
+                      <th class="p-3 font-medium">Damage</th>
+                      <th class="p-3 font-medium">Energy</th>
+                      <th class="p-3 font-medium">Frame Data</th>
+                      <th class="p-3 font-medium">Effect</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800 bg-slate-900/50">
+                    <tr>
+                       <td class="p-3 font-bold text-white">Punch</td>
+                       <td class="p-3 text-red-400">5</td>
+                       <td class="p-3 text-yellow-400 font-mono">10</td>
+                       <td class="p-3 text-slate-400">30f cooldown</td>
+                       <td class="p-3 text-slate-400 text-xs">Blocked = 0 dmg + Stun</td>
+                    </tr>
+                    <tr>
+                       <td class="p-3 font-bold text-white">Kick</td>
+                       <td class="p-3 text-red-400">10</td>
+                       <td class="p-3 text-yellow-400 font-mono">20</td>
+                       <td class="p-3 text-slate-400">20f cooldown</td>
+                       <td class="p-3 text-slate-400 text-xs">Crouched = 0 dmg + Stun</td>
+                    </tr>
+                    <tr>
+                       <td class="p-3 font-bold text-white">Block</td>
+                       <td class="p-3 text-slate-500">-</td>
+                       <td class="p-3 text-yellow-400 font-mono">0.5/f</td>
+                       <td class="p-3 text-slate-400">Instant</td>
+                       <td class="p-3 text-slate-400 text-xs">Negates Punches</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- RPS System -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-xl border border-slate-700">
+               <h3 class="text-lg font-bold text-white mb-4">Strategic Counters (Rock-Paper-Scissors)</h3>
+               <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                  <div class="space-y-2">
+                     <div class="text-red-400 font-bold text-xl">BLOCK</div>
+                     <div class="text-slate-500 text-sm">counters</div>
+                     <div class="text-white font-bold">PUNCH</div>
+                     <p class="text-xs text-slate-400">Arm blocks fist perfectly. 0 Damage.</p>
+                  </div>
+                  <div class="space-y-2">
+                     <div class="text-blue-400 font-bold text-xl">CROUCH</div>
+                     <div class="text-slate-500 text-sm">counters</div>
+                     <div class="text-white font-bold">KICK</div>
+                     <p class="text-xs text-slate-400">Duck under high kicks. 0 Damage.</p>
+                  </div>
+                  <div class="space-y-2">
+                     <div class="text-green-400 font-bold text-xl">TIMING</div>
+                     <div class="text-slate-500 text-sm">counters</div>
+                     <div class="text-white font-bold">DEFENSE</div>
+                     <p class="text-xs text-slate-400">Attacking during cooldowns or from behind.</p>
+                  </div>
+               </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Neural Network Tab -->
+        <template #network>
+          <div class="space-y-8 animate-fade-in pt-4">
+            <!-- Into -->
+            <div class="prose prose-invert max-w-none">
+              <p class="text-lg text-slate-300">
+                The AI brain is a <strong>Feed-Forward Neural Network</strong> that processes game state inputs to determine the best action 60 times per second.
+              </p>
+            </div>
+
+            <!-- Diagrams -->
+            <div class="bg-slate-950 rounded-xl p-6 border border-slate-800">
+               <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-6 text-center">Network Architecture</h4>
+               <div class="flex justify-between items-center max-w-lg mx-auto relative">
+                  <!-- Input Layer -->
+                  <div class="flex flex-col gap-2 items-center">
+                    <div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_theme(colors.blue.500)]"></div>
+                    <div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_theme(colors.blue.500)]"></div>
+                     <div class="h-8 border-l border-dashed border-slate-700"></div>
+                    <div class="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_theme(colors.blue.500)]"></div>
+                    <span class="text-xs font-mono text-blue-400 mt-2">9 Inputs</span>
+                  </div>
+
+                  <!-- Connections -->
+                  <div class="flex-1 h-32 mx-4 relative opacity-30">
+                     <!-- Visual flair lines -->
+                     <div class="absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-blue-500 to-purple-500 transform -translate-y-4 rotate-12"></div>
+                     <div class="absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-blue-500 to-purple-500 transform translate-y-4 -rotate-12"></div>
+                     <div class="absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-blue-500 to-purple-500"></div>
+                  </div>
+
+                  <!-- Hidden Layer -->
+                  <div class="flex flex-col gap-2 items-center">
+                    <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
+                    <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
+                    <div class="h-12 border-l border-dashed border-slate-700"></div>
+                    <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
+                    <span class="text-xs font-mono text-purple-400 mt-2">16 Hidden</span>
+                  </div>
+
+                  <!-- Connections -->
+                  <div class="flex-1 h-32 mx-4 relative opacity-30">
+                     <div class="absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-purple-500 to-teal-500 transform -translate-y-2 -rotate-6"></div>
+                     <div class="absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-purple-500 to-teal-500 transform translate-y-2 rotate-6"></div>
+                  </div>
+
+                  <!-- Output Layer -->
+                  <div class="flex flex-col gap-2 items-center">
+                    <div class="w-3 h-3 rounded-full bg-teal-500 shadow-[0_0_10px_theme(colors.teal.500)]"></div>
+                    <div class="w-3 h-3 rounded-full bg-teal-500 shadow-[0_0_10px_theme(colors.teal.500)]"></div>
+                    <div class="h-8 border-l border-dashed border-slate-700"></div>
+                    <div class="w-3 h-3 rounded-full bg-teal-500 shadow-[0_0_10px_theme(colors.teal.500)]"></div>
+                    <span class="text-xs font-mono text-teal-400 mt-2">8 Outputs</span>
+                  </div>
+               </div>
+            </div>
+
+            <!-- Inputs Table -->
+            <div>
+              <h3 class="text-lg font-bold text-white mb-4 border-l-4 border-blue-500 pl-3">Network Inputs (Sensors)</h3>
+              <div class="overflow-hidden rounded-lg border border-slate-800">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-slate-950 text-slate-400">
+                    <tr>
+                      <th class="p-3 font-medium">Input</th>
+                      <th class="p-3 font-medium">Description</th>
+                      <th class="p-3 font-medium">Range</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800 bg-slate-900/50">
+                    <tr><td class="p-3 font-mono text-blue-400">distanceX</td><td class="p-3 text-slate-300">Horiz distance to opponent</td><td class="p-3 font-mono text-slate-500">-1 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-400">distanceY</td><td class="p-3 text-slate-300">Vert distance to opponent</td><td class="p-3 font-mono text-slate-500">-1 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-400">selfHealth</td><td class="p-3 text-slate-300">Own health percentage</td><td class="p-3 font-mono text-slate-500">0 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-400">enemyHealth</td><td class="p-3 text-slate-300">Enemy health percentage</td><td class="p-3 font-mono text-slate-500">0 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-400">facing</td><td class="p-3 text-slate-300">Direction facing (L/R)</td><td class="p-3 font-mono text-slate-500">-1 or 1</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Outputs Table -->
+            <div>
+              <h3 class="text-lg font-bold text-white mb-4 border-l-4 border-teal-500 pl-3">Network Outputs (Actions)</h3>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div v-for="(action, i) in ['IDLE', 'LEFT', 'RIGHT', 'JUMP', 'CROUCH', 'PUNCH', 'KICK', 'BLOCK']" :key="action" class="bg-slate-800 p-3 rounded border border-slate-700 flex items-center gap-3">
+                   <span class="bg-slate-950 w-6 h-6 rounded flex items-center justify-center text-xs font-mono text-slate-500">{{ i }}</span>
+                   <span class="font-bold text-slate-200">{{ action }}</span>
+                </div>
+              </div>
+              <p class="text-xs text-slate-500 mt-2 italic">* Multiple outputs can be active simultaneously (e.g., JUMP + KICK)</p>
+            </div>
+
+             <!-- Genetic Algo -->
+             <div class="bg-slate-800/20 p-6 rounded-xl border border-slate-800">
+                <h3 class="text-lg font-bold text-white mb-4">🧬 Genetic Algorithm</h3>
+                <p class="mb-4">Instead of backpropagation, we use <strong>Neuroevolution</strong> to train inputs:</p>
+                <ol class="space-y-4">
+                  <li class="flex gap-4">
+                     <span class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 border border-slate-700">1</span>
+                     <div>
+                        <strong class="text-teal-400 block">Selection</strong>
+                        <span class="text-slate-400">Top performers are chosen as parents using Tournament Selection.</span>
+                     </div>
+                  </li>
+                  <li class="flex gap-4">
+                     <span class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 border border-slate-700">2</span>
+                     <div>
+                        <strong class="text-teal-400 block">Crossover</strong>
+                        <span class="text-slate-400">Child networks inherit weights from two parents.</span>
+                     </div>
+                  </li>
+                  <li class="flex gap-4">
+                     <span class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 border border-slate-700">3</span>
+                     <div>
+                        <strong class="text-teal-400 block">Mutation</strong>
+                        <span class="text-slate-400">Random small changes (±0.04) are applied to weights to discover new strategies.</span>
+                     </div>
+                  </li>
+                </ol>
+             </div>
           </div>
         </template>
 
