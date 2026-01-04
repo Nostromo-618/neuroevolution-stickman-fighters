@@ -12,8 +12,8 @@ const { changelog } = useChangelog()
 
 const version = '2.0.4'
 
-// Get latest 5 changelog entries for display
-const recentChangelog = computed(() => changelog.slice(0, 5))
+// Get all changelog entries for display
+const recentChangelog = computed(() => changelog)
 
 const tabs = [
   {
@@ -82,8 +82,8 @@ const renderingLayers = [
     content: 'The core layer. Draws procedural skeletons based on physics state, applies "stickman" styling, and renders weapons.'
   },
   {
-    label: 'Layer 5: Visual Effects',
-    content: 'Particle system layer: blood splashes, hit sparks, and energy auras. Uses additive blending for glow effects.'
+    label: 'Layer 5: Hitbox Indicators',
+    content: 'Renders subtle white semi-transparent circles to indicate active attack hitboxes during punches and kicks. Purely visual feedback for debugging and player awareness.'
   },
   {
     label: 'Layer 6: UI Overlay',
@@ -326,6 +326,52 @@ const renderingLayers = [
               </div>
             </div>
 
+            <!-- Physics Formulas -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-blue-500 pl-3">Physics Formulas (Per Frame)</h3>
+
+              <div class="space-y-4">
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <UIcon name="i-lucide-move-vertical" class="size-4 text-blue-500" />
+                    <h4 class="text-sm font-semibold text-default">Vertical Motion (Gravity)</h4>
+                  </div>
+                  <code class="block dark:bg-slate-900 bg-white p-3 rounded border dark:border-slate-800 border-gray-200 text-xs font-mono">
+                    y += velocityY
+                    velocityY += 0.8  // gravity acceleration
+                  </code>
+                  <p class="text-xs text-muted mt-2">Applied every frame until fighter touches ground (y = 305px)</p>
+                </div>
+
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <UIcon name="i-lucide-move-horizontal" class="size-4 text-blue-500" />
+                    <h4 class="text-sm font-semibold text-default">Horizontal Motion (Friction)</h4>
+                  </div>
+                  <code class="block dark:bg-slate-900 bg-white p-3 rounded border dark:border-slate-800 border-gray-200 text-xs font-mono">
+                    x += velocityX
+                    velocityX *= 0.85  // friction damping
+                  </code>
+                  <p class="text-xs text-muted mt-2">Reduces speed by 15% each frame, simulating ground friction</p>
+                </div>
+
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <UIcon name="i-lucide-zap" class="size-4 text-yellow-500" />
+                    <h4 class="text-sm font-semibold text-default">Energy System</h4>
+                  </div>
+                  <code class="block dark:bg-slate-900 bg-white p-3 rounded border dark:border-slate-800 border-gray-200 text-xs font-mono">
+                    // Idle regeneration: +0.5 per frame
+                    // Active regeneration: +0.2 per frame
+                    // Movement cost: -0.5 per frame
+                    // Jump cost: -12 (one-time)
+                    // Punch cost: -10 (one-time)
+                    // Kick cost: -15 (one-time)
+                  </code>
+                </div>
+              </div>
+            </div>
+
             <!-- RPS System -->
             <div class="bg-gradient-to-br dark:from-slate-900 dark:to-slate-800 from-gray-50 to-gray-100 p-6 rounded-xl border dark:border-slate-700 border-gray-200">
                <h3 class="text-lg font-bold text-highlighted mb-4">Strategic Counters (Rock-Paper-Scissors)</h3>
@@ -410,6 +456,43 @@ const renderingLayers = [
                </div>
             </div>
 
+            <!-- Activation Functions -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-purple-500 pl-3">Activation Functions</h3>
+
+              <div class="grid md:grid-cols-2 gap-6">
+                <!-- ReLU -->
+                <div class="space-y-3">
+                  <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <h4 class="font-bold text-default">ReLU (Hidden Layers)</h4>
+                  </div>
+                  <code class="block dark:bg-slate-900 bg-white p-3 rounded border dark:border-slate-800 border-gray-200 text-xs font-mono text-purple-500">
+                    f(x) = max(0, x)
+                  </code>
+                  <p class="text-xs text-muted">
+                    Rectified Linear Unit: Outputs the input if positive, otherwise 0. Fast to compute and prevents vanishing gradients.
+                  </p>
+                  <UBadge color="purple" variant="soft" size="sm">Non-linear</UBadge>
+                </div>
+
+                <!-- Sigmoid -->
+                <div class="space-y-3">
+                  <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-teal-500"></div>
+                    <h4 class="font-bold text-default">Sigmoid (Output Layer)</h4>
+                  </div>
+                  <code class="block dark:bg-slate-900 bg-white p-3 rounded border dark:border-slate-800 border-gray-200 text-xs font-mono text-teal-500">
+                    f(x) = 1 / (1 + e^(-x))
+                  </code>
+                  <p class="text-xs text-muted">
+                    Squashes values to (0, 1) range. Perfect for binary decision outputs (attack: yes/no, move left: yes/no).
+                  </p>
+                  <UBadge color="teal" variant="soft" size="sm">Probabilistic</UBadge>
+                </div>
+              </div>
+            </div>
+
             <!-- Inputs Table -->
             <div>
               <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-blue-500 pl-3">Network Inputs (Sensors)</h3>
@@ -427,7 +510,11 @@ const renderingLayers = [
                     <tr><td class="p-3 font-mono text-blue-500">distanceY</td><td class="p-3 text-muted">Vert distance to opponent</td><td class="p-3 font-mono text-muted">-1 to 1</td></tr>
                     <tr><td class="p-3 font-mono text-blue-500">selfHealth</td><td class="p-3 text-muted">Own health percentage</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
                     <tr><td class="p-3 font-mono text-blue-500">enemyHealth</td><td class="p-3 text-muted">Enemy health percentage</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-500">oppAction</td><td class="p-3 text-muted">Opponent's current action</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-500">selfEnergy</td><td class="p-3 text-muted">Own energy level</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
                     <tr><td class="p-3 font-mono text-blue-500">facing</td><td class="p-3 text-muted">Direction facing (L/R)</td><td class="p-3 font-mono text-muted">-1 or 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-500">oppCooldown</td><td class="p-3 text-muted">Opponent attack cooldown</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
+                    <tr><td class="p-3 font-mono text-blue-500">oppEnergy</td><td class="p-3 text-muted">Opponent energy level</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -473,6 +560,52 @@ const renderingLayers = [
                   </li>
                 </ol>
              </div>
+
+             <!-- Forward Propagation Example -->
+             <UAlert
+               color="primary"
+               variant="soft"
+               icon="i-lucide-lightbulb"
+               title="How the Network Makes Decisions"
+               description="Each frame (60 times per second), the network performs forward propagation:"
+             >
+               <template #description>
+                 <ol class="mt-3 space-y-2 text-xs text-muted">
+                   <li class="flex gap-2">
+                     <span class="font-bold text-primary">1.</span>
+                     <span>Collect 9 sensor inputs from game state</span>
+                   </li>
+                   <li class="flex gap-2">
+                     <span class="font-bold text-primary">2.</span>
+                     <span>Multiply by input weights (9×13 matrix) + apply biases → 13 hidden neurons</span>
+                   </li>
+                   <li class="flex gap-2">
+                     <span class="font-bold text-primary">3.</span>
+                     <span>Apply ReLU activation to hidden layer 1</span>
+                   </li>
+                   <li class="flex gap-2">
+                     <span class="font-bold text-primary">4.</span>
+                     <span>Multiply by hidden weights (13×13 matrix) + apply biases → 13 more hidden neurons</span>
+                   </li>
+                   <li class="flex gap-2">
+                     <span class="font-bold text-primary">5.</span>
+                     <span>Apply ReLU activation to hidden layer 2</span>
+                   </li>
+                   <li class="flex gap-2">
+                     <span class="font-bold text-primary">6.</span>
+                     <span>Multiply by output weights (13×8 matrix) + apply biases → 8 action outputs</span>
+                   </li>
+                   <li class="flex gap-2">
+                     <span class="font-bold text-primary">7.</span>
+                     <span>Apply Sigmoid activation → values between 0 and 1</span>
+                   </li>
+                   <li class="flex gap-2">
+                     <span class="font-bold text-primary">8.</span>
+                     <span>If output > 0.5, activate that action (PUNCH, JUMP, etc.)</span>
+                   </li>
+                 </ol>
+               </template>
+             </UAlert>
           </div>
         </template>
 
@@ -546,6 +679,61 @@ const renderingLayers = [
                     This allows for fluid transitions and dynamic posing (e.g., looking at opponent, leaning).
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <!-- Canvas Optimization Techniques -->
+            <div>
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-pink-500 pl-3">Performance Optimizations</h3>
+
+              <div class="grid md:grid-cols-2 gap-4">
+                <UCard>
+                  <template #header>
+                    <div class="flex items-center gap-2">
+                      <UIcon name="i-lucide-layers" class="size-5 text-pink-500" />
+                      <h4 class="font-semibold text-default">Layer Culling</h4>
+                    </div>
+                  </template>
+                  <p class="text-xs text-muted">
+                    Background layers (sky, mountains) only redraw when theme changes, not every frame.
+                  </p>
+                </UCard>
+
+                <UCard>
+                  <template #header>
+                    <div class="flex items-center gap-2">
+                      <UIcon name="i-lucide-minimize-2" class="size-5 text-pink-500" />
+                      <h4 class="font-semibold text-default">Geometry Simplification</h4>
+                    </div>
+                  </template>
+                  <p class="text-xs text-muted">
+                    Stickman fighters use simple line segments instead of complex meshes for 60fps performance.
+                  </p>
+                </UCard>
+
+                <UCard>
+                  <template #header>
+                    <div class="flex items-center gap-2">
+                      <UIcon name="i-lucide-target" class="size-5 text-pink-500" />
+                      <h4 class="font-semibold text-default">Hitbox Visualization</h4>
+                    </div>
+                  </template>
+                  <p class="text-xs text-muted">
+                    Only rendered during active attacks, using semi-transparent white circles for debugging.
+                  </p>
+                </UCard>
+
+                <UCard>
+                  <template #header>
+                    <div class="flex items-center gap-2">
+                      <UIcon name="i-lucide-gauge" class="size-5 text-pink-500" />
+                      <h4 class="font-semibold text-default">Fixed Time Step</h4>
+                    </div>
+                  </template>
+                  <p class="text-xs text-muted">
+                    Renders at 60 FPS using requestAnimationFrame for smooth, deterministic physics.
+                  </p>
+                </UCard>
               </div>
             </div>
           </div>
@@ -748,10 +936,25 @@ const renderingLayers = [
               />
               <div>
                 <p class="text-sm font-medium text-default">
-                  Turbo Mode
+                  Turbo AI vs AI Training
                 </p>
                 <p class="text-xs text-muted">
-                  Enable Turbo mode for faster training without rendering
+                  Runs training via Web Workers without rendering. Only available for AI vs AI (Custom Scripts require the main thread for synchronous execution).
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <UIcon
+                name="i-lucide-cpu"
+                class="size-5 text-primary shrink-0 mt-0.5"
+              />
+              <div>
+                <p class="text-sm font-medium text-default">
+                  Background AI vs AI Training
+                </p>
+                <p class="text-xs text-muted">
+                  In Arcade mode, AI continues learning in background workers while you play. Only works with Simple AI opponent (not Custom Scripts).
                 </p>
               </div>
             </div>

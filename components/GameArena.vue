@@ -21,13 +21,13 @@
       <span class="text-gray-500 dark:text-slate-400 font-mono">Initializing Arena...</span>
     </div>
 
-    <!-- Turbo Training Overlay -->
+    <!-- Turbo AI vs AI Training Overlay -->
     <div
       v-if="settings.gameMode === 'TRAINING' && settings.turboTraining && settings.isRunning"
       class="absolute inset-0 flex items-center justify-center bg-gray-100/90 dark:bg-slate-900/90 rounded-xl"
     >
       <div class="text-center">
-        <div class="text-3xl font-black text-emerald-500 dark:text-emerald-400 tracking-tight mb-2">TURBO TRAINING</div>
+        <div class="text-3xl font-black text-emerald-500 dark:text-emerald-400 tracking-tight mb-2">TURBO AI vs AI</div>
         <div class="text-xl font-mono text-gray-700 dark:text-slate-300">Generation {{ gameState.generation }}</div>
         <div class="text-sm font-mono text-gray-500 dark:text-slate-400 mt-1">Best Fitness: {{ gameState.bestFitness.toFixed(0) }}</div>
         <div class="mt-4 flex items-center justify-center gap-2">

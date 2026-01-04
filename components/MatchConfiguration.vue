@@ -211,6 +211,8 @@ const setPlayer1Type = (type: (typeof arcadePlayer1Types)[number] | (typeof trai
   props.setSettings(s => ({
     ...s,
     player1Type: type,
+    // Auto-disable turbo when Script is selected (workers only support AI vs AI)
+    ...(type.includes('CUSTOM') && { turboTraining: false }),
     ...(type === 'HUMAN' && { simulationSpeed: 1 })
   }));
 };
@@ -220,7 +222,9 @@ const setPlayer2Type = (type: (typeof arcadePlayer2Types)[number] | (typeof trai
     ...s,
     player2Type: type,
     // Auto-enable background training when Simple AI is selected
-    ...(type === 'SIMPLE_AI' && { backgroundTraining: true })
+    ...(type === 'SIMPLE_AI' && { backgroundTraining: true }),
+    // Auto-disable background training when Script is selected (workers only support AI vs AI)
+    ...(type.includes('CUSTOM') && { backgroundTraining: false })
   }));
 };
 

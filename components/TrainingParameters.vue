@@ -61,39 +61,45 @@
         />
       </div>
 
-      <!-- Background Training Toggle - Only shown in ARCADE mode -->
+      <!-- Background AI vs AI Training Toggle - Only shown in ARCADE mode -->
       <div v-if="!isTrainingActive" class="pt-2">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Background Training</span>
-            <span v-if="settings.backgroundTraining" class="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Training active in background" />
+            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Background AI vs AI</span>
+            <span v-if="settings.backgroundTraining && canUseBackground" class="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Training active in background" />
           </div>
           <USwitch
             :model-value="settings.backgroundTraining"
+            :disabled="!canUseBackground"
             @update:model-value="toggleBackgroundTraining"
             color="success"
           />
         </div>
         <p class="text-[10px] text-gray-500 dark:text-slate-500 mt-1">
-          AI keeps learning while you play Arcade (uses intelligent mutation)
+          {{ !canUseBackground
+            ? 'Not available with Custom Scripts (workers only support AI vs AI)'
+            : 'AI keeps learning while you play Arcade (uses intelligent mutation)' }}
         </p>
       </div>
 
-      <!-- Turbo Training Toggle - Only shown in TRAINING mode -->
+      <!-- Turbo AI vs AI Training Toggle - Only shown in TRAINING mode -->
       <div v-if="isTrainingActive" class="pt-2">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Turbo Training</span>
-            <span v-if="settings.turboTraining && settings.isRunning" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" title="Turbo training active" />
+            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Turbo AI vs AI</span>
+            <span v-if="settings.turboTraining && settings.isRunning && canUseTurbo" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" title="Turbo training active" />
           </div>
           <USwitch
             :model-value="settings.turboTraining"
+            :disabled="!canUseTurbo"
             @update:model-value="toggleTurboTraining"
             color="success"
           />
         </div>
         <p class="text-[10px] text-gray-500 dark:text-slate-500 mt-1">
-          Parallel workers, no visualization (faster)
+          {{ !canUseTurbo
+            ? 'Not available with Custom Scripts (workers only support AI vs AI)'
+            : 'Parallel workers, no visualization (faster)' }}
         </p>
       </div>
 
@@ -212,6 +218,12 @@ const showTrainingParams = ref(true);
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
 const isHumanOpponent = computed(() => props.settings.player1Type === 'HUMAN');
 const shouldDisableSpeed = computed(() => isHumanOpponent.value);
+
+// Check if Custom Script is selected (workers only support AI vs AI)
+const hasCustomScriptP1 = computed(() => props.settings.player1Type.includes('CUSTOM'));
+const hasCustomScriptP2 = computed(() => props.settings.player2Type.includes('CUSTOM'));
+const canUseTurbo = computed(() => !hasCustomScriptP1.value);
+const canUseBackground = computed(() => !hasCustomScriptP2.value);
 
 watch(isHumanOpponent, (isHuman) => {
   if (isHuman && props.settings.simulationSpeed !== 1) {
