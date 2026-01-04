@@ -25,6 +25,9 @@ export const changelogData: ChangelogEntry[] = [
                 'Training Mode: Fitness Chart relocated below Neural Network visualization (left column)',
                 'Arcade Mode: Fitness Chart remains in right column for compact layout',
                 'Live Training max speed increased from 100x to 500x'
+            ],
+            fixed: [
+                'Fixed bug where training opponent selection remained disabled after resetting a match against a Script opponent'
             ]
         }
     },

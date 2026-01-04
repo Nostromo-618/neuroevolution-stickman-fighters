@@ -297,6 +297,15 @@ const resetMatch = () => {
   // Spawn new fighters immediately (don't leave activeMatchRef as null)
   activeMatchRef.value = null;
   startMatch();
+  
+  // FIX: After startMatch(), Training mode sets roundStatus to 'FIGHTING'.
+  // Override it back to 'WAITING' so opponent selection remains enabled.
+  // This allows users to change the training opponent after reset.
+  setGameState(prev => ({
+    ...prev,
+    matchActive: false,
+    roundStatus: 'WAITING'
+  }));
 };
 
 const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTimeout, startCountdown, clearCountdownInterval } = useGameLoop({
