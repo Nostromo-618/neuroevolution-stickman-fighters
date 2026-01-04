@@ -12,6 +12,15 @@ A real-time neuroevolution fighting game where AI fighters learn combat through 
 
 ---
 
+## ⚠️ Project Status
+
+**End of Development**: This project will reach end-of-life on **January 31, 2026**. After this date:
+- No new features or major updates will be developed
+- GitHub Pages hosting for the demo will be discontinued before on January 31, 2026
+- Minor fixes & improvements may be addressed through 2026, but with no guaranteed timeline
+
+The codebase will remain available as an educational resource and reference implementation.
+
 ## 🎮 Features
 
 - **Training Mode**: Watch AI fight AI. Each generation produces smarter fighters.
