@@ -11,6 +11,17 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '2.0.4',
+        date: '2026-01-04',
+        changes: {
+            fixed: [
+                'Opponent selection controls now correctly stay disabled during paused matches',
+                'Prevented mid-match configuration changes that could corrupt game state',
+                'Enforced pristine-state-only changes with three-condition validation (matchesPlayed, isRunning, roundStatus)'
+            ]
+        }
+    },
+    {
         version: '2.0.3',
         date: '2026-01-04',
         changes: {

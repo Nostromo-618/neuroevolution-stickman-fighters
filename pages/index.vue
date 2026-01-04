@@ -264,15 +264,14 @@ const resetMatch = () => {
   resetMatchTimer();
   evolutionResetMatch();
   
-  // Reset arcade stats so initial spawn logic works
-  if (settings.value.gameMode === 'ARCADE') {
-    setGameState(prev => ({
-      ...prev,
-      matchActive: false,
-      roundStatus: 'WAITING',
-      arcadeStats: { matchesPlayed: 0, p1Wins: 0, p2Wins: 0 }
-    }));
-  }
+  // Reset state for both Arcade and Training modes
+  // This ensures opponent selection is re-enabled after reset
+  setGameState(prev => ({
+    ...prev,
+    matchActive: false,
+    roundStatus: 'WAITING',
+    arcadeStats: { matchesPlayed: 0, p1Wins: 0, p2Wins: 0 }
+  }));
   
   // Spawn new fighters immediately (don't leave activeMatchRef as null)
   activeMatchRef.value = null;

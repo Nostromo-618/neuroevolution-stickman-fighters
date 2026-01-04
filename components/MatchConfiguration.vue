@@ -131,8 +131,29 @@ interface Props {
 const props = defineProps<Props>();
 
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
-// Allow changes only when the match has not started yet (WAITING state)
-const canChangeSettings = computed(() => props.gameState.roundStatus === 'WAITING');
+
+/**
+ * Stability Rule 5: Explicit state guards
+ * Allow opponent changes ONLY in pristine state (fresh load or after reset).
+ * 
+ * Pristine state checked by THREE conditions (ALL must be true):
+ * 1. matchesPlayed === 0 (no completed matches yet)
+ * 2. !isRunning (not currently playing)
+ * 3. roundStatus === 'WAITING' (in initial/reset state, not mid-match)
+ * 
+ * This ensures:
+ * - Fresh load: matchesPlayed=0, !isRunning, WAITING ✅
+ * - After Reset: matchesPlayed=0, !isRunning, WAITING ✅
+ * - Running: isRunning=true ❌ (blocked by condition 2)
+ * - Paused mid-match: roundStatus='FIGHTING' ❌ (blocked by condition 3)
+ */
+const canChangeSettings = computed(() => {
+  return (
+    props.gameState.arcadeStats.matchesPlayed === 0 &&
+    !props.isRunning &&
+    props.gameState.roundStatus === 'WAITING'
+  );
+});
 
 // Button text: START (never started) -> PAUSE (running) -> RESUME (paused after start)
 const startButtonText = computed(() => {
