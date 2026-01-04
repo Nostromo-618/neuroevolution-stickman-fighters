@@ -23,7 +23,8 @@ export const changelogData: ChangelogEntry[] = [
             ],
             changed: [
                 'Training Mode: Fitness Chart relocated below Neural Network visualization (left column)',
-                'Arcade Mode: Fitness Chart remains in right column for compact layout'
+                'Arcade Mode: Fitness Chart remains in right column for compact layout',
+                'Live Training max speed increased from 100x to 500x'
             ]
         }
     },

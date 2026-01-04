@@ -269,11 +269,11 @@ const maxWorkers = computed(() =>
   typeof navigator !== 'undefined' ? Math.min(navigator.hardwareConcurrency || 4, 8) : 8
 );
 
-const maxSimulationSpeed = computed(() => props.settings.turboTraining ? 5000 : 100);
+const maxSimulationSpeed = computed(() => props.settings.turboTraining ? 5000 : 500);
 
 watch(() => props.settings.turboTraining, (isTurbo) => {
-  if (!isTurbo && props.settings.simulationSpeed > 100) {
-    props.setSettings(s => ({ ...s, simulationSpeed: 100 }));
+  if (!isTurbo && props.settings.simulationSpeed > 500) {
+    props.setSettings(s => ({ ...s, simulationSpeed: 500 }));
   }
 });
 
