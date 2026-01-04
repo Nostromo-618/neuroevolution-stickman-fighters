@@ -8,11 +8,11 @@
         </UBadge>
       </div>
 
-      <div class="w-full" style="min-height: 100px">
+      <div class="w-full" :style="{ minHeight: tall ? '200px' : '100px' }">
         <VChart
           :option="chartOption"
           class="w-full"
-          style="height: 100px"
+          :style="{ height: tall ? '200px' : '100px' }"
           autoresize
         />
       </div>
@@ -33,7 +33,8 @@ import { LineChart } from 'echarts/charts';
 import {
   TitleComponent,
   TooltipComponent,
-  GridComponent
+  GridComponent,
+  LegendComponent
 } from 'echarts/components';
 import VChart from 'vue-echarts';
 
@@ -43,62 +44,116 @@ use([
   LineChart,
   TitleComponent,
   TooltipComponent,
-  GridComponent
+  GridComponent,
+  LegendComponent
 ]);
 
 interface Props {
-  fitnessHistory: { gen: number; fitness: number }[];
+  fitnessHistory: { gen: number; fitness: number; mutationRate: number }[];
   currentGen: number;
   bestFitness: number;
   isTrainingActive: boolean;
+  /** When true, doubles the chart height for better readability */
+  tall?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  tall: false
+});
 
 // Get color mode
 const colorMode = useColorMode();
 const isDarkMode = computed(() => colorMode.value === 'dark');
 
 const chartOption = computed(() => ({
-  grid: { left: 30, right: 10, top: 10, bottom: 20 },
+  grid: { left: 35, right: 35, top: 20, bottom: 20 },
+  legend: {
+    show: true,
+    top: 0,
+    right: 0,
+    textStyle: { color: isDarkMode.value ? '#94a3b8' : '#6b7280', fontSize: 9 },
+    itemWidth: 12,
+    itemHeight: 8,
+    data: ['Fitness', 'Mutation']
+  },
   xAxis: {
     type: 'category',
     data: props.fitnessHistory.map(d => d.gen),
     axisLabel: { color: isDarkMode.value ? '#64748b' : '#6b7280', fontSize: 10 },
     axisLine: { lineStyle: { color: isDarkMode.value ? '#334155' : '#d1d5db' } }
   },
-  yAxis: {
-    type: 'value',
-    splitLine: { lineStyle: { color: isDarkMode.value ? '#334155' : '#e5e7eb', type: 'dashed' } },
-    axisLabel: { color: isDarkMode.value ? '#64748b' : '#6b7280', fontSize: 10 }
-  },
+  yAxis: [
+    {
+      type: 'value',
+      name: '',
+      position: 'left',
+      splitLine: { lineStyle: { color: isDarkMode.value ? '#334155' : '#e5e7eb', type: 'dashed' } },
+      axisLabel: { color: isDarkMode.value ? '#64748b' : '#6b7280', fontSize: 10 }
+    },
+    {
+      type: 'value',
+      name: '',
+      position: 'right',
+      min: 0,
+      max: 0.35,
+      splitLine: { show: false },
+      axisLabel: { 
+        color: isDarkMode.value ? '#fbbf24' : '#d97706', 
+        fontSize: 10,
+        formatter: (value: number) => `${(value * 100).toFixed(0)}%`
+      }
+    }
+  ],
   tooltip: {
     backgroundColor: isDarkMode.value ? '#1e293b' : '#ffffff',
     borderColor: isDarkMode.value ? '#334155' : '#d1d5db',
     textStyle: { color: isDarkMode.value ? '#fff' : '#111827', fontSize: 10 },
-    formatter: (params: any) => {
-      return `Gen ${params.data[0]}: ${params.data[1].toFixed(0)}`;
+    trigger: 'axis',
+    formatter: (params: any[]) => {
+      if (!params || params.length === 0) return '';
+      const gen = params[0]?.axisValue;
+      let html = `<div style="font-weight: 600; margin-bottom: 4px;">Gen ${gen}</div>`;
+      for (const param of params) {
+        if (param.seriesName === 'Fitness') {
+          html += `<div style="color: #14b8a6;">Fitness: ${param.value?.toFixed(0) ?? '-'}</div>`;
+        } else if (param.seriesName === 'Mutation') {
+          html += `<div style="color: #f59e0b;">Mutation: ${((param.value ?? 0) * 100).toFixed(1)}%</div>`;
+        }
+      }
+      return html;
     }
   },
-  series: [{
-    data: props.fitnessHistory.map(d => [d.gen, d.fitness]),
-    type: 'line',
-    smooth: true,
-    lineStyle: { color: '#14b8a6', width: 2 },
-    areaStyle: {
-      color: {
-        type: 'linear',
-        x: 0, y: 0, x2: 0, y2: 1,
-        colorStops: [
-          { offset: 0, color: 'rgba(20, 184, 166, 0.5)' },
-          { offset: 1, color: 'rgba(20, 184, 166, 0.0)' }
-        ]
-      }
+  series: [
+    {
+      name: 'Fitness',
+      data: props.fitnessHistory.map(d => d.fitness),
+      type: 'line',
+      smooth: true,
+      yAxisIndex: 0,
+      lineStyle: { color: '#14b8a6', width: 2 },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(20, 184, 166, 0.5)' },
+            { offset: 1, color: 'rgba(20, 184, 166, 0.0)' }
+          ]
+        }
+      },
+      symbol: 'none',
+      animationDuration: 300
     },
-    symbol: 'none',
-    animationDuration: 300
-  }]
+    {
+      name: 'Mutation',
+      data: props.fitnessHistory.map(d => d.mutationRate),
+      type: 'line',
+      smooth: true,
+      yAxisIndex: 1,
+      lineStyle: { color: '#f59e0b', width: 1.5, type: 'dashed' },
+      symbol: 'none',
+      animationDuration: 300
+    }
+  ]
 }));
 </script>
-
-

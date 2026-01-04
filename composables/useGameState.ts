@@ -20,7 +20,8 @@ export const useGameState = (): UseGameStateReturn => {
         matchesUntilEvolution: 3,
         arcadeStats: { matchesPlayed: 0, p1Wins: 0, p2Wins: 0 },
         countdownValue: null,
-        currentMutationRate: 0.10
+        currentMutationRate: 0.30,
+        recentBestFitness: []
     });
 
     const gameStateRef = ref(gameState.value);

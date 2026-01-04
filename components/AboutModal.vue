@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
 const open = defineModel<boolean>('open', { default: false })
 const { changelog } = useChangelog()
 
-const version = '2.0.4'
+const version = '2.0.6'
 
 // Get all changelog entries for display
 const recentChangelog = computed(() => changelog)
@@ -400,6 +400,74 @@ const renderingLayers = [
                     <div class="text-xl font-mono font-bold text-purple-400">+300</div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Smart Adaptive Mutation -->
+            <div class="dark:bg-gradient-to-r dark:from-amber-950/30 dark:to-slate-950 bg-gradient-to-r from-amber-50 to-gray-50 p-6 rounded-xl border dark:border-amber-900/50 border-amber-200">
+              <h3 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
+                <UIcon name="i-lucide-trending-up" class="size-5" />
+                Smart Adaptive Mutation
+              </h3>
+              
+              <div class="space-y-4">
+                <p class="text-muted text-sm">
+                  When <strong class="text-amber-400">Intelligent Mutation</strong> is enabled, the mutation rate automatically adapts using a combined strategy:
+                </p>
+
+                <div class="grid md:grid-cols-3 gap-4">
+                  <!-- Base Decay -->
+                  <div class="dark:bg-slate-900/50 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                    <div class="flex items-center gap-2 mb-2">
+                      <div class="w-3 h-3 rounded-full bg-teal-500" />
+                      <h4 class="font-bold text-default text-sm">Base Decay</h4>
+                    </div>
+                    <p class="text-xs text-muted mb-2">
+                      Starts at <strong class="text-teal-400">30%</strong>, decays by 0.8% per generation down to a <strong class="text-teal-400">5% floor</strong>.
+                    </p>
+                    <div class="font-mono text-xs text-teal-500">30% → 5%</div>
+                  </div>
+
+                  <!-- Plateau Spike -->
+                  <div class="dark:bg-slate-900/50 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                    <div class="flex items-center gap-2 mb-2">
+                      <div class="w-3 h-3 rounded-full bg-red-500" />
+                      <h4 class="font-bold text-default text-sm">Plateau Detection</h4>
+                    </div>
+                    <p class="text-xs text-muted mb-2">
+                      If no fitness improvement for <strong class="text-red-400">5 generations</strong>, spikes back to <strong class="text-red-400">20%</strong>.
+                    </p>
+                    <div class="font-mono text-xs text-red-500">Stagnation → 20%</div>
+                  </div>
+
+                  <!-- Oscillation -->
+                  <div class="dark:bg-slate-900/50 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                    <div class="flex items-center gap-2 mb-2">
+                      <div class="w-3 h-3 rounded-full bg-blue-500" />
+                      <h4 class="font-bold text-default text-sm">Periodic Boost</h4>
+                    </div>
+                    <p class="text-xs text-muted mb-2">
+                      Every <strong class="text-blue-400">25 generations</strong>, adds a <strong class="text-blue-400">+5%</strong> boost to escape local minima.
+                    </p>
+                    <div class="font-mono text-xs text-blue-500">Gen 25, 50, 75...</div>
+                  </div>
+                </div>
+
+                <div class="dark:bg-slate-900/50 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200 font-mono text-xs">
+                  <div class="text-slate-500 mb-2">// Mutation rate calculation</div>
+                  <div><span class="text-purple-400">baseRate</span> = max(<span class="text-amber-400">0.05</span>, <span class="text-amber-400">0.30</span> - generation × <span class="text-amber-400">0.008</span>)</div>
+                  <div class="mt-1"><span class="text-red-400">if</span> (noImprovement for 5 gens) rate = max(rate, <span class="text-amber-400">0.20</span>)</div>
+                  <div><span class="text-blue-400">if</span> (generation % 25 === 0) rate += <span class="text-amber-400">0.05</span></div>
+                  <div class="mt-1"><span class="text-green-400">return</span> clamp(rate, <span class="text-amber-400">0.05</span>, <span class="text-amber-400">0.35</span>)</div>
+                </div>
+
+                <UAlert
+                  color="warning"
+                  variant="soft"
+                  icon="i-lucide-chart-line"
+                  title="Visualize in Real-Time"
+                  description="Watch the amber dashed line on the Fitness Chart to see mutation rate changes. Spikes indicate plateau recovery or periodic boosts!"
+                />
               </div>
             </div>
 

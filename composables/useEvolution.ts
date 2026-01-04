@@ -12,6 +12,7 @@ import type { Ref } from 'vue';
 import type { Genome, TrainingSettings, GameState } from '~/types';
 import { mutateNetwork, crossoverNetworks, createRandomNetwork } from '~/services/NeuralNetwork';
 import { clearGenomeStorage } from '~/services/PersistenceManager';
+import { calculateAdaptiveMutationRate } from '~/services/AdaptiveMutation';
 
 interface EvolutionContext {
     settingsRef: Ref<TrainingSettings>;
@@ -20,7 +21,7 @@ interface EvolutionContext {
     setGameState: (updater: GameState | ((prev: GameState) => GameState)) => void;
     populationRef: Ref<Genome[]>;
     bestTrainedGenomeRef: Ref<Genome | null>;
-    setFitnessHistory: (updater: { gen: number; fitness: number }[] | ((prev: { gen: number; fitness: number }[]) => { gen: number; fitness: number }[])) => void;
+    setFitnessHistory: (updater: { gen: number; fitness: number; mutationRate: number }[] | ((prev: { gen: number; fitness: number; mutationRate: number }[]) => { gen: number; fitness: number; mutationRate: number }[])) => void;
     currentMatchIndex: Ref<number>;
     addToast: (type: 'success' | 'error' | 'info', message: string) => void;
     onAutoStop?: () => void;
@@ -65,7 +66,8 @@ export function useEvolution(ctx: EvolutionContext) {
             ...prev,
             generation: 1,
             bestFitness: 0,
-            currentMutationRate: 0.30
+            currentMutationRate: 0.30,
+            recentBestFitness: []
         }));
     };
 
@@ -122,10 +124,23 @@ export function useEvolution(ctx: EvolutionContext) {
             ctx.bestTrainedGenomeRef.value = JSON.parse(JSON.stringify(best));
         }
 
-        // Update fitness history
+        // Calculate mutation rate using smart adaptive strategy or manual
+        let mutationRate: number;
+        if (ctx.settingsRef.value.intelligentMutation) {
+            // Smart adaptive mutation with plateau detection and oscillation
+            mutationRate = calculateAdaptiveMutationRate({
+                generation: ctx.gameStateRef.value.generation,
+                fitnessHistory: ctx.gameStateRef.value.recentBestFitness
+            });
+        } else {
+            // Manual mutation rate from settings
+            mutationRate = ctx.settingsRef.value.mutationRate;
+        }
+
+        // Update fitness history with mutation rate
         ctx.setFitnessHistory(prev => [
             ...prev.slice(-20),
-            { gen: ctx.gameStateRef.value.generation, fitness: best.fitness }
+            { gen: ctx.gameStateRef.value.generation, fitness: best.fitness, mutationRate }
         ]);
 
         // Calculate next evolution interval
@@ -135,16 +150,15 @@ export function useEvolution(ctx: EvolutionContext) {
             popSize
         );
 
-        // Update game state
+        // Update game state with new generation and track recent fitness for plateau detection
         const newGeneration = ctx.gameStateRef.value.generation + 1;
         ctx.setGameState(prev => ({
             ...prev,
             bestFitness: best.fitness,
             generation: newGeneration,
             matchesUntilEvolution: nextEvolutionInterval,
-            currentMutationRate: ctx.settingsRef.value.intelligentMutation
-                ? Math.max(0.05, 0.30 - (newGeneration * 0.008))
-                : ctx.settingsRef.value.mutationRate
+            currentMutationRate: mutationRate,
+            recentBestFitness: [...prev.recentBestFitness.slice(-9), best.fitness]
         }));
 
         // Auto-stop training if enabled and limit reached
@@ -184,15 +198,7 @@ export function useEvolution(ctx: EvolutionContext) {
             });
         }
 
-        // Mutation rate: intelligent (adaptive decay) or manual
-        let mutationRate: number;
-        if (ctx.settingsRef.value.intelligentMutation) {
-            // Adaptive mutation rate: starts high (30%), decays to 5% minimum
-            mutationRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
-        } else {
-            // Manual mutation rate from settings
-            mutationRate = ctx.settingsRef.value.mutationRate;
-        }
+        // mutationRate already calculated above for fitness history
 
         // Selection pool (top 25%)
         const selectionPoolSize = Math.max(2, Math.floor(pop.length / 4));

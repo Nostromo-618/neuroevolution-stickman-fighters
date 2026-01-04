@@ -30,10 +30,22 @@
             :current-match-index="currentMatchIndex"
           />
 
-          <ControlsHelper />
+          <!-- Controls Helper - Arcade mode only -->
+          <ControlsHelper v-if="settings.gameMode === 'ARCADE'" />
 
           <!-- Mobile Touch Controls - only in Arcade mode -->
           <TouchControls v-if="settings.gameMode === 'ARCADE'" :input-manager="{ value: inputManager } as any" />
+
+          <!-- Fitness Chart (Training Mode Only - Below Arena, taller for readability) -->
+          <FitnessChart
+            v-if="settings.gameMode === 'TRAINING'"
+            class="hidden md:block w-full"
+            :fitness-history="fitnessHistory"
+            :current-gen="gameState.generation"
+            :best-fitness="gameState.bestFitness"
+            :is-training-active="settings.gameMode === 'TRAINING'"
+            :tall="true"
+          />
 
           <!-- Neural Network Visualization (Desktop Only) -->
           <NeuralNetworkVisualizer
@@ -50,8 +62,6 @@
           <Dashboard
             :settings="settings"
             :set-settings="setSettings"
-            :fitness-history="fitnessHistory"
-            :current-gen="gameState.generation"
             :best-fitness="gameState.bestFitness"
             :game-state="gameState"
             :on-reset-match="resetMatch"
@@ -60,6 +70,15 @@
             :on-export-weights="handleExportWeights"
             :on-import-weights="handleImportWeights"
             :on-script-recompile="handleScriptRecompile"
+          />
+
+          <!-- Fitness Chart (Arcade Mode Only - Right Column) -->
+          <FitnessChart
+            v-if="settings.gameMode === 'ARCADE'"
+            :fitness-history="fitnessHistory"
+            :current-gen="gameState.generation"
+            :best-fitness="gameState.bestFitness"
+            :is-training-active="false"
           />
 
           <ImportModal
@@ -114,7 +133,7 @@ definePageMeta({
 });
 
 const pkgName = 'neuroevolution-stickman-fighters';
-const pkgVersion = '2.0.5';
+const pkgVersion = '2.0.6';
 
 const toast = useToast();
 

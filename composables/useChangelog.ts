@@ -11,6 +11,23 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '2.0.6',
+        date: '2026-01-04',
+        changes: {
+            added: [
+                'Smart Adaptive Mutation: Combined strategy with plateau detection and periodic oscillation',
+                'Mutation rate now spikes to 20% when fitness stagnates for 5 generations',
+                'Periodic +5% mutation boost every 25 generations to escape local minima',
+                'Fitness Chart now displays both Fitness (teal) and Mutation Rate (amber) lines',
+                'Dual Y-axis chart with legend and improved tooltips'
+            ],
+            changed: [
+                'Training Mode: Fitness Chart relocated below Neural Network visualization (left column)',
+                'Arcade Mode: Fitness Chart remains in right column for compact layout'
+            ]
+        }
+    },
+    {
         version: '2.0.5',
         date: '2026-01-04',
         changes: {

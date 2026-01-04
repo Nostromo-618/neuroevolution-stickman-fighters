@@ -3,12 +3,13 @@ import { WorkerPool } from '~/services/WorkerPool';
 import type { Genome, TrainingSettings, GameState } from '~/types';
 import { crossoverNetworks, mutateNetwork } from '~/services/NeuralNetwork';
 import { debugLog, debugCritical } from '~/utils/debug';
+import { calculateAdaptiveMutationRate } from '~/services/AdaptiveMutation';
 
 interface UseBackgroundTrainingProps {
     settings: Ref<TrainingSettings>;
     setSettings: (updater: TrainingSettings | ((prev: TrainingSettings) => TrainingSettings)) => void;
     setGameState: (updater: GameState | ((prev: GameState) => GameState)) => void;
-    setFitnessHistory: (updater: { gen: number, fitness: number }[] | ((prev: { gen: number, fitness: number }[]) => { gen: number, fitness: number }[])) => void;
+    setFitnessHistory: (updater: { gen: number, fitness: number, mutationRate: number }[] | ((prev: { gen: number, fitness: number, mutationRate: number }[]) => { gen: number, fitness: number, mutationRate: number }[])) => void;
     populationRef: Ref<Genome[]>;
     bestTrainedGenomeRef: Ref<Genome | null>;
     currentMatchIndex: Ref<number>;
@@ -71,20 +72,39 @@ export const useBackgroundTraining = ({
 
             let currentGen = 0;
             let newGeneration = 0;
+            let recentBestFitness: number[] = [];
+
+            // Calculate mutation rate using smart adaptive strategy
             setGameState(prev => {
                 currentGen = prev.generation;
                 newGeneration = prev.generation + 1;
+                recentBestFitness = prev.recentBestFitness;
+
+                const mutationRate = settings.value.intelligentMutation
+                    ? calculateAdaptiveMutationRate({
+                        generation: prev.generation,
+                        fitnessHistory: prev.recentBestFitness
+                    })
+                    : settings.value.mutationRate;
+
                 return {
                     ...prev,
                     bestFitness: best.fitness,
                     generation: newGeneration,
-                    currentMutationRate: settings.value.intelligentMutation
-                        ? Math.max(0.05, 0.30 - (newGeneration * 0.008))
-                        : settings.value.mutationRate
+                    currentMutationRate: mutationRate,
+                    recentBestFitness: [...prev.recentBestFitness.slice(-9), best.fitness]
                 };
             });
 
-            setFitnessHistory(prev => [...prev.slice(-20), { gen: currentGen, fitness: best.fitness }]);
+            // Calculate mutation rate for history
+            const mutationRate = settings.value.intelligentMutation
+                ? calculateAdaptiveMutationRate({
+                    generation: currentGen,
+                    fitnessHistory: recentBestFitness
+                })
+                : settings.value.mutationRate;
+
+            setFitnessHistory(prev => [...prev.slice(-20), { gen: currentGen, fitness: best.fitness, mutationRate }]);
 
             // Auto-stop training if enabled and limit reached
             // Auto-stop training if enabled and limit reached
@@ -109,7 +129,7 @@ export const useBackgroundTraining = ({
                 { ...pop[1], network: pop[1].network, fitness: 0, matchesWon: 0, id: `gen${currentGen + 1}-1` }
             ];
 
-            const adaptiveRate = Math.max(0.05, 0.30 - (currentGen * 0.008));
+            // Use the already calculated smart adaptive mutation rate
             const selectionPoolSize = Math.max(2, Math.floor(pop.length / 4));
 
             while (newPop.length < popSize) {
@@ -119,7 +139,7 @@ export const useBackgroundTraining = ({
                     continue;
                 }
                 let childNet = crossoverNetworks(parentA.network, parentB.network);
-                childNet = mutateNetwork(childNet, adaptiveRate);
+                childNet = mutateNetwork(childNet, mutationRate);
                 newPop.push({
                     id: `gen${currentGen + 1}-${newPop.length}`,
                     network: childNet,

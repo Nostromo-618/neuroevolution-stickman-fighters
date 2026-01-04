@@ -5,8 +5,8 @@ import { createRandomNetwork } from '~/services/NeuralNetwork';
 interface UsePopulationReturn {
     populationRef: Ref<Genome[]>;
     bestTrainedGenomeRef: Ref<Genome | null>;
-    fitnessHistory: Ref<{ gen: number, fitness: number }[]>;
-    setFitnessHistory: (updater: { gen: number, fitness: number }[] | ((prev: { gen: number, fitness: number }[]) => { gen: number, fitness: number }[])) => void;
+    fitnessHistory: Ref<{ gen: number, fitness: number, mutationRate: number }[]>;
+    setFitnessHistory: (updater: { gen: number, fitness: number, mutationRate: number }[] | ((prev: { gen: number, fitness: number, mutationRate: number }[]) => { gen: number, fitness: number, mutationRate: number }[])) => void;
     initPopulation: (settings: TrainingSettings, clearBest?: boolean) => void;
     getBestGenome: () => Genome | null;
 }
@@ -14,7 +14,7 @@ interface UsePopulationReturn {
 export const usePopulation = (): UsePopulationReturn => {
     const populationRef = ref<Genome[]>([]);
     const bestTrainedGenomeRef = ref<Genome | null>(null);
-    const fitnessHistory = ref<{ gen: number, fitness: number }[]>([]);
+    const fitnessHistory = ref<{ gen: number, fitness: number, mutationRate: number }[]>([]);
 
     const initPopulation = (settings: TrainingSettings, clearBest: boolean = true) => {
         const pop: Genome[] = [];
@@ -39,7 +39,7 @@ export const usePopulation = (): UsePopulationReturn => {
         return sorted[0] ?? null;
     };
 
-    const setFitnessHistory = (updater: { gen: number, fitness: number }[] | ((prev: { gen: number, fitness: number }[]) => { gen: number, fitness: number }[])) => {
+    const setFitnessHistory = (updater: { gen: number, fitness: number, mutationRate: number }[] | ((prev: { gen: number, fitness: number, mutationRate: number }[]) => { gen: number, fitness: number, mutationRate: number }[])) => {
         if (typeof updater === 'function') {
             fitnessHistory.value = updater(fitnessHistory.value);
         } else {

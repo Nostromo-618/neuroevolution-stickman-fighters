@@ -129,6 +129,7 @@ export interface GameState {
   arcadeStats: ArcadeStats; // Arcade mode win/loss tracking
   countdownValue: number | null; // Countdown display: 3, 2, 1, 0 (FIGHT!), null (hidden)
   currentMutationRate: number; // Current mutation rate (for display)
+  recentBestFitness: number[]; // Recent best fitness values for plateau detection (last 10 generations)
 }
 
 // =============================================================================
