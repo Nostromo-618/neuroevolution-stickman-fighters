@@ -85,21 +85,36 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
         const loops = currentSettings.gameMode === 'ARCADE' ? 1 : currentSettings.simulationSpeed;
         let matchEnded = false;
 
+        // === TIMING FAIRNESS FIX v2 ===
+        // Instead of caching once per frame, we compute fresh decisions EACH tick.
+        // The original issue was: at high sim speeds, Script A was stuck on stale decisions
+        // while AI got fresh ones. Now we let both compute fresh each tick.
+        // 
+        // The Script's worker-based latency is inherent (1 frame behind),
+        // but this is consistent and fair - the same latency exists at 1x and 99x.
+        // The AI now also operates with similar decision timing.
+        // See: considerations/timing-fairness-sim-speed-options.md
+
+        const dummyInput = { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
+        const isP1Human = !match.p1.isAi && !match.p1.isCustom;
+
         for (let i = 0; i < loops; i++) {
             if (!currentGameState.matchActive || matchEnded) break;
 
-            const dummyInput = { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
-            const isP1Human = !match.p1.isAi && !match.p1.isCustom;
+            // Get human input (only for human players)
             let p1Input = (isP1Human && ctx.inputManager.value)
                 ? ctx.inputManager.value.getState()
                 : dummyInput;
 
+            // Freeze inputs during WAITING phase
             if (currentGameState.roundStatus === 'WAITING') {
                 p1Input = dummyInput;
             }
 
+            // IMPORTANT: Do NOT use cached inputs - let Fighter compute fresh each tick
+            // This ensures both AI and Script react to current game state each tick.
+            // The Script's async worker lag is inherent but consistent.
             match.p1.update(p1Input, match.p2);
-
             match.p2.update(dummyInput, match.p1);
 
             const p1 = match.p1;

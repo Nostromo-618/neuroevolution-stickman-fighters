@@ -59,7 +59,7 @@
             :on-mode-change="handleModeChange"
             :on-export-weights="handleExportWeights"
             :on-import-weights="handleImportWeights"
-            :on-script-recompile="recompileCustomScript"
+            :on-script-recompile="handleScriptRecompile"
           />
 
           <ImportModal
@@ -97,6 +97,7 @@ import { useGameSettings } from '~/composables/useGameSettings';
 import { useGameState } from '~/composables/useGameState';
 import { usePopulation } from '~/composables/usePopulation';
 import { useCustomScriptWorkers } from '~/composables/useCustomScriptWorkers';
+import { useSyncScriptExecutors } from '~/composables/useSyncScriptExecutors';
 import { useBackgroundTraining } from '~/composables/useBackgroundTraining';
 import { useGameLoop } from '~/composables/useGameLoop';
 import { useGenomeImportExport } from '~/composables/useGenomeImportExport';
@@ -176,6 +177,15 @@ const currentMatchIndex = ref(0);
 const inputManager = ref<InputManager | null>(null);
 
 const { customScriptWorkerARef, customScriptWorkerBRef, recompileCustomScript } = useCustomScriptWorkers(settings, addToast);
+
+// Option A: Sync script executors for timing fairness with AI
+const { syncExecutorARef, syncExecutorBRef, recompileSyncExecutors } = useSyncScriptExecutors(settings, addToast);
+
+// Recompile both when user saves script
+const handleScriptRecompile = async () => {
+  await recompileCustomScript();
+  recompileSyncExecutors();
+};
 
 // Auto-stop modal state and handlers (defined early for use in composables)
 const showAutoStopModal = ref(false);
@@ -282,6 +292,9 @@ const { update, startMatch, requestRef, clearWaitingTimeout, clearMatchRestartTi
   inputManager: inputManager as any,
   customScriptWorkerARef,
   customScriptWorkerBRef,
+  // Option A: Sync executors for timing fairness
+  syncScriptExecutorARef: syncExecutorARef,
+  syncScriptExecutorBRef: syncExecutorBRef,
   evolve,
   addToast
 });

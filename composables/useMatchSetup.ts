@@ -4,6 +4,10 @@
  * =============================================================================
  * 
  * Handles setting up new matches (spawning fighters, initializing game state).
+ * 
+ * TIMING FAIRNESS (Option A):
+ * Now supports SyncScriptExecutor for synchronous script execution,
+ * achieving timing parity with neural network AI.
  */
 
 import { ref, type Ref } from 'vue';
@@ -11,6 +15,7 @@ import type { TrainingSettings, GameState, Genome } from '~/types';
 import { Fighter } from '~/services/GameEngine';
 import { MatchSetup } from '~/services/MatchSetup';
 import type { ScriptWorkerManager } from '~/services/CustomScriptRunner';
+import type { SyncScriptExecutor } from '~/services/SyncScriptExecutor';
 import { createRandomNetwork } from '~/services/NeuralNetwork';
 import { calculateEvolutionInterval } from './useEvolution';
 import { COLORS } from '~/services/Config';
@@ -27,6 +32,9 @@ interface MatchSetupContext {
     matchTimerRef: Ref<number>;
     customScriptWorkerARef: Ref<ScriptWorkerManager | null>;
     customScriptWorkerBRef: Ref<ScriptWorkerManager | null>;
+    // Option A: Sync executors for timing fairness
+    syncScriptExecutorARef?: Ref<SyncScriptExecutor | null>;
+    syncScriptExecutorBRef?: Ref<SyncScriptExecutor | null>;
     evolve: () => void;
 }
 
@@ -61,8 +69,14 @@ export function useMatchSetup(ctx: MatchSetupContext) {
             workerB: ctx.customScriptWorkerBRef.value
         };
 
+        // Option A: Sync executors for timing fairness
+        const syncExecutors = {
+            executorA: ctx.syncScriptExecutorARef?.value ?? null,
+            executorB: ctx.syncScriptExecutorBRef?.value ?? null
+        };
+
         const spawnFighter = (type: 'HUMAN' | 'SIMPLE_AI' | 'CUSTOM_A' | 'CUSTOM_B', x: number, color: string, isP2: boolean) =>
-            MatchSetup.createFighter(type, x, color, isP2, ctx.settingsRef.value, workers, ctx.getBestGenome());
+            MatchSetup.createFighter(type, x, color, isP2, ctx.settingsRef.value, workers, ctx.getBestGenome(), syncExecutors);
 
         if (ctx.settingsRef.value.gameMode === 'TRAINING') {
             const popSize = ctx.populationRef.value.length;
@@ -94,7 +108,11 @@ export function useMatchSetup(ctx: MatchSetupContext) {
                 p1Color = COLORS.CUSTOM_A;
                 p1Fighter = new Fighter(280 + spawnOffset1, p1Color, false);
                 p1Fighter.isCustom = true;
-                // Assign worker even if still compiling - it will start working once ready
+                // Option A: Prefer sync executor for timing fairness
+                if (ctx.syncScriptExecutorARef?.value?.isReady()) {
+                    p1Fighter.syncScriptExecutor = ctx.syncScriptExecutorARef.value;
+                }
+                // Fallback to async worker
                 if (ctx.customScriptWorkerARef.value) {
                     p1Fighter.scriptWorker = ctx.customScriptWorkerARef.value;
                 }
@@ -103,7 +121,11 @@ export function useMatchSetup(ctx: MatchSetupContext) {
                 p1Color = COLORS.CUSTOM_B;
                 p1Fighter = new Fighter(280 + spawnOffset1, p1Color, false);
                 p1Fighter.isCustom = true;
-                // Assign worker even if still compiling - it will start working once ready
+                // Option A: Prefer sync executor for timing fairness
+                if (ctx.syncScriptExecutorBRef?.value?.isReady()) {
+                    p1Fighter.syncScriptExecutor = ctx.syncScriptExecutorBRef.value;
+                }
+                // Fallback to async worker
                 if (ctx.customScriptWorkerBRef.value) {
                     p1Fighter.scriptWorker = ctx.customScriptWorkerBRef.value;
                 }

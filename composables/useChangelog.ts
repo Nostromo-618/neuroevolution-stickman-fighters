@@ -11,6 +11,26 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '2.0.3',
+        date: '2026-01-04',
+        changes: {
+            added: [
+                'Synchronous script execution for perfect timing fairness with AI',
+                'AST-based infinite loop detection prevents dangerous code from freezing the game',
+                'Compile-time safety checks block while(true), for(;;) without break statements'
+            ],
+            fixed: [
+                'Critical timing bug: Custom scripts now compete fairly at all simulation speeds (1x-99x)',
+                'High-speed simulation bias eliminated - Script vs AI outcomes now consistent',
+                'Script editor prevents saving code with infinite loops'
+            ],
+            changed: [
+                'Custom scripts execute synchronously on main thread instead of async Web Worker',
+                'Script execution now achieves 1:1 timing parity with neural network AI'
+            ]
+        }
+    },
+    {
         version: '2.0.2',
         date: '2026-01-03',
         changes: {

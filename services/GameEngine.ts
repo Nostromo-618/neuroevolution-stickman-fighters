@@ -16,6 +16,7 @@ import { FighterAction } from '../types';
 import type { Genome, InputState } from '../types';
 import { predict } from './NeuralNetwork';
 import { ScriptWorkerManager } from './CustomScriptRunner';
+import { SyncScriptExecutor } from './SyncScriptExecutor';
 import type { FighterState as CustomFighterState } from './CustomScriptRunner';
 import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
 import { applyFitnessShaping } from './FitnessShaping';
@@ -44,6 +45,7 @@ export { CANVAS_WIDTH, CANVAS_HEIGHT };
  * Represents a combatant in the arena. Can be controlled by:
  * - Human player (via InputManager)
  * - AI (via neural network predictions)
+ * - Custom Script (via SyncScriptExecutor for timing fairness)
  * 
  * The Fighter handles its own physics and state management,
  * making it self-contained for simulation.
@@ -63,7 +65,8 @@ export class Fighter {
   isAi: boolean;          // True if controlled by neural network
 
   isCustom: boolean;      // True if controlled by user custom script
-  scriptWorker: ScriptWorkerManager | null = null; // Web Worker for secure custom script execution
+  scriptWorker: ScriptWorkerManager | null = null; // Web Worker (async fallback)
+  syncScriptExecutor: SyncScriptExecutor | null = null; // Sync executor (preferred for timing fairness)
   genome?: Genome;        // AI brain (only set for AI fighters)
 
   // --- Combat Stats ---
@@ -86,6 +89,19 @@ export class Fighter {
    * Fighter is "animation locked" while cooldown > 15
    */
   cooldown: number = 0;
+
+  /**
+   * TIMING FAIRNESS: Delayed AI Action
+   * 
+   * To match the Script's inherent 1-tick latency (async worker),
+   * AI decisions are also delayed by 1 tick:
+   * - `pendingAiInput`: The decision computed THIS tick, to be used NEXT tick
+   * - `currentAiInput`: The decision computed LAST tick, used THIS tick
+   * 
+   * This ensures both AI and Script react with the same latency.
+   */
+  private pendingAiInput: InputState | null = null;
+  private currentAiInput: InputState | null = null;
 
   /**
    * Creates a new Fighter
@@ -125,14 +141,28 @@ export class Fighter {
     // === DEATH PHYSICS ===
     if (this.handleDeathState()) return;
 
-    // === AI/SCRIPTED DECISION MAKING ===
+    // === AI/SCRIPTED DECISION MAKING WITH TIMING FAIRNESS ===
+    // Both AI and Script use a 1-tick delayed decision pattern.
+    // This ensures fair timing between sync (AI) and async (Script) controllers.
     let activeInput = input;
 
     if (this.isCustom && this.scriptWorker) {
+      // Script: Uses worker's cached action (inherently 1-tick delayed)
+      // Also requests next action for future tick
       activeInput = this.processCustom(opponent);
-    }
-    else if (this.isAi && this.genome) {
-      activeInput = this.processAi(opponent);
+    } else if (this.isAi && this.genome) {
+      // AI: Use PREVIOUS tick's decision (currentAiInput)
+      // Compute THIS tick's decision for NEXT tick (pendingAiInput)
+
+      // Step 1: Shift pending → current (use last tick's decision)
+      this.currentAiInput = this.pendingAiInput;
+
+      // Step 2: Compute new decision for next tick
+      this.pendingAiInput = this.processAi(opponent);
+
+      // Step 3: Use the delayed decision (or no-op if first tick)
+      activeInput = this.currentAiInput || { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
+
       applyFitnessShaping(this, opponent, this.genome);
     }
 
@@ -368,18 +398,23 @@ export class Fighter {
   /**
    * Custom Script Decision Making via User-Defined JavaScript
    * 
-   * Similar to processScripted, but uses the user's custom code
-   * that was compiled and stored in customScriptFn.
+   * TIMING FAIRNESS (Option A):
+   * Uses SyncScriptExecutor to execute scripts synchronously on the main thread,
+   * achieving timing parity with the neural network AI. This ensures both Script
+   * and AI make decisions at the same rate (once per tick).
+   * 
+   * Falls back to async Web Worker if sync executor is not available.
    * 
    * @param opponent - The other fighter
    * @returns InputState object with boolean action flags
    */
   processCustom(opponent: Fighter): InputState {
-    if (!this.scriptWorker || !this.scriptWorker.isReady()) {
-      return { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
-    }
+    const neutralAction: InputState = {
+      left: false, right: false, up: false, down: false,
+      action1: false, action2: false, action3: false
+    };
 
-    // Build state for custom script
+    // Build state objects for script execution
     const selfState: CustomFighterState = {
       x: this.x,
       y: this.y,
@@ -408,11 +443,21 @@ export class Fighter {
       height: opponent.height
     };
 
-    // Request next action computation (async, runs in worker)
-    this.scriptWorker.requestAction(selfState, opponentState);
+    // === OPTION A: SYNCHRONOUS EXECUTION (Preferred for timing fairness) ===
+    // This executes the script on the main thread, just like the AI's neural network.
+    // Both make exactly one decision per tick, achieving perfect timing parity.
+    if (this.syncScriptExecutor && this.syncScriptExecutor.isReady()) {
+      return this.syncScriptExecutor.execute(selfState, opponentState);
+    }
 
-    // Return cached action (1 frame latency, ~16ms - imperceptible)
-    return this.scriptWorker.getAction();
+    // === FALLBACK: Async Web Worker (legacy behavior) ===
+    // Only used if sync executor is not set up. Has timing issues at high sim speeds.
+    if (this.scriptWorker && this.scriptWorker.isReady()) {
+      this.scriptWorker.requestAction(selfState, opponentState);
+      return this.scriptWorker.getAction();
+    }
+
+    return neutralAction;
   }
 
   /**

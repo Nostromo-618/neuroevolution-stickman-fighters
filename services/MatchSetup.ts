@@ -1,5 +1,6 @@
 import { Fighter } from './GameEngine';
 import { ScriptWorkerManager } from './CustomScriptRunner';
+import { SyncScriptExecutor } from './SyncScriptExecutor';
 import type { Genome, TrainingSettings } from '../types';
 import { createRandomNetwork } from './NeuralNetwork';
 import { COLORS } from './Config';
@@ -15,7 +16,11 @@ export class MatchSetup {
             workerA: ScriptWorkerManager | null,
             workerB: ScriptWorkerManager | null
         },
-        bestGenome: Genome | null
+        bestGenome: Genome | null,
+        syncExecutors?: {
+            executorA: SyncScriptExecutor | null,
+            executorB: SyncScriptExecutor | null
+        }
     ): Fighter {
         // 1. HUMAN
         if (type === 'HUMAN') {
@@ -32,7 +37,11 @@ export class MatchSetup {
         if (type === 'CUSTOM_A') {
             const f = new Fighter(x, COLORS.CUSTOM_A, false);
             f.isCustom = true;
-            // Assign worker even if still compiling - it will start working once ready
+            // Option A (Timing Fairness): Prefer sync executor for equal timing with AI
+            if (syncExecutors?.executorA && syncExecutors.executorA.isReady()) {
+                f.syncScriptExecutor = syncExecutors.executorA;
+            }
+            // Fallback to async worker (legacy, has timing issues at high speeds)
             if (workers.workerA) {
                 f.scriptWorker = workers.workerA;
             }
@@ -43,7 +52,11 @@ export class MatchSetup {
         if (type === 'CUSTOM_B') {
             const f = new Fighter(x, COLORS.CUSTOM_B, false);
             f.isCustom = true;
-            // Assign worker even if still compiling - it will start working once ready
+            // Option A (Timing Fairness): Prefer sync executor for equal timing with AI
+            if (syncExecutors?.executorB && syncExecutors.executorB.isReady()) {
+                f.syncScriptExecutor = syncExecutors.executorB;
+            }
+            // Fallback to async worker (legacy, has timing issues at high speeds)
             if (workers.workerB) {
                 f.scriptWorker = workers.workerB;
             }
@@ -54,4 +67,3 @@ export class MatchSetup {
         return new Fighter(x, defaultColor, false);
     }
 }
-

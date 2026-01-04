@@ -4,18 +4,38 @@
  * =============================================================================
  * 
  * Compiles user-written JavaScript code into safe, executable functions.
+ * 
+ * SAFETY (Phase 2):
+ * Before compilation, analyzes code for infinite loops using AST analysis.
+ * Blocks compilation if dangerous patterns (while(true) without break) detected.
  */
 
 import type { InputState } from '../types';
 import type { FighterState, CompileResult } from './CustomScriptRunner';
+import { analyzeLoopSafety } from './LoopSafetyAnalyzer';
 
 /**
  * Compiles user code string into an executable function.
+ * 
+ * PHASE 2 SAFETY: Now includes infinite loop detection before compilation.
+ * Scripts with while(true), for(;;), etc. without break statements are rejected.
  * 
  * @param userCode - The JavaScript code written by the user
  * @returns An object containing either the compiled function or an error message
  */
 export function compileScript(userCode: string): CompileResult {
+    // === PHASE 2: INFINITE LOOP DETECTION ===
+    // CRITICAL: Must check before compilation since scripts now run synchronously.
+    // An infinite loop will freeze the entire game.
+    const loopSafety = analyzeLoopSafety(userCode);
+
+    if (!loopSafety.safe) {
+        return {
+            compiledDecideFunction: null,
+            error: loopSafety.error || 'Dangerous loop detected'
+        };
+    }
+
     try {
         const wrappedCode = `
       ${userCode}
@@ -69,4 +89,3 @@ export function compileScript(userCode: string): CompileResult {
         };
     }
 }
-

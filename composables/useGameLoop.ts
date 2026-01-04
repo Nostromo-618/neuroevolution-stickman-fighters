@@ -3,6 +3,7 @@ import type { TrainingSettings, GameState, Genome } from '~/types';
 import { Fighter } from '~/services/GameEngine';
 import type { InputManager } from '~/services/InputManager';
 import type { ScriptWorkerManager } from '~/services/CustomScriptRunner';
+import type { SyncScriptExecutor } from '~/services/SyncScriptExecutor';
 import { useMatchSetup } from './useMatchSetup';
 import { useMatchUpdate } from './useMatchUpdate';
 
@@ -19,6 +20,9 @@ interface MatchContext {
     inputManager: Ref<InputManager | null>;
     customScriptWorkerARef: Ref<ScriptWorkerManager | null>;
     customScriptWorkerBRef: Ref<ScriptWorkerManager | null>;
+    // Option A: Sync executors for timing fairness
+    syncScriptExecutorARef?: Ref<SyncScriptExecutor | null>;
+    syncScriptExecutorBRef?: Ref<SyncScriptExecutor | null>;
     evolve: () => void;
     addToast: (type: 'success' | 'error' | 'info', message: string, clearFirst?: boolean) => void;
 }
@@ -35,6 +39,9 @@ export const useGameLoop = (ctx: MatchContext) => {
         matchTimerRef: ctx.matchTimerRef,
         customScriptWorkerARef: ctx.customScriptWorkerARef,
         customScriptWorkerBRef: ctx.customScriptWorkerBRef,
+        // Option A: Pass sync executors for timing fairness
+        syncScriptExecutorARef: ctx.syncScriptExecutorARef,
+        syncScriptExecutorBRef: ctx.syncScriptExecutorBRef,
         evolve: ctx.evolve
     });
 

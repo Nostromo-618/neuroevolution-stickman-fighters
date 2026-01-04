@@ -1,7 +1,7 @@
 {
   "name": "neuroevolution-stickman-fighters",
   "private": true,
-  "version": "2.0.2",
+  "version": "2.0.3",
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
@@ -17,6 +17,7 @@
   "dependencies": {
     "@monaco-editor/loader": "^1.7.0",
     "@nuxt/ui": "^4.3.0",
+    "acorn": "^8.15.0",
     "echarts": "^6.0.0",
     "monaco-editor": "^0.55.1",
     "nuxt": "^4.2.2",
