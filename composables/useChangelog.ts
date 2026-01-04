@@ -15,6 +15,7 @@ export const changelogData: ChangelogEntry[] = [
         date: '2026-01-04',
         changes: {
             fixed: [
+                'Auto-stop modal no longer loops when clicking "Stop Training" - Training Mode now pauses, Arcade Mode continues',
                 'Opponent selection controls now correctly stay disabled during paused matches',
                 'Prevented mid-match configuration changes that could corrupt game state',
                 'Enforced pristine-state-only changes with three-condition validation (matchesPlayed, isRunning, roundStatus)'

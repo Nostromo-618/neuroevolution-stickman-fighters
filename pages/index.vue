@@ -114,7 +114,7 @@ definePageMeta({
 });
 
 const pkgName = 'neuroevolution-stickman-fighters';
-const pkgVersion = '1.3.1';
+const pkgVersion = '2.0.4';
 
 const toast = useToast();
 
@@ -217,7 +217,9 @@ const handleAutoStopStop = () => {
   setSettings(s => ({ 
     ...s, 
     backgroundTraining: false, 
-    isRunning: true 
+    // In Training Mode: pause to prevent re-triggering the limit check
+    // In Arcade Mode: keep running (only background training stops)
+    isRunning: s.gameMode === 'ARCADE'
   }));
   showAutoStopModal.value = false;
 };
