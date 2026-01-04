@@ -10,9 +10,9 @@
         </template>
 
         <div class="space-y-4">
-          <div class="bg-slate-800/50 rounded-lg p-3 mb-4 text-sm font-mono flex items-center justify-between">
-            <span class="text-slate-400">Milestone:</span>
-            <span class="text-teal-300">Generation {{ currentGen }}</span>
+          <div class="bg-slate-200 dark:bg-slate-800/50 rounded-lg p-3 mb-4 text-sm font-mono flex items-center justify-between">
+            <span class="text-slate-600 dark:text-slate-400">Milestone:</span>
+            <span class="text-teal-600 dark:text-teal-300">Generation {{ currentGen }}</span>
           </div>
           <p class="text-slate-400 mb-6 leading-relaxed text-sm">
             Background training has reached its generation limit. To prevent infinite resource usage, training has been paused.
@@ -29,14 +29,19 @@
               Continue (+1000 Gens)
             </UButton>
             
-            <UButton
-              @click="onDisable"
-              color="cyan"
-              variant="soft"
-              class="w-full"
-            >
-              Don't Interrupt Again
-            </UButton>
+            <div class="space-y-1">
+              <UButton
+                @click="onDisable"
+                color="cyan"
+                variant="outline"
+                class="w-full border-2 border-cyan-500"
+              >
+                Don't Interrupt Again
+              </UButton>
+              <p class="text-xs text-slate-500 dark:text-slate-400 text-center px-2">
+                Deactivates Auto Stop and continues Training indefinitely
+              </p>
+            </div>
             
             <UButton
               @click="onStop"

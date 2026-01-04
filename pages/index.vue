@@ -114,7 +114,7 @@ definePageMeta({
 });
 
 const pkgName = 'neuroevolution-stickman-fighters';
-const pkgVersion = '2.0.4';
+const pkgVersion = '2.0.5';
 
 const toast = useToast();
 

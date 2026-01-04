@@ -11,6 +11,16 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '2.0.5',
+        date: '2026-01-04',
+        changes: {
+            changed: [
+                'Auto-stop modal "Don\'t Interrupt Again" button now has visible cyan outline for better clarity',
+                'Improved milestone display in auto-stop modal with light/dark theme support'
+            ]
+        }
+    },
+    {
         version: '2.0.4',
         date: '2026-01-04',
         changes: {
