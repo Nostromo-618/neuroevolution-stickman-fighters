@@ -22,6 +22,11 @@ const tabs = [
     slot: 'features' as const
   },
   {
+    label: 'Training',
+    icon: 'i-lucide-graduation-cap',
+    slot: 'training' as const
+  },
+  {
     label: 'Game Engine',
     icon: 'i-lucide-cog',
     slot: 'engine' as const
@@ -231,6 +236,200 @@ const renderingLayers = [
                 </p>
               </div>
             </div>
+          </div>
+        </template>
+
+        <!-- Training Tab -->
+        <template #training>
+          <div class="space-y-8 animate-fade-in pt-4">
+            <!-- Intro -->
+            <div class="prose prose-invert max-w-none">
+              <p class="text-lg text-slate-300">
+                AI fighters evolve through <strong>neuroevolution</strong> — competing in matches, earning fitness scores, and passing their successful neural network weights to the next generation.
+              </p>
+            </div>
+
+            <!-- Training Modes Overview -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-teal-500 pl-3">Training Modes</h3>
+              
+              <div class="grid md:grid-cols-3 gap-4">
+                <!-- Live Training -->
+                <div class="dark:bg-slate-900 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                    <h4 class="font-bold text-default">Live Training</h4>
+                  </div>
+                  <p class="text-xs text-muted mb-2">
+                    Watch AI evolve in real-time. Train against <strong class="text-green-400">Custom Scripts</strong> or other AI fighters.
+                  </p>
+                  <UBadge color="green" variant="soft" size="sm">Script Compatible</UBadge>
+                </div>
+
+                <!-- Turbo Training -->
+                <div class="dark:bg-slate-900 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="w-3 h-3 rounded-full bg-amber-500" />
+                    <h4 class="font-bold text-default">Turbo Training</h4>
+                  </div>
+                  <p class="text-xs text-muted mb-2">
+                    Lightning-fast AI vs AI training. Up to <strong class="text-amber-400">99x speed</strong> via Web Workers.
+                  </p>
+                  <UBadge color="amber" variant="soft" size="sm">AI vs AI Only</UBadge>
+                </div>
+
+                <!-- Background Training -->
+                <div class="dark:bg-slate-900 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                  <div class="flex items-center gap-2 mb-2">
+                    <div class="w-3 h-3 rounded-full bg-blue-500" />
+                    <h4 class="font-bold text-default">Background Training</h4>
+                  </div>
+                  <p class="text-xs text-muted mb-2">
+                    AI trains in background while you play <strong class="text-blue-400">Arcade mode</strong>. Multitask learning!
+                  </p>
+                  <UBadge color="blue" variant="soft" size="sm">AI vs AI Only</UBadge>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Training Deep Dive -->
+            <div class="dark:bg-gradient-to-r dark:from-green-950/30 dark:to-slate-950 bg-gradient-to-r from-green-50 to-gray-50 p-6 rounded-xl border dark:border-green-900/50 border-green-200">
+              <h3 class="text-lg font-bold text-green-400 mb-4 flex items-center gap-2">
+                <UIcon name="i-lucide-play-circle" class="size-5" />
+                Live Training: Script vs AI
+              </h3>
+              
+              <div class="space-y-4">
+                <p class="text-muted text-sm">
+                  This is the most <strong class="text-green-400">powerful training strategy</strong>: write a challenging script, then let the AI evolve specifically to beat YOUR strategy!
+                </p>
+
+                <div class="dark:bg-slate-900/50 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                  <h4 class="text-sm font-bold text-default mb-2">How It Works</h4>
+                  <ol class="text-xs text-muted space-y-1 list-decimal list-inside">
+                    <li>Write a script with your best fighting strategy in Script A or B</li>
+                    <li>Set Training mode opponent to your Custom Script</li>
+                    <li>Start Live Training (non-turbo)</li>
+                    <li>AI fighters battle your script round by round</li>
+                    <li>Each match updates the AI's fitness score</li>
+                    <li>After enough matches, the best AI evolve and mutate</li>
+                    <li>Repeat until AI learns to counter your strategy!</li>
+                  </ol>
+                </div>
+
+                <UAlert
+                  color="success"
+                  variant="soft"
+                  icon="i-lucide-sparkles"
+                  title="Pro Tip"
+                  description="Your script acts as a consistent sparring partner. The AI will specifically adapt to beat whatever patterns you programmed!"
+                />
+              </div>
+            </div>
+
+            <!-- Mode Comparison Table -->
+            <div>
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-purple-500 pl-3">Mode Comparison</h3>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                  <thead class="dark:bg-slate-950 bg-gray-100 dark:text-slate-400 text-gray-500">
+                    <tr>
+                      <th class="p-3 font-medium">Mode</th>
+                      <th class="p-3 font-medium">Script Support</th>
+                      <th class="p-3 font-medium">Genome Updated</th>
+                      <th class="p-3 font-medium">Speed</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y dark:divide-slate-800 divide-gray-200 dark:bg-slate-900/50 bg-white">
+                    <tr>
+                      <td class="p-3 font-bold text-green-400">Live Training</td>
+                      <td class="p-3"><span class="text-green-400">✓ Yes</span></td>
+                      <td class="p-3"><span class="text-green-400">✓ Yes</span></td>
+                      <td class="p-3 text-muted">1x (real-time)</td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 font-bold text-amber-400">Turbo Training</td>
+                      <td class="p-3"><span class="text-red-400">✗ No</span></td>
+                      <td class="p-3"><span class="text-green-400">✓ Yes</span></td>
+                      <td class="p-3 text-muted">Up to 99x</td>
+                    </tr>
+                    <tr>
+                      <td class="p-3 font-bold text-blue-400">Background (Arcade)</td>
+                      <td class="p-3"><span class="text-red-400">✗ No</span></td>
+                      <td class="p-3"><span class="text-green-400">✓ Yes</span></td>
+                      <td class="p-3 text-muted">Parallel workers</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Fitness Formula -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-amber-500 pl-3">Fitness Calculation</h3>
+              <p class="text-muted text-sm mb-4">
+                Each match updates the genome's fitness score based on combat performance:
+              </p>
+
+              <div class="space-y-4">
+                <div class="dark:bg-slate-900 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200 font-mono text-xs">
+                  <div class="text-slate-500 mb-2">// Per-match fitness calculation</div>
+                  <div><span class="text-purple-400">damageDealt</span> = <span class="text-blue-400">100</span> - opponent.health</div>
+                  <div><span class="text-purple-400">healthRemaining</span> = self.health</div>
+                  <div class="mt-2 text-slate-500">// Base rewards</div>
+                  <div>fitness += <span class="text-purple-400">damageDealt</span> × <span class="text-amber-400">2</span></div>
+                  <div>fitness += <span class="text-purple-400">healthRemaining</span> × <span class="text-amber-400">2.5</span></div>
+                  <div class="mt-2 text-slate-500">// Win bonuses</div>
+                  <div class="text-green-400">if (won by KO) fitness += 300</div>
+                  <div class="text-yellow-400">if (won by timeout) fitness += 150</div>
+                  <div class="mt-2 text-slate-500">// Penalty for passive play</div>
+                  <div class="text-red-400">if (timeout && totalDamage &lt; 30) fitness -= 100</div>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-3">
+                  <div class="dark:bg-slate-800 bg-gray-100 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
+                    <div class="text-xs dark:text-slate-400 text-gray-500 uppercase">Damage Weight</div>
+                    <div class="text-xl font-mono font-bold text-amber-400">2x</div>
+                  </div>
+                  <div class="dark:bg-slate-800 bg-gray-100 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
+                    <div class="text-xs dark:text-slate-400 text-gray-500 uppercase">Health Weight</div>
+                    <div class="text-xl font-mono font-bold text-green-400">2.5x</div>
+                  </div>
+                  <div class="dark:bg-slate-800 bg-gray-100 p-3 rounded text-center border dark:border-slate-700 border-gray-200">
+                    <div class="text-xs dark:text-slate-400 text-gray-500 uppercase">KO Bonus</div>
+                    <div class="text-xl font-mono font-bold text-purple-400">+300</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Why Scripts Don't Work in Workers -->
+            <div class="dark:bg-slate-800/30 bg-gray-50 p-6 rounded-xl border dark:border-slate-700 border-gray-200">
+              <h3 class="text-sm font-bold text-highlighted mb-3 flex items-center gap-2">
+                <UIcon name="i-lucide-info" class="size-4 text-blue-400" />
+                Why Scripts Only Work in Live Training
+              </h3>
+              <p class="text-xs text-muted leading-relaxed">
+                <strong>Turbo</strong> and <strong>Background</strong> training use Web Workers — separate threads that can't access the main browser context. Custom scripts need the sandboxed execution environment on the main thread for security. This is why Script vs AI training runs at 1x speed but is the only way to train against your custom strategies.
+              </p>
+            </div>
+
+            <!-- Training Tips -->
+            <UAlert
+              color="primary"
+              variant="soft"
+              icon="i-lucide-lightbulb"
+              title="Recommended Training Strategy"
+            >
+              <template #description>
+                <ol class="mt-2 space-y-1 text-xs text-muted list-decimal list-inside">
+                  <li><strong>Initial evolution:</strong> Use Turbo Training (AI vs AI) to quickly establish base fighting skills</li>
+                  <li><strong>Strategy refinement:</strong> Write a challenging script that exploits AI weaknesses</li>
+                  <li><strong>Targeted training:</strong> Run Live Training with your script to evolve counter-strategies</li>
+                  <li><strong>Iterate:</strong> Update your script to be harder, retrain, repeat!</li>
+                </ol>
+              </template>
+            </UAlert>
           </div>
         </template>
 
