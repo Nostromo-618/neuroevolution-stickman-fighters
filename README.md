@@ -261,18 +261,17 @@ MIT License - feel free to use this code for learning and projects.
 
 | Audit Result | Date |
 |--------------|------|
-| ✅ No vulnerabilities found | January 2026 |
+| ✅ No vulnerabilities found | January 4, 2026 |
 ```
-Sonabot here, beep boop beep boop, here are your Sonatype OSS Index results:
-Total dependencies audited: 8
+Total dependencies audited: 9
 
---------------------------------------------------------------------------------------------------------------
-[1/8] - pkg:npm/@monaco-editor/loader@1.7.0 - No vulnerabilities found!
-[2/8] - pkg:npm/@nuxt/ui@4.3.0 - No vulnerabilities found!
-[3/8] - pkg:npm/echarts@6.0.0 - No vulnerabilities found!
-[4/8] - pkg:npm/monaco-editor@0.55.1 - No vulnerabilities found!
-[5/8] - pkg:npm/nuxt@4.2.2 - No vulnerabilities found!
-[6/8] - pkg:npm/vue-echarts@8.0.1 - No vulnerabilities found!
-[7/8] - pkg:npm/vue@3.5.26 - No vulnerabilities found!
-[8/8] - pkg:npm/zod@4.3.4 - No vulnerabilities found!
+[1/9] - pkg:npm/@monaco-editor/loader@1.7.0 - No vulnerabilities found!
+[2/9] - pkg:npm/@nuxt/ui@4.3.0 - No vulnerabilities found!
+[3/9] - pkg:npm/acorn@8.15.0 - No vulnerabilities found!
+[4/9] - pkg:npm/echarts@6.0.0 - No vulnerabilities found!
+[5/9] - pkg:npm/monaco-editor@0.55.1 - No vulnerabilities found!
+[6/9] - pkg:npm/nuxt@4.2.2 - No vulnerabilities found!
+[7/9] - pkg:npm/vue-echarts@8.0.1 - No vulnerabilities found!
+[8/9] - pkg:npm/vue@3.5.26 - No vulnerabilities found!
+[9/9] - pkg:npm/zod@4.3.5 - No vulnerabilities found!
 ```
