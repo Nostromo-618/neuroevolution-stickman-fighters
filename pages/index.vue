@@ -458,7 +458,18 @@ const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
 
 onMounted(() => {
   inputManager.value = markRaw(new InputManager());
-  resetPopulation();
+  
+  // Only reset population if no persisted data was loaded
+  // When population is restored from localStorage, populationRef will already have genomes
+  if (populationRef.value.length === 0) {
+    resetPopulation();
+  } else {
+    // Population was restored - just spawn the initial match fighters
+    currentMatchIndex.value = 0;
+    activeMatchRef.value = null;
+    startMatch();
+  }
+  
   if (requestRef.value === null) {
     requestRef.value = requestAnimationFrame(update);
   }

@@ -28,10 +28,6 @@
           @reset-genome="props.onResetGenome"
         />
 
-        <!-- Usage Hint -->
-        <p v-if="isTrainingActive" class="text-[10px] text-gray-500 dark:text-slate-500 text-center italic">
-          Visualizing evolution... Uncheck "TRAINING" to play manually.
-        </p>
       </div>
     </UCard>
   </div>

@@ -1,6 +1,11 @@
 import { ref, type Ref } from 'vue';
 import type { Genome, TrainingSettings } from '~/types';
 import { createRandomNetwork } from '~/services/NeuralNetwork';
+import {
+    loadPopulation,
+    loadBestGenome,
+    loadFitnessHistory
+} from '~/services/PersistenceManager';
 
 interface UsePopulationReturn {
     populationRef: Ref<Genome[]>;
@@ -12,9 +17,17 @@ interface UsePopulationReturn {
 }
 
 export const usePopulation = (): UsePopulationReturn => {
-    const populationRef = ref<Genome[]>([]);
-    const bestTrainedGenomeRef = ref<Genome | null>(null);
-    const fitnessHistory = ref<{ gen: number, fitness: number, mutationRate: number }[]>([]);
+    // Try to load persisted state from localStorage
+    const persistedPopulation = loadPopulation();
+    const persistedBestGenome = loadBestGenome();
+    const persistedFitnessHistory = loadFitnessHistory();
+
+    // Initialize with persisted data if available, otherwise empty
+    const populationRef = ref<Genome[]>(persistedPopulation || []);
+    const bestTrainedGenomeRef = ref<Genome | null>(persistedBestGenome);
+    const fitnessHistory = ref<{ gen: number, fitness: number, mutationRate: number }[]>(
+        persistedFitnessHistory || []
+    );
 
     const initPopulation = (settings: TrainingSettings, clearBest: boolean = true) => {
         const pop: Genome[] = [];

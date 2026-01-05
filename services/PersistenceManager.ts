@@ -13,7 +13,9 @@ import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
 const KEYS = {
     SETTINGS: 'neuroevolution_settings_v1',
     BEST_GENOME: 'neuroevolution_best_genome_v1',
-    POPULATION: 'neuroevolution_population_v1' // Optional: Save full state
+    POPULATION: 'neuroevolution_population_v1',
+    FITNESS_HISTORY: 'neuroevolution_fitness_history_v1',
+    TRAINING_STATE: 'neuroevolution_training_state_v1'
 };
 
 // Serialized genome structure (matches what we store in localStorage)
@@ -22,6 +24,21 @@ interface SerializedGenome {
     fitness: number;
     matchesWon: number;
     network: ReturnType<FeedForwardNetwork['toJSON']>;
+}
+
+// Fitness history entry for chart persistence
+export interface FitnessHistoryEntry {
+    gen: number;
+    fitness: number;
+    mutationRate: number;
+}
+
+// Training state metadata for resuming
+export interface TrainingStateMetadata {
+    generation: number;
+    bestFitness: number;
+    currentMutationRate: number;
+    recentBestFitness: number[];
 }
 
 // --- SETTINGS PERSISTENCE ---
@@ -65,17 +82,54 @@ const serializeGenome = (genome: Genome): SerializedGenome => {
 };
 
 /**
- * Deserializes a Genome object, reconstructing the FeedForwardNetwork class.
+ * Deserializes a Genome object, converting the saved network data back to
+ * a plain NeuralNetworkData object that crossoverNetworks can use.
+ * 
+ * Handles two formats:
+ * 1. FeedForwardNetwork format (older): { inputWeights, outputWeights, biases }
+ *    - Missing hiddenWeights, needs to be created as empty
+ * 2. NeuralNetworkData format (current): { inputWeights, hiddenWeights, outputWeights, biases }
  */
 const deserializeGenome = (data: SerializedGenome): Genome => {
-    const network = new FeedForwardNetwork(data.network.id || 'restored');
-    network.fromJSON(data.network);
+    const savedNetwork = data.network;
+
+    // Check if it's the old FeedForwardNetwork format (no hiddenWeights)
+    // or the new NeuralNetworkData format (has hiddenWeights)
+    const hasHiddenWeights = 'hiddenWeights' in savedNetwork &&
+        Array.isArray((savedNetwork as { hiddenWeights?: unknown }).hiddenWeights);
+
+    let network: import('../types').NeuralNetworkData;
+
+    if (hasHiddenWeights) {
+        // Already in NeuralNetworkData format
+        network = savedNetwork as unknown as import('../types').NeuralNetworkData;
+    } else {
+        // Old FeedForwardNetwork format - add empty hiddenWeights
+        // This handles legacy saved data that lacks hiddenWeights
+        const inputWeights = savedNetwork.inputWeights || [];
+        const outputWeights = savedNetwork.outputWeights || [];
+        const biases = savedNetwork.biases || [];
+
+        // Create hiddenWeights with same dimensions as output layer expects
+        // For legacy data, create identity-like hidden layer
+        const hiddenSize = inputWeights[0]?.length || 13;
+        const hiddenWeights = Array(hiddenSize).fill(0).map(() =>
+            Array(hiddenSize).fill(0).map(() => Math.random() * 0.2 - 0.1)
+        );
+
+        network = {
+            inputWeights,
+            hiddenWeights,
+            outputWeights,
+            biases
+        };
+    }
 
     return {
         id: data.id,
         fitness: data.fitness,
         matchesWon: data.matchesWon,
-        network: network
+        network
     };
 };
 
@@ -122,11 +176,55 @@ export const loadPopulation = (): Genome[] | null => {
     }
 };
 
+// --- FITNESS HISTORY PERSISTENCE ---
+
+export const saveFitnessHistory = (history: FitnessHistoryEntry[]): void => {
+    try {
+        // Keep only last 50 entries to avoid bloating storage
+        const trimmed = history.slice(-50);
+        localStorage.setItem(KEYS.FITNESS_HISTORY, JSON.stringify(trimmed));
+    } catch (e) {
+        console.warn('Failed to save fitness history:', e);
+    }
+};
+
+export const loadFitnessHistory = (): FitnessHistoryEntry[] | null => {
+    try {
+        const data = localStorage.getItem(KEYS.FITNESS_HISTORY);
+        if (!data) return null;
+        return JSON.parse(data);
+    } catch (e) {
+        console.warn('Failed to load fitness history:', e);
+        return null;
+    }
+};
+
+// --- TRAINING STATE PERSISTENCE ---
+
+export const saveTrainingState = (state: TrainingStateMetadata): void => {
+    try {
+        localStorage.setItem(KEYS.TRAINING_STATE, JSON.stringify(state));
+    } catch (e) {
+        console.warn('Failed to save training state:', e);
+    }
+};
+
+export const loadTrainingState = (): TrainingStateMetadata | null => {
+    try {
+        const data = localStorage.getItem(KEYS.TRAINING_STATE);
+        if (!data) return null;
+        return JSON.parse(data);
+    } catch (e) {
+        console.warn('Failed to load training state:', e);
+        return null;
+    }
+};
+
 // --- CLEAR GENOME STORAGE ---
 
 /**
  * Clears all genome-related data from localStorage.
- * This includes settings, best genome, and population.
+ * This includes settings, best genome, population, fitness history, and training state.
  * Does NOT clear custom scripts or disclaimer acceptance.
  */
 export const clearGenomeStorage = (): void => {
@@ -134,6 +232,8 @@ export const clearGenomeStorage = (): void => {
         localStorage.removeItem(KEYS.SETTINGS);
         localStorage.removeItem(KEYS.BEST_GENOME);
         localStorage.removeItem(KEYS.POPULATION);
+        localStorage.removeItem(KEYS.FITNESS_HISTORY);
+        localStorage.removeItem(KEYS.TRAINING_STATE);
     } catch (e) {
         console.warn('Failed to clear genome storage:', e);
     }

@@ -4,6 +4,12 @@ import type { Genome, TrainingSettings, GameState } from '~/types';
 import { crossoverNetworks, mutateNetwork } from '~/services/NeuralNetwork';
 import { debugLog, debugCritical } from '~/utils/debug';
 import { calculateAdaptiveMutationRate } from '~/services/AdaptiveMutation';
+import {
+    saveBestGenome,
+    savePopulation,
+    saveFitnessHistory,
+    saveTrainingState
+} from '~/services/PersistenceManager';
 
 interface UseBackgroundTrainingProps {
     settings: Ref<TrainingSettings>;
@@ -104,7 +110,13 @@ export const useBackgroundTraining = ({
                 })
                 : settings.value.mutationRate;
 
-            setFitnessHistory(prev => [...prev.slice(-20), { gen: currentGen, fitness: best.fitness, mutationRate }]);
+            // Update and persist fitness history
+            setFitnessHistory(prev => {
+                const updated = [...prev.slice(-20), { gen: currentGen, fitness: best.fitness, mutationRate }];
+                // Persist fitness history to localStorage
+                saveFitnessHistory(updated);
+                return updated;
+            });
 
             // Auto-stop training if enabled and limit reached
             // Auto-stop training if enabled and limit reached
@@ -151,6 +163,26 @@ export const useBackgroundTraining = ({
             populationRef.value = newPop;
             currentMatchIndex.value = 0;
             debugLog('BG_TRAIN', `Generation complete - gen=${currentGen + 1} bestFitness=${best.fitness}`);
+
+            // === AUTO-SAVE TO LOCALSTORAGE ===
+            // Save best genome
+            if (bestTrainedGenomeRef.value) {
+                saveBestGenome(bestTrainedGenomeRef.value);
+            }
+
+            // Save the new population
+            savePopulation(newPop);
+
+            // Save training state metadata
+            setGameState(prev => {
+                saveTrainingState({
+                    generation: prev.generation,
+                    bestFitness: prev.bestFitness,
+                    currentMutationRate: prev.currentMutationRate,
+                    recentBestFitness: prev.recentBestFitness
+                });
+                return prev; // No state change, just side effect
+            });
 
         } catch (error) {
             debugCritical('BG_TRAIN', 'Worker training error', error);

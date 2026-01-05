@@ -11,7 +11,13 @@
 import type { Ref } from 'vue';
 import type { Genome, TrainingSettings, GameState } from '~/types';
 import { mutateNetwork, crossoverNetworks, createRandomNetwork } from '~/services/NeuralNetwork';
-import { clearGenomeStorage } from '~/services/PersistenceManager';
+import {
+    clearGenomeStorage,
+    saveBestGenome,
+    savePopulation,
+    saveFitnessHistory,
+    saveTrainingState
+} from '~/services/PersistenceManager';
 import { calculateAdaptiveMutationRate } from '~/services/AdaptiveMutation';
 
 interface EvolutionContext {
@@ -137,11 +143,14 @@ export function useEvolution(ctx: EvolutionContext) {
             mutationRate = ctx.settingsRef.value.mutationRate;
         }
 
-        // Update fitness history with mutation rate
-        ctx.setFitnessHistory(prev => [
-            ...prev.slice(-20),
-            { gen: ctx.gameStateRef.value.generation, fitness: best.fitness, mutationRate }
-        ]);
+        // Update fitness history with mutation rate and persist
+        const newHistoryEntry = { gen: ctx.gameStateRef.value.generation, fitness: best.fitness, mutationRate };
+        ctx.setFitnessHistory(prev => {
+            const updated = [...prev.slice(-20), newHistoryEntry];
+            // Persist fitness history to localStorage
+            saveFitnessHistory(updated);
+            return updated;
+        });
 
         // Calculate next evolution interval
         const popSize = ctx.populationRef.value.length;
@@ -223,6 +232,23 @@ export function useEvolution(ctx: EvolutionContext) {
 
         ctx.populationRef.value = newPop;
         ctx.currentMatchIndex.value = 0;
+
+        // === AUTO-SAVE TO LOCALSTORAGE ===
+        // Save best genome (the current best trained AI)
+        if (ctx.bestTrainedGenomeRef.value) {
+            saveBestGenome(ctx.bestTrainedGenomeRef.value);
+        }
+
+        // Save the new population
+        savePopulation(newPop);
+
+        // Save training state metadata for resuming
+        saveTrainingState({
+            generation: ctx.gameStateRef.value.generation,
+            bestFitness: ctx.gameStateRef.value.bestFitness,
+            currentMutationRate: ctx.gameStateRef.value.currentMutationRate,
+            recentBestFitness: ctx.gameStateRef.value.recentBestFitness
+        });
     };
 
     return {
