@@ -49,32 +49,35 @@
               </UBadge>
             </div>
 
-            <!-- Buttons (moved from footer) -->
+            <!-- Global action buttons (Save & Close only) -->
             <div class="flex items-center gap-2">
-              <UButton
-                @click="handleReset"
-                color="neutral"
-                variant="outline"
-                size="sm"
-              >
-                Load Default
-              </UButton>
-              <UButton
-                @click="handleImport"
-                color="neutral"
-                variant="outline"
-                size="sm"
-              >
-                Import
-              </UButton>
-              <UButton
-                @click="handleExport"
-                color="neutral"
-                variant="outline"
-                size="sm"
-              >
-                Export
-              </UButton>
+              <!-- Single mode: Show per-script action buttons here -->
+              <template v-if="!sideBySideMode">
+                <UButton
+                  @click="handleResetSlot(activeSlot)"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                >
+                  Load Default ({{ activeSlot === 'slot1' ? 'A' : 'B' }})
+                </UButton>
+                <UButton
+                  @click="handleImportSlot(activeSlot)"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                >
+                  Import ({{ activeSlot === 'slot1' ? 'A' : 'B' }})
+                </UButton>
+                <UButton
+                  @click="handleExportSlot(activeSlot)"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                >
+                  Export ({{ activeSlot === 'slot1' ? 'A' : 'B' }})
+                </UButton>
+              </template>
               <UButton
                 @click="handleSave"
                 :disabled="hasAnyError || isSaving"
@@ -134,18 +137,32 @@
 
       <!-- Editor Area - fills remaining space with explicit height -->
       <div v-else class="flex-1 flex gap-4 min-h-0 h-full">
-        <!-- Side-by-Side Mode: Both editors -->
+        <!-- Side-by-Side Mode: Both editors with individual toolbars -->
         <template v-if="sideBySideMode">
           <!-- Script A Editor -->
           <div class="flex-1 flex flex-col min-h-0 h-full">
-            <div class="text-sm font-semibold text-green-400 mb-2 px-2">Script A (Strategic)</div>
-            <div ref="editorContainerA" class="flex-1 min-h-0 h-full rounded-lg overflow-hidden border border-slate-700" style="min-height: 400px;" />
+            <div class="flex items-center justify-between mb-2 px-2">
+              <span class="text-sm font-semibold text-green-400">Script A (Strategic)</span>
+              <div class="flex gap-1">
+                <UButton @click="handleResetSlot('slot1')" color="neutral" variant="ghost" size="xs">Load Default</UButton>
+                <UButton @click="handleImportSlot('slot1')" color="neutral" variant="ghost" size="xs">Import</UButton>
+                <UButton @click="handleExportSlot('slot1')" color="neutral" variant="ghost" size="xs">Export</UButton>
+              </div>
+            </div>
+            <div ref="editorContainerA" class="flex-1 min-h-0 h-full rounded-lg overflow-hidden border border-slate-700 dark:border-slate-700 border-gray-300" style="min-height: 400px;" />
           </div>
           
           <!-- Script B Editor -->
           <div class="flex-1 flex flex-col min-h-0 h-full">
-            <div class="text-sm font-semibold text-purple-400 mb-2 px-2">Script B (Chaotic)</div>
-            <div ref="editorContainerB" class="flex-1 min-h-0 h-full rounded-lg overflow-hidden border border-slate-700" style="min-height: 400px;" />
+            <div class="flex items-center justify-between mb-2 px-2">
+              <span class="text-sm font-semibold text-purple-400">Script B (Chaotic)</span>
+              <div class="flex gap-1">
+                <UButton @click="handleResetSlot('slot2')" color="neutral" variant="ghost" size="xs">Load Default</UButton>
+                <UButton @click="handleImportSlot('slot2')" color="neutral" variant="ghost" size="xs">Import</UButton>
+                <UButton @click="handleExportSlot('slot2')" color="neutral" variant="ghost" size="xs">Export</UButton>
+              </div>
+            </div>
+            <div ref="editorContainerB" class="flex-1 min-h-0 h-full rounded-lg overflow-hidden border border-slate-700 dark:border-slate-700 border-gray-300" style="min-height: 400px;" />
           </div>
         </template>
 
@@ -513,6 +530,9 @@ const handleImport = () => {
   fileInputRef.value?.click();
 };
 
+// Track which slot the import should go to
+const pendingImportSlot = ref<'slot1' | 'slot2'>('slot1');
+
 const handleFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
@@ -522,18 +542,21 @@ const handleFileChange = (e: Event) => {
     const content = event.target?.result as string;
     const importedCode = importScript(content);
     if (importedCode) {
-      if (sideBySideMode.value) {
-        // Import to Script A in side-by-side mode
+      const targetSlot = pendingImportSlot.value;
+      if (targetSlot === 'slot1') {
         codeA.value = importedCode;
-        editorInstanceA?.setValue(importedCode);
-      } else {
-        // Import to active slot in single mode
-        if (activeSlot.value === 'slot1') {
-          codeA.value = importedCode;
-        } else {
-          codeB.value = importedCode;
+        if (sideBySideMode.value) {
+          editorInstanceA?.setValue(importedCode);
+        } else if (activeSlot.value === 'slot1') {
+          editorInstanceSingle?.setValue(importedCode);
         }
-        editorInstanceSingle?.setValue(importedCode);
+      } else {
+        codeB.value = importedCode;
+        if (sideBySideMode.value) {
+          editorInstanceB?.setValue(importedCode);
+        } else if (activeSlot.value === 'slot2') {
+          editorInstanceSingle?.setValue(importedCode);
+        }
       }
     } else {
       alert('Invalid script file. Please select a valid exported script.');
@@ -542,6 +565,43 @@ const handleFileChange = (e: Event) => {
   reader.readAsText(file);
 
   (e.target as HTMLInputElement).value = '';
+};
+
+// === Per-slot handlers ===
+
+const handleResetSlot = (slot: 'slot1' | 'slot2') => {
+  const slotLabel = slot === 'slot1' ? 'Script A' : 'Script B';
+  
+  if (confirm(`Load default template for ${slotLabel}? Your current code will be replaced.`)) {
+    const template = getDefaultTemplate(slot);
+    if (slot === 'slot1') {
+      codeA.value = template;
+      if (sideBySideMode.value) {
+        editorInstanceA?.setValue(template);
+      } else if (activeSlot.value === 'slot1') {
+        editorInstanceSingle?.setValue(template);
+      }
+      saveScript(template, 'slot1');
+    } else {
+      codeB.value = template;
+      if (sideBySideMode.value) {
+        editorInstanceB?.setValue(template);
+      } else if (activeSlot.value === 'slot2') {
+        editorInstanceSingle?.setValue(template);
+      }
+      saveScript(template, 'slot2');
+    }
+  }
+};
+
+const handleImportSlot = (slot: 'slot1' | 'slot2') => {
+  pendingImportSlot.value = slot;
+  fileInputRef.value?.click();
+};
+
+const handleExportSlot = (slot: 'slot1' | 'slot2') => {
+  const code = slot === 'slot1' ? codeA.value : codeB.value;
+  exportScript(code);
 };
 
 const onClose = () => {
