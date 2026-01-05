@@ -6,6 +6,13 @@
       @save="handleScriptSave"
     />
 
+    <!-- Fitness Editor Modal -->
+    <FitnessEditor
+      v-model="fitnessEditorOpen"
+      :initial-code="fitnessEditorCode"
+      @save="handleFitnessSave"
+    />
+
     <UCard class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-2xl">
       <div class="space-y-6">
         <MatchConfiguration
@@ -13,6 +20,7 @@
           :set-settings="setSettings"
           :game-state="gameState"
           :on-open-script-editor="() => scriptEditorOpen = true"
+          :on-open-fitness-editor="() => fitnessEditorOpen = true"
           :on-toggle-running="toggleRunning"
           :on-reset-match="props.onResetMatch"
           :is-running="settings.isRunning"
@@ -35,8 +43,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { TrainingSettings, GameState } from '~/types';
+import type { TrainingSettings, GameState, FitnessConfig } from '~/types';
 import { saveScript } from '~/services/CustomScriptRunner';
+import { useFitnessConfig } from '~/composables/useFitnessConfig';
+import { DEFAULT_FITNESS_SCRIPT } from '~/templates/defaultFitnessScript';
+import { configToJavascript } from '~/services/FitnessStorage';
 
 interface Props {
   settings: TrainingSettings;
@@ -52,16 +63,31 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const toast = useToast();
 
 const scriptEditorOpen = ref(false);
+const fitnessEditorOpen = ref(false);
 
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
+const { fitnessConfig, updateFitnessConfig } = useFitnessConfig();
+
+// Compute editor code from saved config (reactive)
+const fitnessEditorCode = computed(() => configToJavascript(fitnessConfig.value));
 
 const handleScriptSave = (code: string) => {
   saveScript(code);
   if (props.onScriptRecompile) {
     props.onScriptRecompile();
   }
+};
+
+const handleFitnessSave = (config: FitnessConfig) => {
+  updateFitnessConfig(config);
+  toast.add({
+    title: 'Fitness config applied to live training',
+    description: 'Background/turbo workers will use new config on next training start',
+    color: 'green'
+  });
 };
 
 const toggleRunning = () => {

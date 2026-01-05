@@ -403,6 +403,68 @@ const renderingLayers = [
               </div>
             </div>
 
+            <!-- Custom Fitness Editor -->
+            <div class="dark:bg-gradient-to-r dark:from-purple-950/30 dark:to-slate-950 bg-gradient-to-r from-purple-50 to-gray-50 p-6 rounded-xl border dark:border-purple-900/50 border-purple-200">
+              <h3 class="text-lg font-bold text-purple-400 mb-4 flex items-center gap-2">
+                <UIcon name="i-lucide-calculator" class="size-5" />
+                Custom Fitness Editor
+              </h3>
+
+              <div class="space-y-4">
+                <p class="text-muted text-sm">
+                  Customize how AI fighters are rewarded during training. The <strong class="text-purple-400">NN Fitness Editor</strong> lets you tune 16 different reward parameters to shape fighter behavior:
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                  <!-- Per-Frame Shaping -->
+                  <div class="dark:bg-slate-900/50 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                    <div class="flex items-center gap-2 mb-2">
+                      <div class="w-3 h-3 rounded-full bg-blue-500" />
+                      <h4 class="font-bold text-default text-sm">Per-Frame Shaping</h4>
+                    </div>
+                    <p class="text-xs text-muted mb-2">
+                      Applied <strong class="text-blue-400">60 times per second</strong> to guide moment-to-moment behavior:
+                    </p>
+                    <ul class="text-xs text-muted space-y-1 list-disc list-inside">
+                      <li>Proximity rewards (encourage engagement)</li>
+                      <li>Aggression rewards (reward attacks)</li>
+                      <li>Positioning bonuses (center control)</li>
+                      <li>Edge/time penalties (discourage stalling)</li>
+                    </ul>
+                  </div>
+
+                  <!-- Match-End Bonuses -->
+                  <div class="dark:bg-slate-900/50 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                    <div class="flex items-center gap-2 mb-2">
+                      <div class="w-3 h-3 rounded-full bg-green-500" />
+                      <h4 class="font-bold text-default text-sm">Match-End Bonuses</h4>
+                    </div>
+                    <p class="text-xs text-muted mb-2">
+                      Applied <strong class="text-green-400">once per match</strong> to reward overall performance:
+                    </p>
+                    <ul class="text-xs text-muted space-y-1 list-disc list-inside">
+                      <li>Damage/health multipliers</li>
+                      <li>Win bonuses (KO vs timeout)</li>
+                      <li>Stalemate penalties</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <UAlert
+                  color="primary"
+                  variant="soft"
+                  icon="i-lucide-lightbulb"
+                  title="How It Works"
+                >
+                  <template #description>
+                    <p class="text-xs text-muted mt-2">
+                      Changes apply immediately to <strong>live training</strong>. Background/turbo workers use new config on next training start. Export and import your custom fitness functions to experiment with different training strategies!
+                    </p>
+                  </template>
+                </UAlert>
+              </div>
+            </div>
+
             <!-- Smart Adaptive Mutation -->
             <div class="dark:bg-gradient-to-r dark:from-amber-950/30 dark:to-slate-950 bg-gradient-to-r from-amber-50 to-gray-50 p-6 rounded-xl border dark:border-amber-900/50 border-amber-200">
               <h3 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2">
@@ -1252,6 +1314,21 @@ const renderingLayers = [
                 </p>
                 <p class="text-xs text-muted">
                   Open Script Editor to write custom JavaScript fighter logic
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <UIcon
+                name="i-lucide-calculator"
+                class="size-5 text-primary shrink-0 mt-0.5"
+              />
+              <div>
+                <p class="text-sm font-medium text-default">
+                  Customize Fitness
+                </p>
+                <p class="text-xs text-muted">
+                  Open NN Fitness Editor to tune how AI fighters are rewarded during training
                 </p>
               </div>
             </div>

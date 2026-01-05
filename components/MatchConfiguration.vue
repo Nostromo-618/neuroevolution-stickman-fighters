@@ -111,6 +111,18 @@
       <UIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
       Open Script Editor
     </UButton>
+
+    <!-- Edit NN Fitness Button -->
+    <UButton
+      @click="onOpenFitnessEditor"
+      color="secondary"
+      variant="outline"
+      class="w-full"
+      size="sm"
+    >
+      <UIcon name="i-heroicons-calculator" class="w-4 h-4" />
+      Open NN Fitness Editor
+    </UButton>
   </div>
 </template>
 
@@ -123,6 +135,7 @@ interface Props {
   setSettings: (updater: TrainingSettings | ((prev: TrainingSettings) => TrainingSettings)) => void;
   gameState: GameState;
   onOpenScriptEditor: () => void;
+  onOpenFitnessEditor: () => void;
   onToggleRunning: () => void;
   onResetMatch: () => void;
   isRunning: boolean;

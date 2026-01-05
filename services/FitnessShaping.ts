@@ -10,55 +10,53 @@
 
 import { Fighter, CANVAS_WIDTH } from './GameEngine';
 import { FighterAction } from '../types';
-import type { Genome } from '../types';
+import type { Genome, FitnessConfig } from '../types';
 
 /**
  * Applies fitness shaping rewards/penalties during training.
- * 
+ *
  * This function is called every frame during training matches to provide
  * intermediate feedback to the AI, helping it learn faster than if it
  * only received rewards at match end.
- * 
+ *
  * @param fighter - The fighter being evaluated
  * @param opponent - The opponent fighter
  * @param genome - The genome to update fitness for
+ * @param config - The fitness configuration to use
  */
-export function applyFitnessShaping(fighter: Fighter, opponent: Fighter, genome: Genome): void {
+export function applyFitnessShaping(fighter: Fighter, opponent: Fighter, genome: Genome, config: FitnessConfig): void {
     if (opponent.health <= 0) return;
 
     const dist = Math.abs(fighter.x - opponent.x);
 
     // 1. PROXIMITY REWARD
-    if (dist < 400) genome.fitness += 0.005;
-    if (dist < 200) genome.fitness += 0.02;
-    if (dist < 80) genome.fitness += 0.08;  // Increased from 0.05 to encourage close engagement
+    if (dist < 400) genome.fitness += config.proximityReward400;
+    if (dist < 200) genome.fitness += config.proximityReward200;
+    if (dist < 80) genome.fitness += config.proximityReward80;
 
     // 2. FACING REWARD
     const dx = opponent.x - fighter.x;
     const correctFacing = (dx > 0 && fighter.direction === 1) || (dx < 0 && fighter.direction === -1);
-    if (correctFacing) genome.fitness += 0.01;  // Reduced from 0.02 to prevent passive reward farming
+    if (correctFacing) genome.fitness += config.facingReward;
 
     // 3. AGGRESSION REWARD
     if (dist < 100 && (fighter.state === FighterAction.PUNCH || fighter.state === FighterAction.KICK)) {
-        genome.fitness += 0.15;  // Increased from 0.1 to strengthen main learning signal
+        genome.fitness += config.aggressionReward;
     }
 
     // 4. TIME PENALTY
-    genome.fitness -= 0.005;
+    genome.fitness += config.timePenalty;
 
     // 5. EDGE/CORNER PENALTY
-    const edgeThreshold = 60;
-    if (fighter.x < edgeThreshold || fighter.x > CANVAS_WIDTH - fighter.width - edgeThreshold) {
-        genome.fitness -= 0.03;  // Softened from -0.04
+    if (fighter.x < config.edgeThreshold || fighter.x > CANVAS_WIDTH - fighter.width - config.edgeThreshold) {
+        genome.fitness += config.edgePenalty;
     }
 
     // 6. CENTER CONTROL BONUS
     const centerX = CANVAS_WIDTH / 2;
     const distFromCenter = Math.abs(fighter.x + fighter.width / 2 - centerX);
-    if (distFromCenter < 150) {
-        genome.fitness += 0.02;  // Increased from 0.015 to better balance with edge penalty
+    if (distFromCenter < config.centerThreshold) {
+        genome.fitness += config.centerBonus;
     }
-
-    // Movement reward removed to prevent jittering exploits
 }
 

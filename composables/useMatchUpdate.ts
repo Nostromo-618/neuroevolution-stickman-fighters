@@ -11,6 +11,7 @@ import type { TrainingSettings, GameState } from '~/types';
 import { Fighter } from '~/services/GameEngine';
 import type { InputManager } from '~/services/InputManager';
 import { debugFrame, debugCritical, debugLog } from '~/utils/debug';
+import { useFitnessConfig } from '~/composables/useFitnessConfig';
 
 interface MatchUpdateContext {
     settingsRef: Ref<TrainingSettings>;
@@ -28,6 +29,7 @@ interface MatchUpdateContext {
 export function useMatchUpdate(ctx: MatchUpdateContext) {
     const requestRef = ref<number | null>(null);
     const matchRestartTimeoutRef = ref<ReturnType<typeof setTimeout> | null>(null);
+    const { fitnessConfig } = useFitnessConfig();
 
     const clearMatchRestartTimeout = () => {
         if (matchRestartTimeoutRef.value) {
@@ -114,8 +116,8 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
             // IMPORTANT: Do NOT use cached inputs - let Fighter compute fresh each tick
             // This ensures both AI and Script react to current game state each tick.
             // The Script's async worker lag is inherent but consistent.
-            match.p1.update(p1Input, match.p2);
-            match.p2.update(dummyInput, match.p1);
+            match.p1.update(p1Input, match.p2, fitnessConfig.value);
+            match.p2.update(dummyInput, match.p1, fitnessConfig.value);
 
             const p1 = match.p1;
             const p2 = match.p2;
@@ -148,22 +150,23 @@ export function useMatchUpdate(ctx: MatchUpdateContext) {
                 if (currentSettings.gameMode === 'TRAINING') {
                     const p1Damage = 100 - p2.health;
                     const p2Damage = 100 - p1.health;
+                    const config = fitnessConfig.value;
 
-                    if (p1.genome) { p1.genome.fitness += p1Damage * 2 + p1.health * 2.5; }
-                    if (p2.genome) { p2.genome.fitness += p2Damage * 2 + p2.health * 2.5; }
+                    if (p1.genome) { p1.genome.fitness += p1Damage * config.damageMultiplier + p1.health * config.healthMultiplier; }
+                    if (p2.genome) { p2.genome.fitness += p2Damage * config.damageMultiplier + p2.health * config.healthMultiplier; }
 
                     if (p1.health > 0 && p2.health <= 0) {
-                        if (p1.genome) { p1.genome.fitness += 300; p1.genome.matchesWon++; }
+                        if (p1.genome) { p1.genome.fitness += config.koWinBonus; p1.genome.matchesWon++; }
                     } else if (p2.health > 0 && p1.health <= 0) {
-                        if (p2.genome) { p2.genome.fitness += 300; p2.genome.matchesWon++; }
+                        if (p2.genome) { p2.genome.fitness += config.koWinBonus; p2.genome.matchesWon++; }
                     } else if (isTimeout) {
-                        if (p1.health > p2.health && p1.genome) { p1.genome.fitness += 150; p1.genome.matchesWon++; }
-                        else if (p2.health > p1.health && p2.genome) { p2.genome.fitness += 150; p2.genome.matchesWon++; }
+                        if (p1.health > p2.health && p1.genome) { p1.genome.fitness += config.timeoutWinBonus; p1.genome.matchesWon++; }
+                        else if (p2.health > p1.health && p2.genome) { p2.genome.fitness += config.timeoutWinBonus; p2.genome.matchesWon++; }
                     }
 
-                    if (isTimeout && (p1Damage + p2Damage) < 30) {
-                        if (p1.genome) p1.genome.fitness -= 100;
-                        if (p2.genome) p2.genome.fitness -= 100;
+                    if (isTimeout && (p1Damage + p2Damage) < config.stalemateThreshold) {
+                        if (p1.genome) p1.genome.fitness += config.stalematePenalty;
+                        if (p2.genome) p2.genome.fitness += config.stalematePenalty;
                     }
 
                     // Track session wins for HUD display

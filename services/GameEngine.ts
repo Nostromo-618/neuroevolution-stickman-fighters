@@ -13,7 +13,7 @@
  */
 
 import { FighterAction } from '../types';
-import type { Genome, InputState } from '../types';
+import type { Genome, InputState, FitnessConfig } from '../types';
 import { predict } from './NeuralNetwork';
 import { ScriptWorkerManager } from './CustomScriptRunner';
 import { SyncScriptExecutor } from './SyncScriptExecutor';
@@ -123,7 +123,7 @@ export class Fighter {
 
   /**
    * Main update loop - called every frame
-   * 
+   *
    * This is the heart of the fighter simulation:
    * 1. Handle death state physics
    * 2. Process AI decisions (if AI)
@@ -133,11 +133,12 @@ export class Fighter {
    * 6. Activate hitboxes during attacks
    * 7. Apply physics integration
    * 8. Enforce boundaries
-   * 
+   *
    * @param input - Control signals (from human or passed through for AI)
    * @param opponent - Reference to the other fighter
+   * @param fitnessConfig - Optional fitness configuration for training
    */
-  update(input: InputState, opponent: Fighter) {
+  update(input: InputState, opponent: Fighter, fitnessConfig?: FitnessConfig) {
     // === DEATH PHYSICS ===
     if (this.handleDeathState()) return;
 
@@ -163,7 +164,9 @@ export class Fighter {
       // Step 3: Use the delayed decision (or no-op if first tick)
       activeInput = this.currentAiInput || { left: false, right: false, up: false, down: false, action1: false, action2: false, action3: false };
 
-      applyFitnessShaping(this, opponent, this.genome);
+      if (fitnessConfig) {
+        applyFitnessShaping(this, opponent, this.genome, fitnessConfig);
+      }
     }
 
     // === UPDATE LOOP ===

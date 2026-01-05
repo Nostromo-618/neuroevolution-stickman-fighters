@@ -203,3 +203,41 @@ export interface InputState {
   action2: boolean;  // Kick (K, B button)
   action3: boolean;  // Block (L, Shift, RB/RT)
 }
+
+// =============================================================================
+// FITNESS CONFIGURATION TYPES
+// =============================================================================
+
+/**
+ * FitnessConfig Interface
+ *
+ * Defines the reward function for AI training. This controls how fighters
+ * are scored during evolution, allowing customization of training behavior.
+ *
+ * Two categories of rewards:
+ * 1. Per-frame shaping: Applied every game frame to guide moment-to-moment behavior
+ * 2. Match-end bonuses: Applied when a match concludes to reward overall performance
+ *
+ * All values are additive to the genome's fitness score.
+ */
+export interface FitnessConfig {
+  // PER-FRAME SHAPING REWARDS
+  proximityReward400: number;   // Reward when distance < 400px (encourages approach)
+  proximityReward200: number;   // Reward when distance < 200px (encourages engagement)
+  proximityReward80: number;    // Reward when distance < 80px (encourages close combat)
+  facingReward: number;         // Reward for facing opponent direction
+  aggressionReward: number;     // Reward for attacking when in range (distance < 100px)
+  timePenalty: number;          // Penalty per frame (negative, discourages stalling)
+  edgePenalty: number;          // Penalty for being at arena edge (negative)
+  centerBonus: number;          // Bonus for controlling arena center
+  edgeThreshold: number;        // Distance from edge to trigger edge penalty (pixels)
+  centerThreshold: number;      // Distance from center to get center bonus (pixels)
+
+  // MATCH-END BONUSES
+  damageMultiplier: number;     // Multiplier for damage dealt to opponent
+  healthMultiplier: number;     // Multiplier for remaining health
+  koWinBonus: number;           // Bonus for winning by knockout
+  timeoutWinBonus: number;      // Bonus for winning by timeout (less than KO)
+  stalematePenalty: number;     // Penalty for passive play (negative)
+  stalemateThreshold: number;   // Minimum total damage to avoid stalemate penalty
+}

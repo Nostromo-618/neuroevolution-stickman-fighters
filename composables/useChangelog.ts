@@ -11,6 +11,30 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '2.0.8',
+        date: '2026-01-05',
+        changes: {
+            added: [
+                'NN Fitness Editor: Customize the AI reward function with 16 tunable parameters',
+                'Per-frame shaping rewards: proximity, aggression, facing, positioning, edge/time penalties',
+                'Match-end bonuses: damage/health multipliers, win bonuses, stalemate penalties',
+                'Monaco-based editor with real-time validation and syntax highlighting',
+                'Import/Export fitness configurations to experiment with different training strategies',
+                'LocalStorage persistence for custom fitness functions across sessions'
+            ],
+            changed: [
+                'Fitness calculation now uses configurable parameters instead of hardcoded values',
+                'Changes apply immediately to live training with toast notification',
+                'Background/turbo workers use new fitness config on next training start'
+            ],
+            fixed: [
+                'Fitness Editor now displays saved configuration instead of always showing defaults',
+                'Removed duplicate toast notification when saving fitness config',
+                'Added accessibility labels for screen reader compatibility'
+            ]
+        }
+    },
+    {
         version: '2.0.7',
         date: '2026-01-05',
         changes: {
