@@ -14,7 +14,7 @@
           <!-- Top row: Title, tabs, toggle, close button -->
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-5">
-              <h2 class="text-xl font-bold text-purple-400">
+              <h2 class="text-xl font-bold text-emerald-400">
                 ✏️ Custom Fighter Script Editor
               </h2>
 
@@ -226,6 +226,10 @@ let monacoInstance: typeof import('monaco-editor') | null = null;
 const cleanupFunctions: Array<() => void> = [];
 let editorsInitialized = false;
 
+// Dynamic theme based on color mode
+const colorMode = useColorMode();
+const editorTheme = computed(() => colorMode.value === 'dark' ? 'vs-dark' : 'vs');
+
 // Computed: current error for single mode
 const currentError = computed(() => {
   return activeSlot.value === 'slot1' ? errorA.value : errorB.value;
@@ -243,12 +247,14 @@ const switchSlot = (slot: 'slot1' | 'slot2') => {
   activeSlot.value = slot;
 };
 
-// Monaco editor configuration
+// Monaco editor configuration with VS Code default font
 const editorOptions: editor.IStandaloneEditorConstructionOptions = {
   language: 'javascript',
-  theme: 'vs-dark',
+  theme: editorTheme.value,
   minimap: { enabled: false },
   fontSize: 14,
+  fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
+  fontLigatures: true,
   lineNumbers: 'on',
   scrollBeyondLastLine: false,
   automaticLayout: true,
@@ -418,6 +424,13 @@ watch(codeB, () => {
   if (codeB.value) {
     const result = compileScript(codeB.value);
     errorB.value = result.error || null;
+  }
+});
+
+// Update editor theme when color mode changes
+watch(editorTheme, (newTheme) => {
+  if (monacoInstance?.editor) {
+    monacoInstance.editor.setTheme(newTheme);
   }
 });
 

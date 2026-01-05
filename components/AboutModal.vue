@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
 const open = defineModel<boolean>('open', { default: false })
 const { changelog } = useChangelog()
 
-const version = '2.0.6'
+const version = '2.0.7'
 
 // Get all changelog entries for display
 const recentChangelog = computed(() => changelog)

@@ -11,6 +11,24 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '2.0.7',
+        date: '2026-01-05',
+        changes: {
+            added: [
+                'Full training state persistence: Resume exactly where you left off after page refresh',
+                'Auto-save of population, best genome, fitness history, and generation counter',
+                'Settings are now persisted and restored on page load'
+            ],
+            changed: [
+                'Script Editor now uses light theme in light mode (was always dark)',
+                'Script Editor uses VS Code default font (Cascadia Code/Consolas) with ligatures'
+            ],
+            fixed: [
+                'Fixed crossover type error when loading persisted genomes in Turbo mode'
+            ]
+        }
+    },
+    {
         version: '2.0.6',
         date: '2026-01-04',
         changes: {
