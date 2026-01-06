@@ -1,6 +1,8 @@
 <template>
+  <!-- Fixed fullscreen overlay to completely cover app content -->
+  <!-- Scroll lock is managed by useDisclaimer composable -->
   <div :class="[
-    'min-h-screen flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700',
+    'fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-center',
     'bg-gray-50 dark:bg-slate-950'
   ]">
     <div class="max-w-md w-full space-y-8">

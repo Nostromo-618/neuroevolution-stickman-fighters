@@ -14,10 +14,10 @@
         />
 
         <div
+          v-if="disclaimerStatus === 'ACCEPTED'"
           :class="[
-            'min-h-screen font-sans flex flex-col items-center py-8 transition-all duration-700',
-            'bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-white',
-            disclaimerStatus === 'PENDING' ? 'blur-md pointer-events-none' : ''
+            'min-h-screen font-sans flex flex-col items-center py-8',
+            'bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-white'
           ]"
         >
         <div class="w-full max-w-6xl px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">

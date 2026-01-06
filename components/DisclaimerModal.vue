@@ -97,8 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { useScrollLock } from '@vueuse/core';
+import { ref } from 'vue';
 
 interface Props {
   onAccept: () => void;
@@ -110,21 +109,15 @@ const props = defineProps<Props>();
 // Modal open state - always starts open, never closes via v-model (only via callbacks)
 const isModalOpen = ref(true);
 
-// Lock body scroll to prevent users from scrolling past the disclaimer modal
-const scrollLock = useScrollLock(computed(() => process.client ? document.body : null));
-
-onMounted(() => {
-  scrollLock.value = true;
-});
+// Note: Scroll lock is now managed centrally by useDisclaimer composable
+// based on disclaimerStatus, ensuring consistent behavior across modal and farewell screen
 
 const handleAccept = () => {
-  scrollLock.value = false;
   isModalOpen.value = false;
   props.onAccept();
 };
 
 const handleDecline = () => {
-  scrollLock.value = false;
   isModalOpen.value = false;
   props.onDecline();
 };
