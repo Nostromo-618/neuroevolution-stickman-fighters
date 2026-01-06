@@ -10,7 +10,7 @@
       <UIcon :name="showTrainingParams ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="w-4 h-4" />
     </UButton>
 
-    <div :class="['space-y-4 transition-all duration-300 overflow-hidden', showTrainingParams ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0']">
+    <div :class="['space-y-4 transition-all duration-300 overflow-hidden', showTrainingParams ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0']">
       <!-- Speed Slider - Only shown in TRAINING mode when Turbo is OFF -->
       <div v-if="isTrainingActive && !settings.turboTraining" class="space-y-2">
         <div class="flex justify-between">

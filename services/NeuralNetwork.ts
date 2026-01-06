@@ -113,17 +113,14 @@ export const OUTPUT_NODES = NN_ARCH.OUTPUT_NODES;
  * - Falls back to default 9→13→13→8 if nothing saved
  *
  * @param customArch - Optional custom architecture to use
- * @returns A new NeuralNetwork with random weights and biases
+ * @returns A new FlexibleNeuralNetworkData with random weights and biases
  */
-export const createRandomNetwork = (customArch?: NNArchitecture): NeuralNetworkData => {
+export const createRandomNetwork = (customArch?: NNArchitecture): FlexibleNeuralNetworkData => {
   // Use provided architecture, or load from persistence, or fall back to default
   const arch = customArch ?? getCurrentArchitecture();
 
-  // Use the first hidden layer's node count for the legacy 2-layer format
-  // Both hidden layers will use the same size (current architecture limitation)
-  const hiddenNodes = arch.hiddenLayers[0] ?? HIDDEN_NODES;
-
-  return createRandomNetworkWithArch(hiddenNodes);
+  // Create flexible network that supports 1-5 hidden layers
+  return createNetworkFromArchitecture(arch);
 };
 
 /**

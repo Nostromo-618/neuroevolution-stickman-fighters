@@ -146,9 +146,16 @@ export interface FlexibleNeuralNetworkData {
  */
 export interface Genome {
   id: string;              // Unique identifier (e.g., "gen5-3" = generation 5, individual 3)
-  network: NeuralNetworkData;  // The AI's neural network
+  network: NeuralNetworkData | FlexibleNeuralNetworkData;  // The AI's neural network (flexible or legacy format)
   fitness: number;         // Accumulated fitness score (higher = better)
   matchesWon: number;      // Number of matches won by this genome
+}
+
+/**
+ * Type guard to check if a network is in flexible format.
+ */
+export function isFlexibleNetwork(network: NeuralNetworkData | FlexibleNeuralNetworkData): network is FlexibleNeuralNetworkData {
+  return 'layerWeights' in network && 'architecture' in network;
 }
 
 // =============================================================================

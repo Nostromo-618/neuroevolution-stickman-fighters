@@ -11,6 +11,18 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '3.0.1',
+        date: '2026-01-06',
+        changes: {
+            fixed: [
+                'Neural Network Visualizer now dynamically renders custom architectures from NN Editor',
+                'Visualizer supports 1-5 hidden layers with variable neuron counts (was hardcoded to 2 layers)',
+                'Hidden layers now display with purple color-coding matching the NN Editor design',
+                'Reset Genome button no longer cut off in Training Parameters panel'
+            ]
+        }
+    },
+    {
         version: '3.0.0',
         date: '2026-01-06',
         changes: {

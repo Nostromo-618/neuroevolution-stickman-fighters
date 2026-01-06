@@ -19,19 +19,21 @@
 <script setup lang="ts">
 /**
  * =============================================================================
- * NEURAL NETWORK VISUALIZER - Optimized for 60FPS
+ * NEURAL NETWORK VISUALIZER - Dynamic Architecture Support
  * =============================================================================
  *
  * Hybrid approach:
  * - Static: Canvas element managed by Vue
  * - Dynamic: Weights/activations rendered via direct canvas API (no reactivity)
  *
- * Architecture: 9 → 13 → 13 → 8
+ * Supports 1-5 hidden layers with variable neuron counts.
+ * Automatically adapts to the network's actual architecture.
  */
 
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import type { Fighter } from '~/services/GameEngine';
 import { NN_ARCH } from '~/services/Config';
+import { legacyToFlexible } from '~/services/NeuralNetwork';
 
 // Get color mode
 const colorMode = useColorMode();
@@ -45,8 +47,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  width: 600,
-  height: 200,
+  width: 800,
+  height: 250,
   className: ''
 });
 
@@ -56,6 +58,8 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const INPUT_LABELS = ['Dist X', 'Dist Y', 'My HP', 'Op HP', 'Op Act', 'My En', 'Face', 'Op CD', 'Op En'];
 const OUTPUT_LABELS = ['Idle', 'Left', 'Right', 'Jump', 'Crouch', 'Punch', 'Kick', 'Block'];
 const NODE_RADIUS = 4;
+const LEFT_MARGIN = 60;
+const RIGHT_MARGIN = 60;
 
 let animationFrameId: number | null = null;
 let isRunning = false;
@@ -71,13 +75,21 @@ const sigmoid = (x: number): number => 1 / (1 + Math.exp(-x));
 // COLOR HELPERS
 // =============================================================================
 
-const getNodeColor = (value: number, isDark: boolean): string => {
+const getNodeColor = (value: number, isDark: boolean, layerType: 'input' | 'hidden' | 'output'): string => {
   const brightness = Math.min(1, Math.max(0.2, value));
+  
   if (isDark) {
-    return `rgba(0, 255, 255, ${brightness})`;
+    // Cyan for input/output, purple tint for hidden
+    if (layerType === 'hidden') {
+      return `rgba(168, 85, 247, ${brightness})`; // Purple
+    }
+    return `rgba(0, 255, 255, ${brightness})`; // Cyan
   } else {
-    // Blue-ish color for light mode for better visibility
-    return `rgba(14, 116, 144, ${brightness})`;
+    // Light mode colors
+    if (layerType === 'hidden') {
+      return `rgba(147, 51, 234, ${brightness})`; // Purple-600
+    }
+    return `rgba(14, 116, 144, ${brightness})`; // Cyan-700
   }
 };
 
@@ -122,7 +134,7 @@ const render = (): void => {
 
   // No fighter - show waiting message
   if (!props.fighter || !props.fighter.genome) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.fillStyle = isDarkMode.value ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
     ctx.font = '14px Inter, sans-serif';
     const text = 'Waiting for Neural Network...';
     const textWidth = ctx.measureText(text).width;
@@ -131,83 +143,78 @@ const render = (): void => {
     return;
   }
 
-  const network = props.fighter.genome.network;
+  // Convert legacy network to flexible format to get architecture info
+  const legacyNetwork = props.fighter.genome.network;
+  const flexNetwork = legacyToFlexible(legacyNetwork);
+  const arch = flexNetwork.architecture;
+  
+  // Build layer sizes array: [input, ...hidden, output]
+  const layerSizes = [arch.inputNodes, ...arch.hiddenLayers, arch.outputNodes];
+  const numLayers = layerSizes.length;
+  
   const inputs = props.fighter.lastInputs || new Array(NN_ARCH.INPUT_NODES).fill(0);
 
-  // Dynamically detect hidden layer size from network structure
-  const inputWeights = network.inputWeights;
-  const hiddenWeights = network.hiddenWeights;
-  const outputWeights = network.outputWeights;
-  const biases = network.biases;
-  
-  // H1 Size = columns in inputWeights (Input -> H1)
-  const hidden1Size = inputWeights[0]?.length ?? NN_ARCH.HIDDEN_NODES;
-  // H2 Size = rows in outputWeights (H2 -> Output)
-  // Or columns in hiddenWeights if it exists
-  const hidden2Size = outputWeights.length ?? NN_ARCH.HIDDEN_NODES; 
-  // Output Size = columns in outputWeights
-  const outputNodes = outputWeights[0]?.length ?? NN_ARCH.OUTPUT_NODES;
-
-  // Use fallback if hiddenWeights is missing (e.g. old structure momentarily)
-  // But we enforce structure now, so we assume hiddenWeights exists.
-  
   // ==========================================================================
   // FORWARD PASS (compute activations for visualization)
+  // Store activations for each layer
   // ==========================================================================
   
-  const hidden1Outputs: number[] = new Array(hidden1Size);
-  const hidden2Outputs: number[] = new Array(hidden2Size);
-  const finalOutputs: number[] = new Array(outputNodes);
-
-  // Input -> H1
-  for (let h = 0; h < hidden1Size; h++) {
-    let sum = 0;
-    for (let i = 0; i < inputs.length; i++) {
-      const inputVal = inputs[i] ?? 0;
-      const weight = inputWeights[i]?.[h] ?? 0;
-      sum += inputVal * weight;
+  const layerActivations: number[][] = [];
+  layerActivations.push([...inputs]); // Layer 0 = inputs
+  
+  // Forward pass through each layer
+  for (let layerIdx = 0; layerIdx < flexNetwork.layerWeights.length; layerIdx++) {
+    const weights = flexNetwork.layerWeights[layerIdx];
+    const layerBiases = flexNetwork.biases[layerIdx];
+    const prevActivations = layerActivations[layerIdx];
+    
+    if (!weights || !layerBiases || !prevActivations) continue;
+    
+    const isOutputLayer = layerIdx === flexNetwork.layerWeights.length - 1;
+    const toSize = layerBiases.length;
+    const nextActivations: number[] = [];
+    
+    for (let toNode = 0; toNode < toSize; toNode++) {
+      let sum = 0;
+      
+      // Weighted sum of all inputs to this node
+      for (let fromNode = 0; fromNode < prevActivations.length; fromNode++) {
+        const weight = weights[fromNode]?.[toNode] ?? 0;
+        sum += (prevActivations[fromNode] ?? 0) * weight;
+      }
+      
+      // Add bias
+      sum += layerBiases[toNode] ?? 0;
+      
+      // Apply activation function
+      if (isOutputLayer) {
+        nextActivations.push(sigmoid(sum));
+      } else {
+        nextActivations.push(relu(sum));
+      }
     }
-    sum += biases[h] ?? 0;
-    hidden1Outputs[h] = relu(sum);
-  }
-
-  // H1 -> H2
-  for (let h2 = 0; h2 < hidden2Size; h2++) {
-    let sum = 0;
-    for (let h1 = 0; h1 < hidden1Size; h1++) {
-      const h1Val = hidden1Outputs[h1] ?? 0;
-      const weight = hiddenWeights?.[h1]?.[h2] ?? 0;
-      sum += h1Val * weight;
-    }
-    sum += biases[hidden1Size + h2] ?? 0;
-    hidden2Outputs[h2] = relu(sum);
-  }
-
-  // H2 -> Output
-  for (let o = 0; o < outputNodes; o++) {
-    let sum = 0;
-    for (let h = 0; h < hidden2Size; h++) {
-      const h2Val = hidden2Outputs[h] ?? 0;
-      const weight = outputWeights[h]?.[o] ?? 0;
-      sum += h2Val * weight;
-    }
-    sum += biases[hidden1Size + hidden2Size + o] ?? 0;
-    finalOutputs[o] = sigmoid(sum);
+    
+    layerActivations.push(nextActivations);
   }
 
   // ==========================================================================
-  // LAYOUT CALCULATIONS
+  // LAYOUT CALCULATIONS - Dynamic for N layers
   // ==========================================================================
   
-  const inputX = 60;
-  const hidden1X = width * 0.4;
-  const hidden2X = width * 0.7;
-  const outputX = width - 60;
-
-  const inputStep = height / (inputs.length + 1);
-  const hidden1Step = height / (hidden1Size + 1);
-  const hidden2Step = height / (hidden2Size + 1);
-  const outputStep = height / (outputNodes + 1);
+  const usableWidth = width - LEFT_MARGIN - RIGHT_MARGIN;
+  
+  // Calculate X positions for each layer
+  const layerXPositions: number[] = [];
+  for (let i = 0; i < numLayers; i++) {
+    if (numLayers === 1) {
+      layerXPositions.push(width / 2);
+    } else {
+      layerXPositions.push(LEFT_MARGIN + (i * usableWidth) / (numLayers - 1));
+    }
+  }
+  
+  // Calculate Y step (spacing between nodes) for each layer
+  const layerYSteps: number[] = layerSizes.map(size => height / (size + 1));
 
   // ==========================================================================
   // DRAW CONNECTIONS (screen blend mode for glow effect)
@@ -215,65 +222,36 @@ const render = (): void => {
   
   ctx.globalCompositeOperation = 'screen';
 
-  // Input → H1
-  for (let i = 0; i < inputs.length; i++) {
-    const y1 = (i + 1) * inputStep;
-    const inputVal = inputs[i] ?? 0;
+  // Draw connections between each pair of adjacent layers
+  for (let layerIdx = 0; layerIdx < numLayers - 1; layerIdx++) {
+    const fromSize = layerSizes[layerIdx] ?? 0;
+    const toSize = layerSizes[layerIdx + 1] ?? 0;
+    const fromX = layerXPositions[layerIdx] ?? 0;
+    const toX = layerXPositions[layerIdx + 1] ?? 0;
+    const fromStep = layerYSteps[layerIdx] ?? 1;
+    const toStep = layerYSteps[layerIdx + 1] ?? 1;
+    const fromActivations = layerActivations[layerIdx] ?? [];
+    const weights = flexNetwork.layerWeights[layerIdx];
     
-    for (let h = 0; h < hidden1Size; h++) {
-      const y2 = (h + 1) * hidden1Step;
-      const weight = inputWeights[i]?.[h] ?? 0;
-      const color = getLineColor(weight, Math.abs(inputVal), isDarkMode.value);
-
-      if (color) {
-        ctx.beginPath();
-        ctx.moveTo(inputX, y1);
-        ctx.lineTo(hidden1X, y2);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(0.1, Math.abs(weight) * 0.5);
-        ctx.stroke();
-      }
-    }
-  }
-
-  // H1 → H2
-  for (let h1 = 0; h1 < hidden1Size; h1++) {
-    const y1 = (h1 + 1) * hidden1Step;
-    const h1Val = hidden1Outputs[h1] ?? 0;
+    if (!weights) continue;
     
-    for (let h2 = 0; h2 < hidden2Size; h2++) {
-      const y2 = (h2 + 1) * hidden2Step;
-      const weight = hiddenWeights?.[h1]?.[h2] ?? 0;
-      const color = getLineColor(weight, h1Val, isDarkMode.value);
+    for (let f = 0; f < fromSize; f++) {
+      const y1 = (f + 1) * fromStep;
+      const fromVal = fromActivations[f] ?? 0;
+      
+      for (let t = 0; t < toSize; t++) {
+        const y2 = (t + 1) * toStep;
+        const weight = weights[f]?.[t] ?? 0;
+        const color = getLineColor(weight, Math.abs(fromVal), isDarkMode.value);
 
-      if (color) {
-        ctx.beginPath();
-        ctx.moveTo(hidden1X, y1);
-        ctx.lineTo(hidden2X, y2);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(0.1, Math.abs(weight) * 0.5);
-        ctx.stroke();
-      }
-    }
-  }
-
-  // H2 → Output
-  for (let h2 = 0; h2 < hidden2Size; h2++) {
-    const y1 = (h2 + 1) * hidden2Step;
-    const h2Val = hidden2Outputs[h2] ?? 0;
-    
-    for (let o = 0; o < outputNodes; o++) {
-      const y2 = (o + 1) * outputStep;
-      const weight = outputWeights[h2]?.[o] ?? 0;
-      const color = getLineColor(weight, h2Val, isDarkMode.value);
-
-      if (color) {
-        ctx.beginPath();
-        ctx.moveTo(hidden2X, y1);
-        ctx.lineTo(outputX, y2);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = Math.max(0.1, Math.abs(weight) * 0.5);
-        ctx.stroke();
+        if (color) {
+          ctx.beginPath();
+          ctx.moveTo(fromX, y1);
+          ctx.lineTo(toX, y2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = Math.max(0.1, Math.abs(weight) * 0.5);
+          ctx.stroke();
+        }
       }
     }
   }
@@ -284,66 +262,65 @@ const render = (): void => {
   // DRAW NODES
   // ==========================================================================
 
-  // Input nodes with labels
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.font = '10px Inter, monospace';
+  for (let layerIdx = 0; layerIdx < numLayers; layerIdx++) {
+    const layerSize = layerSizes[layerIdx] ?? 0;
+    const x = layerXPositions[layerIdx] ?? 0;
+    const yStep = layerYSteps[layerIdx] ?? 1;
+    const activations = layerActivations[layerIdx] ?? [];
+    
+    const isInputLayer = layerIdx === 0;
+    const isOutputLayer = layerIdx === numLayers - 1;
+    const layerType: 'input' | 'hidden' | 'output' = isInputLayer ? 'input' : isOutputLayer ? 'output' : 'hidden';
+    
+    for (let n = 0; n < layerSize; n++) {
+      const y = (n + 1) * yStep;
+      const val = activations[n] ?? 0;
+      
+      // Output layer: highlight active nodes
+      if (isOutputLayer) {
+        const isActive = val > 0.5;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, NODE_RADIUS + (isActive ? 2 : 0), 0, Math.PI * 2);
+        ctx.fillStyle = isActive 
+          ? (isDarkMode.value ? '#00FFFF' : '#0891b2') 
+          : getNodeColor(val, isDarkMode.value, layerType);
+        ctx.fill();
+        ctx.strokeStyle = isDarkMode.value ? '#333' : '#9ca3af';
+        ctx.stroke();
 
-  for (let i = 0; i < inputs.length; i++) {
-    const y = (i + 1) * inputStep;
-    const inputVal = inputs[i] ?? 0;
+        // Output label
+        ctx.textAlign = 'left';
+        ctx.fillStyle = isActive 
+          ? (isDarkMode.value ? '#FFFFFF' : '#111827') 
+          : (isDarkMode.value ? 'rgba(255, 255, 255, 0.5)' : 'rgba(75, 85, 99, 0.7)');
+        ctx.font = isActive ? 'bold 10px Inter, monospace' : '10px Inter, monospace';
+        ctx.fillText(OUTPUT_LABELS[n] ?? '', x + 10, y);
+      }
+      // Input layer: show labels
+      else if (isInputLayer) {
+        ctx.beginPath();
+        ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = getNodeColor(Math.abs(val), isDarkMode.value, layerType);
+        ctx.fill();
+        ctx.strokeStyle = isDarkMode.value ? '#333' : '#9ca3af';
+        ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(inputX, y, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = getNodeColor(Math.abs(inputVal), isDarkMode.value);
-    ctx.fill();
-    ctx.strokeStyle = isDarkMode.value ? '#333' : '#9ca3af';
-    ctx.stroke();
-
-    ctx.fillStyle = isDarkMode.value ? 'rgba(255, 255, 255, 0.7)' : 'rgba(55, 65, 81, 0.9)';
-    ctx.fillText(INPUT_LABELS[i] ?? '', inputX - 10, y);
-  }
-
-  // Hidden 1 nodes
-  for (let h = 0; h < hidden1Size; h++) {
-    const y = (h + 1) * hidden1Step;
-    const val = hidden1Outputs[h] ?? 0;
-
-    ctx.beginPath();
-    ctx.arc(hidden1X, y, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = getNodeColor(val, isDarkMode.value);
-    ctx.fill();
-  }
-
-  // Hidden 2 nodes
-  for (let h = 0; h < hidden2Size; h++) {
-    const y = (h + 1) * hidden2Step;
-    const val = hidden2Outputs[h] ?? 0;
-
-    ctx.beginPath();
-    ctx.arc(hidden2X, y, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = getNodeColor(val, isDarkMode.value);
-    ctx.fill();
-  }
-
-  // Output nodes with labels (highlight active outputs)
-  ctx.textAlign = 'left';
-
-  for (let o = 0; o < outputNodes; o++) {
-    const y = (o + 1) * outputStep;
-    const outputVal = finalOutputs[o] ?? 0;
-    const isActive = outputVal > 0.5;
-
-    ctx.beginPath();
-    ctx.arc(outputX, y, NODE_RADIUS + (isActive ? 2 : 0), 0, Math.PI * 2);
-    ctx.fillStyle = isActive ? (isDarkMode.value ? '#00FFFF' : '#0891b2') : getNodeColor(outputVal, isDarkMode.value);
-    ctx.fill();
-    ctx.strokeStyle = isDarkMode.value ? '#333' : '#9ca3af';
-    ctx.stroke();
-
-    ctx.fillStyle = isActive ? (isDarkMode.value ? '#FFFFFF' : '#111827') : (isDarkMode.value ? 'rgba(255, 255, 255, 0.5)' : 'rgba(75, 85, 99, 0.7)');
-    ctx.font = isActive ? 'bold 10px Inter, monospace' : '10px Inter, monospace';
-    ctx.fillText(OUTPUT_LABELS[o] ?? '', outputX + 10, y);
+        // Input label
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = '10px Inter, monospace';
+        ctx.fillStyle = isDarkMode.value ? 'rgba(255, 255, 255, 0.7)' : 'rgba(55, 65, 81, 0.9)';
+        ctx.fillText(INPUT_LABELS[n] ?? '', x - 10, y);
+      }
+      // Hidden layers: just draw nodes
+      else {
+        ctx.beginPath();
+        ctx.arc(x, y, NODE_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = getNodeColor(val, isDarkMode.value, layerType);
+        ctx.fill();
+      }
+    }
   }
 
   // Schedule next frame
