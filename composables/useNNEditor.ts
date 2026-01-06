@@ -4,14 +4,25 @@
  * =============================================================================
  *
  * Composable for managing the Rete.js Neural Network visual editor.
- * Handles editor initialization, architecture manipulation, and state persistence.
+ * Uses Rete.js with custom Vue layer nodes for the columnar visual design.
+ *
+ * Implementation: Option B - Layers as Custom Nodes
+ * - Each layer is a Rete.js node rendered with CustomLayerNode.vue
+ * - Neurons are circles rendered inside each layer node
+ * - Connections are drawn between adjacent layers
+ *
+ * Stability Rules Applied:
+ * - Rule 1: Simple control flow
+ * - Rule 5: Type assertions on layer operations
+ * - Rule 6: No globals, all state is local
+ * - Rule 9: Immutable architecture updates
  */
 
-import { ref, computed, shallowRef } from 'vue';
-import { NodeEditor, ClassicPreset } from 'rete';
+import { ref, computed, shallowRef, markRaw } from 'vue';
+import { NodeEditor, ClassicPreset, type GetSchemes } from 'rete';
 import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
-import { VuePlugin, Presets as VuePresets } from 'rete-vue-plugin';
+import { VuePlugin, Presets as VuePresets, type VueArea2D } from 'rete-vue-plugin';
 import type { NNArchitecture } from '../types';
 import { DEFAULT_NN_ARCHITECTURE } from '../types';
 import {
@@ -34,134 +45,172 @@ class LayerSocket extends ClassicPreset.Socket {
     }
 }
 
+const layerSocket = new LayerSocket();
+
 /**
- * Base class for layer nodes in the NN editor
+ * Custom layer node representing a neural network layer.
+ * The nodeCount property controls how many neuron circles are displayed.
  */
 class LayerNode extends ClassicPreset.Node {
+    width = 100;
+    height = 350;
+
     public nodeCount: number;
     public readonly layerType: 'input' | 'hidden' | 'output';
-    public readonly isEditable: boolean;
+    public readonly layerIndex: number | undefined;
 
     constructor(
         label: string,
         nodeCount: number,
         layerType: 'input' | 'hidden' | 'output',
-        isEditable: boolean = false
+        layerIndex?: number
     ) {
         super(label);
         this.nodeCount = nodeCount;
         this.layerType = layerType;
-        this.isEditable = isEditable;
-
-        // Add output socket (for connections to next layer)
-        if (layerType !== 'output') {
-            this.addOutput('out', new ClassicPreset.Output(new LayerSocket(), 'Out'));
-        }
-
-        // Add input socket (for connections from previous layer)
-        if (layerType !== 'input') {
-            this.addInput('in', new ClassicPreset.Input(new LayerSocket(), 'In'));
-        }
-    }
-}
-
-class InputLayerNode extends LayerNode {
-    constructor() {
-        super('Input', 9, 'input', false);
-    }
-}
-
-class HiddenLayerNode extends LayerNode {
-    public layerIndex: number;
-
-    constructor(nodeCount: number, layerIndex: number) {
-        super(`Hidden ${layerIndex + 1}`, nodeCount, 'hidden', true);
         this.layerIndex = layerIndex;
+
+        // Add output socket (connections to next layer)
+        if (layerType !== 'output') {
+            this.addOutput('out', new ClassicPreset.Output(layerSocket, 'Out'));
+        }
+
+        // Add input socket (connections from previous layer)
+        if (layerType !== 'input') {
+            this.addInput('in', new ClassicPreset.Input(layerSocket, 'In'));
+        }
     }
 }
 
-class OutputLayerNode extends LayerNode {
-    constructor() {
-        super('Output', 8, 'output', false);
-    }
-}
+class LayerConnection extends ClassicPreset.Connection<LayerNode, LayerNode> { }
+
+// =============================================================================
+// TYPE DEFINITIONS
+// =============================================================================
+
+type Schemes = GetSchemes<LayerNode, LayerConnection>;
+// @ts-ignore - VueArea2D expects ClassicScheme but our custom Schemes work at runtime
+type AreaExtra = VueArea2D<Schemes>;
 
 // =============================================================================
 // COMPOSABLE
 // =============================================================================
 
-// Note: Rete.js v2.x has complex generic constraints that conflict with custom node types.
-// Using 'any' bypasses these while maintaining full runtime functionality.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type EditorSchemes = any;
-
 export function useNNEditor() {
-    // Architecture state
+    // =========================================================================
+    // STATE
+    // =========================================================================
+
+    /** Current architecture being edited */
     const architecture = ref<NNArchitecture>(getCurrentArchitecture());
 
-    // Editor instances (shallowRef to avoid deep reactivity)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const editorRef = shallowRef<NodeEditor<EditorSchemes> | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const areaRef = shallowRef<AreaPlugin<EditorSchemes, any> | null>(null);
+    /** Rete.js editor instance */
+    const editorRef = shallowRef<NodeEditor<Schemes> | null>(null);
 
-    // UI state
+    /** Rete.js area plugin (for zoom/pan) */
+    const areaRef = shallowRef<AreaPlugin<Schemes, AreaExtra> | null>(null);
+
+    /** Rete.js Vue render plugin */
+    const renderRef = shallowRef<VuePlugin<Schemes, AreaExtra> | null>(null);
+
+    /** Whether editor is initialized */
     const isInitialized = ref(false);
-    const isDirty = ref(false); // True if architecture differs from saved
 
-    // Computed values
+    /** True if architecture differs from saved version */
+    const isDirty = ref(false);
+
+    /** Whether to show connection lines */
+    const showConnections = ref(true);
+
+    // =========================================================================
+    // COMPUTED
+    // =========================================================================
+
+    /** Human-readable architecture summary (e.g., "9 → 13 → 13 → 8") */
     const architectureSummary = computed(() => formatArchitecture(architecture.value));
+
+    /** Total trainable parameters */
     const parameterCount = computed(() => calculateParameterCount(architecture.value));
+
+    /** Can add more hidden layers? */
     const canAddLayer = computed(() =>
         architecture.value.hiddenLayers.length < NN_CONSTRAINTS.MAX_HIDDEN_LAYERS
     );
+
+    /** Can remove hidden layers? */
     const canRemoveLayer = computed(() =>
         architecture.value.hiddenLayers.length > NN_CONSTRAINTS.MIN_HIDDEN_LAYERS
     );
 
-    // ==========================================================================
+    // =========================================================================
     // EDITOR INITIALIZATION
-    // ==========================================================================
+    // =========================================================================
 
     /**
      * Initializes the Rete.js editor in the provided container element.
+     * @param container - The HTML element to mount the editor in
+     * @param customNodeComponent - The Vue component to use for rendering nodes
      */
-    async function initEditor(container: HTMLElement): Promise<void> {
+    async function initEditor(
+        container: HTMLElement,
+        customNodeComponent: ReturnType<typeof defineComponent>
+    ): Promise<void> {
         if (isInitialized.value) {
             console.warn('NN Editor already initialized');
             return;
         }
 
         // Create editor
-        const editor = new NodeEditor<EditorSchemes>();
-        editorRef.value = editor;
+        const editor = new NodeEditor<Schemes>();
+        editorRef.value = markRaw(editor);
 
-        // Create area plugin
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const area = new AreaPlugin<EditorSchemes, any>(container);
-        areaRef.value = area;
+        // Create area plugin for zoom/pan
+        const area = new AreaPlugin<Schemes, AreaExtra>(container);
+        areaRef.value = markRaw(area);
 
         // Create connection plugin
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const connection = new ConnectionPlugin<EditorSchemes, any>();
+        // @ts-ignore - ConnectionPlugin types are incompatible with custom Schemes but work at runtime
+        const connection = new ConnectionPlugin<Schemes, AreaExtra>();
+        // @ts-ignore - ClassicPreset types are incompatible with custom Schemes but work at runtime
         connection.addPreset(ConnectionPresets.classic.setup());
 
-        // Create Vue render plugin
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const render = new VuePlugin<EditorSchemes, any>();
-        render.addPreset(VuePresets.classic.setup());
+        // Create Vue render plugin with custom node component
+        const render = new VuePlugin<Schemes, AreaExtra>();
+        renderRef.value = markRaw(render);
+
+        // Add classic preset with customization for our layer nodes
+        // @ts-ignore - VuePresets types are incompatible with custom Schemes but work at runtime
+        render.addPreset(VuePresets.classic.setup({
+            customize: {
+                node() {
+                    // Use our custom layer node component for all nodes
+                    return customNodeComponent;
+                }
+            }
+        }));
 
         // Register plugins
         editor.use(area);
         area.use(connection);
         area.use(render);
 
-        // Enable zoom/pan
+        // Enable useful extensions
         AreaExtensions.simpleNodesOrder(area);
-        AreaExtensions.zoomAt(area, editor.getNodes());
+        AreaExtensions.selectableNodes(area, AreaExtensions.selector(), {
+            accumulating: AreaExtensions.accumulateOnCtrl()
+        });
 
-        // Build initial graph from architecture
+        // Listen for custom events from our node component
+        area.addPipe((context) => {
+            // Handle custom events emitted from CustomLayerNode
+            return context;
+        });
+
+        // Build initial graph from current architecture
         await buildGraphFromArchitecture();
+
+        // Zoom to fit all nodes
+        await zoomToFit();
 
         isInitialized.value = true;
     }
@@ -175,137 +224,192 @@ export function useNNEditor() {
 
         if (!editor || !area) return;
 
-        // Clear existing nodes
+        // Clear existing nodes and connections
+        for (const conn of editor.getConnections()) {
+            await editor.removeConnection(conn.id);
+        }
         for (const node of editor.getNodes()) {
             await editor.removeNode(node.id);
         }
 
-        // Create nodes
-        const inputNode = new InputLayerNode();
-        await editor.addNode(inputNode);
+        // Create layer nodes
+        const nodes: LayerNode[] = [];
 
-        const hiddenNodes: HiddenLayerNode[] = [];
+        // Input layer
+        const inputNode = new LayerNode('Input', architecture.value.inputNodes, 'input');
+        await editor.addNode(inputNode);
+        nodes.push(inputNode);
+
+        // Hidden layers
         for (let i = 0; i < architecture.value.hiddenLayers.length; i++) {
-            const nodeCount = architecture.value.hiddenLayers[i] ?? 13;
-            const hiddenNode = new HiddenLayerNode(nodeCount, i);
+            const count = architecture.value.hiddenLayers[i] ?? 13;
+            const hiddenNode = new LayerNode(`H${i + 1}`, count, 'hidden', i);
             await editor.addNode(hiddenNode);
-            hiddenNodes.push(hiddenNode);
+            nodes.push(hiddenNode);
         }
 
-        const outputNode = new OutputLayerNode();
+        // Output layer
+        const outputNode = new LayerNode('Output', architecture.value.outputNodes, 'output');
         await editor.addNode(outputNode);
+        nodes.push(outputNode);
 
-        // Create connections
-        const allNodes = [inputNode, ...hiddenNodes, outputNode];
-        for (let i = 0; i < allNodes.length - 1; i++) {
-            const from = allNodes[i];
-            const to = allNodes[i + 1];
+        // Create connections between adjacent layers
+        for (let i = 0; i < nodes.length - 1; i++) {
+            const from = nodes[i];
+            const to = nodes[i + 1];
             if (from && to) {
-                const connection = new ClassicPreset.Connection(from, 'out', to, 'in');
-                await editor.addConnection(connection);
+                const conn = new LayerConnection(from, 'out', to, 'in');
+                await editor.addConnection(conn);
             }
         }
 
-        // Position nodes horizontally
-        const spacing = 200;
+        // Position nodes in a horizontal layout
+        const spacing = 160;
         const startX = 50;
-        const centerY = 150;
+        const centerY = 50;
 
-        for (let i = 0; i < allNodes.length; i++) {
-            const node = allNodes[i];
+        for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
             if (node) {
                 await area.translate(node.id, { x: startX + i * spacing, y: centerY });
             }
         }
-
-        // Zoom to fit
-        AreaExtensions.zoomAt(area, allNodes);
     }
 
-    // ==========================================================================
-    // ARCHITECTURE MANIPULATION
-    // ==========================================================================
+    /**
+     * Zooms the view to fit all nodes.
+     */
+    async function zoomToFit(): Promise<void> {
+        const editor = editorRef.value;
+        const area = areaRef.value;
+
+        if (!editor || !area) return;
+
+        const nodes = editor.getNodes();
+        if (nodes.length > 0) {
+            await AreaExtensions.zoomAt(area, nodes);
+        }
+    }
+
+    // =========================================================================
+    // LAYER OPERATIONS
+    // =========================================================================
 
     /**
      * Adds a new hidden layer to the architecture.
      */
-    function addHiddenLayer(): void {
+    async function addHiddenLayer(): Promise<void> {
         if (!canAddLayer.value) return;
 
-        // Add layer with default size of 13 nodes
         architecture.value = {
             ...architecture.value,
             hiddenLayers: [...architecture.value.hiddenLayers, 13]
         };
         isDirty.value = true;
-
-        // Rebuild graph
-        buildGraphFromArchitecture();
+        await buildGraphFromArchitecture();
+        await zoomToFit();
     }
 
     /**
-     * Removes a hidden layer from the architecture.
+     * Removes the last hidden layer from the architecture.
      */
-    function removeHiddenLayer(index: number): void {
+    async function removeHiddenLayer(): Promise<void> {
         if (!canRemoveLayer.value) return;
-        if (index < 0 || index >= architecture.value.hiddenLayers.length) return;
 
         const newLayers = [...architecture.value.hiddenLayers];
-        newLayers.splice(index, 1);
+        newLayers.pop();
 
         architecture.value = {
             ...architecture.value,
             hiddenLayers: newLayers
         };
         isDirty.value = true;
-
-        // Rebuild graph
-        buildGraphFromArchitecture();
+        await buildGraphFromArchitecture();
+        await zoomToFit();
     }
 
     /**
-     * Sets the node count for a specific layer.
+     * Clones a hidden layer (duplicates it with the same neuron count).
      */
-    function setLayerSize(layerIndex: number, size: number): void {
+    async function cloneHiddenLayer(layerIndex: number): Promise<void> {
+        if (!canAddLayer.value) return;
         if (layerIndex < 0 || layerIndex >= architecture.value.hiddenLayers.length) return;
 
-        // Clamp size to valid range
-        const clampedSize = Math.max(
-            NN_CONSTRAINTS.MIN_NODES_PER_LAYER,
-            Math.min(NN_CONSTRAINTS.MAX_NODES_PER_LAYER, size)
-        );
-
+        const nodeCount = architecture.value.hiddenLayers[layerIndex] ?? 13;
         const newLayers = [...architecture.value.hiddenLayers];
-        newLayers[layerIndex] = clampedSize;
+        newLayers.splice(layerIndex + 1, 0, nodeCount);
 
         architecture.value = {
             ...architecture.value,
             hiddenLayers: newLayers
         };
         isDirty.value = true;
-
-        // Update node in editor if initialized
-        if (editorRef.value) {
-            buildGraphFromArchitecture();
-        }
+        await buildGraphFromArchitecture();
+        await zoomToFit();
     }
+
+    // =========================================================================
+    // NEURON OPERATIONS
+    // =========================================================================
+
+    /**
+     * Adds a single neuron to a hidden layer.
+     */
+    async function addNeuronToLayer(layerIndex: number): Promise<boolean> {
+        if (layerIndex < 0 || layerIndex >= architecture.value.hiddenLayers.length) return false;
+
+        const currentCount = architecture.value.hiddenLayers[layerIndex] ?? 0;
+        if (currentCount >= NN_CONSTRAINTS.MAX_NODES_PER_LAYER) return false;
+
+        const newLayers = [...architecture.value.hiddenLayers];
+        newLayers[layerIndex] = currentCount + 1;
+
+        architecture.value = {
+            ...architecture.value,
+            hiddenLayers: newLayers
+        };
+        isDirty.value = true;
+        await buildGraphFromArchitecture();
+        return true;
+    }
+
+    /**
+     * Removes a single neuron from a hidden layer.
+     */
+    async function removeNeuronFromLayer(layerIndex: number): Promise<boolean> {
+        if (layerIndex < 0 || layerIndex >= architecture.value.hiddenLayers.length) return false;
+
+        const currentCount = architecture.value.hiddenLayers[layerIndex] ?? 0;
+        if (currentCount <= NN_CONSTRAINTS.MIN_NODES_PER_LAYER) return false;
+
+        const newLayers = [...architecture.value.hiddenLayers];
+        newLayers[layerIndex] = currentCount - 1;
+
+        architecture.value = {
+            ...architecture.value,
+            hiddenLayers: newLayers
+        };
+        isDirty.value = true;
+        await buildGraphFromArchitecture();
+        return true;
+    }
+
+    // =========================================================================
+    // PERSISTENCE
+    // =========================================================================
 
     /**
      * Resets architecture to default (9→13→13→8).
      */
-    function resetToDefault(): void {
+    async function resetToDefault(): Promise<void> {
         architecture.value = { ...DEFAULT_NN_ARCHITECTURE };
         isDirty.value = true;
-        buildGraphFromArchitecture();
+        await buildGraphFromArchitecture();
+        await zoomToFit();
     }
-
-    // ==========================================================================
-    // PERSISTENCE
-    // ==========================================================================
 
     /**
      * Saves the current architecture to localStorage.
-     * Returns true if save was successful.
      */
     function saveCurrentArchitecture(): boolean {
         if (!isValidArchitecture(architecture.value)) {
@@ -325,26 +429,34 @@ export function useNNEditor() {
     /**
      * Loads architecture from localStorage.
      */
-    function loadSavedArchitecture(): void {
+    async function loadSavedArchitecture(): Promise<void> {
         const saved = loadArchitecture();
         if (saved) {
             architecture.value = saved;
             isDirty.value = false;
-            buildGraphFromArchitecture();
+            await buildGraphFromArchitecture();
+            await zoomToFit();
         }
     }
 
     /**
-     * Resets the dirty flag after a successful save.
-     * Called by parent component after save completes.
+     * Resets the dirty flag.
      */
     function resetDirty(): void {
         isDirty.value = false;
     }
 
-    // ==========================================================================
+    /**
+     * Toggles connection line visibility.
+     */
+    function toggleConnections(): void {
+        showConnections.value = !showConnections.value;
+        // TODO: Implement connection visibility toggle via area pipe
+    }
+
+    // =========================================================================
     // CLEANUP
-    // ==========================================================================
+    // =========================================================================
 
     /**
      * Destroys the editor and cleans up resources.
@@ -355,14 +467,20 @@ export function useNNEditor() {
             areaRef.value = null;
         }
         editorRef.value = null;
+        renderRef.value = null;
         isInitialized.value = false;
     }
+
+    // =========================================================================
+    // RETURN
+    // =========================================================================
 
     return {
         // State
         architecture,
         isInitialized,
         isDirty,
+        showConnections,
 
         // Computed
         architectureSummary,
@@ -370,16 +488,26 @@ export function useNNEditor() {
         canAddLayer,
         canRemoveLayer,
 
-        // Methods
+        // Editor lifecycle
         initEditor,
         destroyEditor,
+        zoomToFit,
+
+        // Layer operations
         addHiddenLayer,
         removeHiddenLayer,
-        setLayerSize,
+        cloneHiddenLayer,
+
+        // Neuron operations
+        addNeuronToLayer,
+        removeNeuronFromLayer,
+
+        // Persistence
         resetToDefault,
         saveCurrentArchitecture,
         loadSavedArchitecture,
         resetDirty,
+        toggleConnections,
 
         // Constants
         NN_CONSTRAINTS

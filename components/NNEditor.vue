@@ -3,50 +3,110 @@
  * Neural Network Visual Editor
  *
  * Rete.js-based visual editor for designing custom neural network architectures.
- * Displays layers as nodes that can be added, removed, and configured.
+ * Uses Option B: Each layer is a Rete node with neurons rendered as circles inside.
+ *
+ * Features:
+ * - Zoomable/pannable canvas (via Rete.js)
+ * - Layers as draggable column nodes
+ * - Neurons shown as circles inside layers
+ * - Add/remove neurons via +/- buttons
+ * - Clone layer functionality
+ * - Connection lines between layers
  */
 
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, h, defineComponent } from 'vue';
 import { useNNEditor } from '../composables/useNNEditor';
+import CustomLayerNode from './rete/CustomLayerNode.vue';
 import type { NNArchitecture } from '../types';
+
+// =============================================================================
+// EMITS
+// =============================================================================
 
 const emit = defineEmits<{
   apply: [architecture: NNArchitecture]
 }>();
 
-// Use the NN editor composable
+// =============================================================================
+// COMPOSABLE
+// =============================================================================
+
 const {
   architecture,
   isInitialized,
   isDirty,
+  showConnections,
   architectureSummary,
   parameterCount,
   canAddLayer,
   canRemoveLayer,
   initEditor,
   destroyEditor,
+  zoomToFit,
   addHiddenLayer,
   removeHiddenLayer,
-  setLayerSize,
+  cloneHiddenLayer,
+  addNeuronToLayer,
+  removeNeuronFromLayer,
   resetToDefault,
-  resetDirty,
-  NN_CONSTRAINTS
+  toggleConnections,
+  resetDirty
 } = useNNEditor();
 
-// Container ref for Rete.js
+// =============================================================================
+// REFS
+// =============================================================================
+
 const containerRef = ref<HTMLElement | null>(null);
 
-// Selected layer for editing
-const selectedLayerIndex = ref<number | null>(null);
-const editingNodeCount = ref<number>(13);
+// =============================================================================
+// CUSTOM NODE WRAPPER
+// =============================================================================
 
-// Dark mode detection
-const colorMode = useColorMode();
-const isDarkMode = computed(() => colorMode.value === 'dark');
+/**
+ * Wrapper component that bridges Rete.js props to our CustomLayerNode
+ * and handles event propagation back to the composable.
+ */
+const CustomLayerNodeWrapper = defineComponent({
+  props: {
+    // Using broad types as Rete.js injects various node properties at runtime
+    data: { type: Object as () => Record<string, unknown>, required: true },
+    styles: { type: Function as unknown as () => () => Record<string, unknown>, default: () => ({}) },
+    emit: { type: Function as unknown as () => (event: string, data?: unknown) => void, required: true }
+  },
+  setup(props) {
+    // Create an emit handler that routes events to our composable
+    const handleEmit = async (event: string, layerIndex?: unknown) => {
+      if (typeof layerIndex !== 'number') return;
+      
+      switch (event) {
+        case 'addNeuron':
+          await addNeuronToLayer(layerIndex);
+          break;
+        case 'removeNeuron':
+          await removeNeuronFromLayer(layerIndex);
+          break;
+        case 'cloneLayer':
+          await cloneHiddenLayer(layerIndex);
+          break;
+      }
+    };
+
+    return () => h(CustomLayerNode, {
+      data: props.data as Record<string, unknown>,
+      styles: props.styles as () => Record<string, unknown>,
+      emit: handleEmit
+    });
+  }
+});
+
+// =============================================================================
+// LIFECYCLE
+// =============================================================================
 
 onMounted(async () => {
   if (containerRef.value) {
-    await initEditor(containerRef.value);
+    await initEditor(containerRef.value, CustomLayerNodeWrapper);
   }
 });
 
@@ -54,41 +114,41 @@ onBeforeUnmount(() => {
   destroyEditor();
 });
 
-// Watch for selected layer changes to update editing value
-watch(selectedLayerIndex, (idx) => {
-  if (idx !== null && architecture.value.hiddenLayers[idx] !== undefined) {
-    editingNodeCount.value = architecture.value.hiddenLayers[idx];
-  }
-});
+// =============================================================================
+// DARK MODE
+// =============================================================================
 
-function handleLayerSelect(index: number) {
-  selectedLayerIndex.value = index;
-  editingNodeCount.value = architecture.value.hiddenLayers[index] ?? 13;
-}
+const colorMode = useColorMode();
+const isDarkMode = computed(() => colorMode.value === 'dark');
 
-function applyNodeCount() {
-  if (selectedLayerIndex.value !== null) {
-    setLayerSize(selectedLayerIndex.value, editingNodeCount.value);
-    selectedLayerIndex.value = null;
-  }
-}
-
-function handleAddLayer() {
-  addHiddenLayer();
-}
-
-function handleRemoveLayer() {
-  if (selectedLayerIndex.value !== null) {
-    removeHiddenLayer(selectedLayerIndex.value);
-    selectedLayerIndex.value = null;
-  }
-}
+// =============================================================================
+// ACTIONS
+// =============================================================================
 
 function handleApply() {
   emit('apply', architecture.value);
 }
 
-// Expose methods to parent component
+async function handleReset() {
+  await resetToDefault();
+}
+
+async function handleAddLayer() {
+  await addHiddenLayer();
+}
+
+async function handleRemoveLayer() {
+  await removeHiddenLayer();
+}
+
+async function handleZoomToFit() {
+  await zoomToFit();
+}
+
+// =============================================================================
+// EXPOSE
+// =============================================================================
+
 defineExpose({
   resetDirty,
   handleApply
@@ -98,11 +158,15 @@ defineExpose({
 <template>
   <div class="flex flex-col h-full">
     <!-- Toolbar -->
-    <div class="flex items-center justify-between p-3 border-b border-default bg-default/80 backdrop-blur-sm">
+    <div
+      class="flex items-center justify-between p-3 border-b"
+      :class="isDarkMode ? 'bg-gray-900/80 border-gray-700' : 'bg-white/80 border-gray-200'"
+    >
       <div class="flex items-center gap-2">
         <UButton
           icon="i-lucide-plus"
           size="sm"
+          color="primary"
           :disabled="!canAddLayer"
           @click="handleAddLayer"
         >
@@ -113,149 +177,89 @@ defineExpose({
           size="sm"
           variant="soft"
           color="error"
-          :disabled="!canRemoveLayer || selectedLayerIndex === null"
+          :disabled="!canRemoveLayer"
           @click="handleRemoveLayer"
         >
-          Remove
+          Remove Last
         </UButton>
         <UButton
           icon="i-lucide-rotate-ccw"
           size="sm"
           variant="ghost"
-          @click="resetToDefault"
+          @click="handleReset"
         >
           Reset
         </UButton>
+        
+        <span class="mx-2 h-5 w-px bg-gray-300 dark:bg-gray-600" />
+        
+        <UButton
+          icon="i-lucide-maximize-2"
+          size="sm"
+          variant="ghost"
+          @click="handleZoomToFit"
+        >
+          Fit View
+        </UButton>
+        <UButton
+          :icon="showConnections ? 'i-lucide-eye' : 'i-lucide-eye-off'"
+          size="sm"
+          variant="ghost"
+          @click="toggleConnections"
+        >
+          {{ showConnections ? 'Hide Lines' : 'Show Lines' }}
+        </UButton>
       </div>
 
-      <div class="flex items-center gap-4 text-sm text-muted">
-        <span>Parameters: <strong class="text-default">{{ parameterCount.toLocaleString() }}</strong></span>
-        <span v-if="isDirty" class="text-yellow-500 flex items-center gap-1">
+      <div class="flex items-center gap-4 text-sm">
+        <span :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
+          Parameters: <strong :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ parameterCount.toLocaleString() }}</strong>
+        </span>
+        <span v-if="isDirty" class="flex items-center gap-1 text-yellow-500">
           <UIcon name="i-lucide-alert-triangle" class="w-4 h-4" />
           Unsaved
         </span>
       </div>
     </div>
 
-    <!-- Canvas -->
-    <div class="flex-1 relative overflow-hidden">
+    <!-- Canvas Container (Rete.js mounts here) -->
+    <div
+      class="flex-1 relative overflow-hidden"
+      :class="isDarkMode ? 'bg-gray-950' : 'bg-gray-50'"
+    >
       <!-- Rete.js container -->
       <div
         ref="containerRef"
         class="absolute inset-0"
-        :class="isDarkMode ? 'bg-gray-900' : 'bg-gray-50'"
+        :style="{ background: isDarkMode ? 'radial-gradient(circle, #1f2937 1px, transparent 1px)' : 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }"
       />
 
       <!-- Loading overlay -->
       <div
         v-if="!isInitialized"
-        class="absolute inset-0 flex items-center justify-center bg-default/80"
+        class="absolute inset-0 flex items-center justify-center"
+        :class="isDarkMode ? 'bg-gray-900/90' : 'bg-white/90'"
       >
         <div class="flex items-center gap-3">
           <UIcon name="i-lucide-loader-2" class="w-6 h-6 animate-spin text-primary" />
-          <span class="text-muted">Initializing editor...</span>
+          <span :class="isDarkMode ? 'text-gray-300' : 'text-gray-600'">Initializing editor...</span>
         </div>
-      </div>
-
-      <!-- Simple layer visualization (fallback/overlay) -->
-      <div
-        v-if="isInitialized"
-        class="absolute bottom-4 left-4 right-4 flex items-center justify-center gap-2"
-      >
-        <!-- Input Layer -->
-        <div
-          class="flex flex-col items-center cursor-not-allowed"
-          :title="`Input Layer: ${architecture.inputNodes} nodes (fixed)`"
-        >
-          <div
-            class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm"
-            :class="isDarkMode ? 'bg-cyan-600' : 'bg-cyan-700'"
-          >
-            {{ architecture.inputNodes }}
-          </div>
-          <span class="text-xs text-muted mt-1">Input</span>
-        </div>
-
-        <UIcon name="i-lucide-arrow-right" class="w-4 h-4 text-muted" />
-
-        <!-- Hidden Layers -->
-        <template v-for="(nodeCount, idx) in architecture.hiddenLayers" :key="`hidden-${idx}`">
-          <button
-            class="flex flex-col items-center cursor-pointer group"
-            :class="selectedLayerIndex === idx ? 'ring-2 ring-primary ring-offset-2 rounded-full' : ''"
-            :title="`Hidden Layer ${idx + 1}: ${nodeCount} nodes (click to edit)`"
-            @click="handleLayerSelect(idx)"
-          >
-            <div
-              class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm transition-transform group-hover:scale-110"
-              :class="isDarkMode ? 'bg-purple-600' : 'bg-purple-700'"
-            >
-              {{ nodeCount }}
-            </div>
-            <span class="text-xs text-muted mt-1">H{{ idx + 1 }}</span>
-          </button>
-          <UIcon name="i-lucide-arrow-right" class="w-4 h-4 text-muted" />
-        </template>
-
-        <!-- Output Layer -->
-        <div
-          class="flex flex-col items-center cursor-not-allowed"
-          :title="`Output Layer: ${architecture.outputNodes} nodes (fixed)`"
-        >
-          <div
-            class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm"
-            :class="isDarkMode ? 'bg-green-600' : 'bg-green-700'"
-          >
-            {{ architecture.outputNodes }}
-          </div>
-          <span class="text-xs text-muted mt-1">Output</span>
-        </div>
-      </div>
-
-      <!-- Layer editing popover -->
-      <div
-        v-if="selectedLayerIndex !== null"
-        class="absolute top-4 right-4 z-20"
-      >
-        <UCard class="w-56">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <span class="font-medium">Hidden Layer {{ selectedLayerIndex + 1 }}</span>
-              <UButton
-                icon="i-lucide-x"
-                variant="ghost"
-                size="xs"
-                @click="selectedLayerIndex = null"
-              />
-            </div>
-          </template>
-
-          <div class="space-y-3">
-            <UFormField label="Nodes">
-              <UInput
-                v-model.number="editingNodeCount"
-                type="number"
-                :min="NN_CONSTRAINTS.MIN_NODES_PER_LAYER"
-                :max="NN_CONSTRAINTS.MAX_NODES_PER_LAYER"
-                size="sm"
-              />
-            </UFormField>
-            <div class="text-xs text-muted">
-              Range: {{ NN_CONSTRAINTS.MIN_NODES_PER_LAYER }}-{{ NN_CONSTRAINTS.MAX_NODES_PER_LAYER }}
-            </div>
-            <UButton size="sm" block @click="applyNodeCount">
-              Apply
-            </UButton>
-          </div>
-        </UCard>
       </div>
     </div>
 
     <!-- Footer -->
-    <div class="flex items-center justify-between p-3 border-t border-default bg-default">
+    <div
+      class="flex items-center justify-between p-3 border-t"
+      :class="isDarkMode ? 'bg-gray-900/80 border-gray-700' : 'bg-white/80 border-gray-200'"
+    >
       <div class="flex items-center gap-2">
-        <UIcon name="i-lucide-git-branch" class="w-4 h-4 text-muted" />
-        <span class="text-sm font-mono">{{ architectureSummary }}</span>
+        <UIcon name="i-lucide-git-branch" class="w-4 h-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
+        <span class="text-sm font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
+          {{ architectureSummary }}
+        </span>
+      </div>
+      <div class="text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
+        Scroll to zoom • Drag to pan • Drag nodes to reposition
       </div>
     </div>
   </div>
@@ -263,8 +267,21 @@ defineExpose({
 
 <style scoped>
 /* Rete.js canvas styling */
-:deep(.rete-editor) {
-  width: 100%;
-  height: 100%;
+:deep(.rete-background) {
+  background: transparent !important;
+}
+
+/* Make nodes have pointer cursor */
+:deep(.node) {
+  cursor: grab;
+}
+
+:deep(.node):active {
+  cursor: grabbing;
+}
+
+/* Connection styling */
+:deep(.connection path) {
+  stroke-width: 3px;
 }
 </style>

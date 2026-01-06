@@ -15,11 +15,14 @@ export const changelogData: ChangelogEntry[] = [
         date: '2026-01-06',
         changes: {
             added: [
-                'Visual Neural Network Designer: Rete.js-based editor for custom AI brain architectures',
-                'Add, remove, and configure hidden layers (1-5 layers, 4-50 nodes each)',
-                'Real-time architecture visualization with interactive layer nodes',
+                'Visual Neural Network Designer with Rete.js-powered zoomable/pannable canvas',
+                'Columnar layer design: layers as draggable nodes with neurons as numbered circles',
+                'Add/remove neurons with +/- buttons directly on hidden layer nodes',
+                'Clone layer button to duplicate hidden layers with same neuron count',
+                'Color-coded layers: cyan (input), purple (hidden), green (output)',
+                'Lock icons on fixed input/output layers to indicate non-editable status',
                 'Educational Theory Glossary panel explaining NN concepts',
-                'Parameter count display showing network complexity',
+                'Real-time parameter count display showing network complexity',
                 'Architecture persistence across browser sessions'
             ],
             changed: [
