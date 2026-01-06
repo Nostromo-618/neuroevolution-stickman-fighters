@@ -47,10 +47,41 @@ export enum FighterAction {
 // =============================================================================
 
 /**
- * NeuralNetwork Interface
+ * NNArchitecture Interface
+ * 
+ * Describes the topology of a neural network. The input and output layers
+ * are fixed (9 inputs for game state, 8 outputs for fighter actions), but
+ * hidden layers are user-configurable via the Visual NN Editor.
+ * 
+ * Examples:
+ * - Default:  { inputNodes: 9, hiddenLayers: [13, 13], outputNodes: 8 }
+ * - Wide:     { inputNodes: 9, hiddenLayers: [50], outputNodes: 8 }
+ * - Deep:     { inputNodes: 9, hiddenLayers: [20, 15, 10], outputNodes: 8 }
+ * 
+ * Constraints (enforced by UI):
+ * - Hidden layers: 1-5 layers
+ * - Nodes per layer: 4-50 nodes
+ */
+export interface NNArchitecture {
+  readonly inputNodes: 9;     // Fixed: game state inputs
+  hiddenLayers: number[];     // User-configurable: e.g., [13, 13] or [20, 15, 10]
+  readonly outputNodes: 8;    // Fixed: fighter action outputs
+}
+
+/**
+ * Default architecture constant (matches legacy hardcoded 9→13→13→8)
+ */
+export const DEFAULT_NN_ARCHITECTURE: NNArchitecture = {
+  inputNodes: 9,
+  hiddenLayers: [13, 13],
+  outputNodes: 8
+} as const;
+
+/**
+ * NeuralNetworkData Interface (Legacy)
  * 
  * Represents the "brain" of an AI fighter. This is a simple feedforward
- * neural network with TWO hidden layers:
+ * neural network with TWO hidden layers (hardcoded 9→13→13→8 architecture):
  * 
  *   INPUT (9 nodes) → HIDDEN 1 (13 nodes) → HIDDEN 2 (13 nodes) → OUTPUT (8 nodes)
  * 
@@ -62,13 +93,40 @@ export enum FighterAction {
  * 
  * During evolution, these weights are mutated and crossed over to create
  * new variations, allowing the AI to "learn" through natural selection.
+ * 
+ * NOTE: This interface is maintained for backward compatibility.
+ * New code should prefer FlexibleNeuralNetworkData for custom architectures.
  */
 export interface NeuralNetworkData {
-  inputWeights: number[][];   // 9 inputs × 13 hidden1 neurons
-  hiddenWeights: number[][];  // 13 hidden1 × 13 hidden2 neurons
-  outputWeights: number[][];  // 13 hidden2 × 8 output neurons
-  biases: number[];           // 34 bias values (13 H1 + 13 H2 + 8 Output)
+  inputWeights: number[][];   // 9 inputs × hiddenNodes hidden1 neurons
+  hiddenWeights: number[][];  // hiddenNodes hidden1 × hiddenNodes hidden2 neurons
+  outputWeights: number[][];  // hiddenNodes hidden2 × 8 output neurons
+  biases: number[];           // Bias values for all non-input layers
 }
+
+/**
+ * FlexibleNeuralNetworkData Interface
+ * 
+ * Extended network data structure supporting variable-depth architectures.
+ * Unlike NeuralNetworkData which assumes 2 hidden layers, this supports
+ * any number of hidden layers (1-5, as limited by UI).
+ * 
+ * Weight structure:
+ * - layerWeights[0]: input → hidden1 weights
+ * - layerWeights[1]: hidden1 → hidden2 weights (if exists)
+ * - layerWeights[N-1]: hiddenN → output weights
+ * 
+ * Bias structure:
+ * - biases[0]: biases for hidden layer 1
+ * - biases[1]: biases for hidden layer 2 (if exists)
+ * - biases[N]: biases for output layer
+ */
+export interface FlexibleNeuralNetworkData {
+  architecture: NNArchitecture;   // The topology this network follows
+  layerWeights: number[][][];     // weights[layer][fromNode][toNode]
+  biases: number[][];             // biases[layer][node] (one array per layer after input)
+}
+
 
 /**
  * Genome Interface

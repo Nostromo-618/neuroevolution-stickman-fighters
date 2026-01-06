@@ -153,6 +153,31 @@
         </p>
       </div>
 
+      <!-- Neural Network Architecture Designer -->
+      <div class="pt-4 border-t border-gray-200 dark:border-slate-700">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <UIcon name="i-lucide-brain-circuit" class="w-4 h-4 text-purple-500" />
+            <span class="text-xs font-semibold text-gray-700 dark:text-slate-300">Network Architecture</span>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <code class="text-xs font-mono text-purple-400">{{ architectureSummary }}</code>
+          <UButton
+            icon="i-lucide-edit-3"
+            size="xs"
+            variant="soft"
+            :disabled="settings.isRunning"
+            @click="nnEditorOpen = true"
+          >
+            Design
+          </UButton>
+        </div>
+        <p v-if="settings.isRunning" class="text-[10px] text-gray-500 dark:text-slate-500 mt-1">
+          Stop training to modify architecture
+        </p>
+      </div>
+
       <!-- Weights Management -->
       <div class="grid grid-cols-2 gap-2 pt-2">
         <UButton
@@ -193,11 +218,18 @@
       </div>
     </div>
   </div>
+
+  <!-- NN Editor Modal -->
+  <NNEditorModal
+    v-model="nnEditorOpen"
+    @apply="handleArchitectureApply"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { TrainingSettings, GameState } from '~/types';
+import type { TrainingSettings, GameState, NNArchitecture } from '~/types';
+import { formatArchitecture, getCurrentArchitecture } from '~/services/NNArchitecturePersistence';
 
 interface Props {
   settings: TrainingSettings;
@@ -210,11 +242,16 @@ const emit = defineEmits<{
   'export-weights': [];
   'import-weights': [];
   'reset-genome': [];
+  'architecture-change': [architecture: NNArchitecture];
 }>();
 
 const props = defineProps<Props>();
 
 const showTrainingParams = ref(true);
+const nnEditorOpen = ref(false);
+const architecture = ref<NNArchitecture>(getCurrentArchitecture());
+const architectureSummary = computed(() => formatArchitecture(architecture.value));
+
 const isTrainingActive = computed(() => props.settings.gameMode === 'TRAINING');
 const isHumanOpponent = computed(() => props.settings.player1Type === 'HUMAN');
 const shouldDisableSpeed = computed(() => isHumanOpponent.value);
@@ -281,5 +318,14 @@ const updateWorkerCount = (value: number | undefined) => {
   if (value !== undefined) {
     props.setSettings({ ...props.settings, workerCount: value });
   }
+};
+
+/**
+ * Handles architecture changes from the NN Editor modal.
+ * Updates local state and emits to parent for population reset.
+ */
+const handleArchitectureApply = (newArch: NNArchitecture) => {
+  architecture.value = newArch;
+  emit('architecture-change', newArch);
 };
 </script>

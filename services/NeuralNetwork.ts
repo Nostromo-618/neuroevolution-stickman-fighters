@@ -49,9 +49,10 @@
  * =============================================================================
  */
 
-import type { NeuralNetworkData } from '../types';
+import type { NeuralNetworkData, NNArchitecture, FlexibleNeuralNetworkData } from '../types';
 
 import { NN_ARCH } from './Config';
+import { getCurrentArchitecture } from './NNArchitecturePersistence';
 
 // =============================================================================
 // NETWORK ARCHITECTURE CONSTANTS
@@ -95,21 +96,34 @@ export const OUTPUT_NODES = NN_ARCH.OUTPUT_NODES;
 
 /**
  * Creates a new neural network with random weights
- * 
+ *
  * Weight Initialization Strategy:
  * - All weights are randomly initialized between -1 and 1
  * - This range allows for both positive (excitatory) and negative (inhibitory) connections
  * - The distribution centers around 0 to prevent initial bias
- * 
+ *
  * Why random initialization?
  * - Provides diversity in the initial population
  * - Each genome starts with a unique "personality"
  * - Natural selection will determine which random configurations work best
- * 
+ *
+ * Architecture Selection:
+ * - If customArch is provided, uses that architecture
+ * - Otherwise reads from localStorage via getCurrentArchitecture()
+ * - Falls back to default 9→13→13→8 if nothing saved
+ *
+ * @param customArch - Optional custom architecture to use
  * @returns A new NeuralNetwork with random weights and biases
  */
-export const createRandomNetwork = (): NeuralNetworkData => {
-  return createRandomNetworkWithArch(HIDDEN_NODES);
+export const createRandomNetwork = (customArch?: NNArchitecture): NeuralNetworkData => {
+  // Use provided architecture, or load from persistence, or fall back to default
+  const arch = customArch ?? getCurrentArchitecture();
+
+  // Use the first hidden layer's node count for the legacy 2-layer format
+  // Both hidden layers will use the same size (current architecture limitation)
+  const hiddenNodes = arch.hiddenLayers[0] ?? HIDDEN_NODES;
+
+  return createRandomNetworkWithArch(hiddenNodes);
 };
 
 /**
@@ -377,6 +391,242 @@ export const crossoverNetworks = (a: NeuralNetworkData, b: NeuralNetworkData): N
     hiddenWeights: newHiddenWeights,
     outputWeights: newOutputWeights,
     biases: newBiases
+  };
+};
+
+// =============================================================================
+// FLEXIBLE ARCHITECTURE FUNCTIONS
+// =============================================================================
+
+/**
+   * Creates a new neural network with random weights for a given architecture.
+   *
+   * Weight Initialization Strategy:
+   * - All weights are randomly initialized between -1 and 1
+   * - This range allows for both positive and negative connections
+   *
+   * @param arch - The architecture defining layer sizes
+   * @returns A new FlexibleNeuralNetworkData with random weights and biases
+   */
+export const createNetworkFromArchitecture = (arch: NNArchitecture): FlexibleNeuralNetworkData => {
+  const layers = [arch.inputNodes, ...arch.hiddenLayers, arch.outputNodes];
+  const layerWeights: number[][][] = [];
+  const biases: number[][] = [];
+
+  // Create weights between each adjacent layer pair
+  for (let i = 0; i < layers.length - 1; i++) {
+    const fromSize = layers[i] ?? 0;
+    const toSize = layers[i + 1] ?? 0;
+
+    // Weights: fromSize × toSize matrix
+    const weights: number[][] = [];
+    for (let f = 0; f < fromSize; f++) {
+      weights.push(Array(toSize).fill(0).map(() => Math.random() * 2 - 1));
+    }
+    layerWeights.push(weights);
+
+    // Biases: one per target node
+    biases.push(Array(toSize).fill(0).map(() => Math.random() * 2 - 1));
+  }
+
+  return {
+    architecture: { ...arch },
+    layerWeights,
+    biases
+  };
+};
+
+/**
+ * Runs the neural network forward pass for flexible architectures.
+ *
+ * Supports any number of hidden layers (1-5).
+ * Uses ReLU activation for hidden layers and Sigmoid for output.
+ *
+ * @param network - The flexible neural network
+ * @param inputs - Array of input values (must match architecture.inputNodes length)
+ * @returns Array of output values (0-1 each)
+ */
+export const predictFlexible = (network: FlexibleNeuralNetworkData, inputs: number[]): number[] => {
+  let currentActivations = [...inputs];
+
+  // Forward pass through each layer
+  for (let layerIdx = 0; layerIdx < network.layerWeights.length; layerIdx++) {
+    const weights = network.layerWeights[layerIdx];
+    const layerBiases = network.biases[layerIdx];
+
+    // Skip if layer data is missing (shouldn't happen with valid network)
+    if (!weights || !layerBiases) continue;
+
+    const isOutputLayer = layerIdx === network.layerWeights.length - 1;
+
+    const nextActivations: number[] = [];
+    const toSize = layerBiases.length;
+
+    for (let toNode = 0; toNode < toSize; toNode++) {
+      let sum = 0;
+
+      // Weighted sum of all inputs to this node
+      for (let fromNode = 0; fromNode < currentActivations.length; fromNode++) {
+        const weight = weights[fromNode]?.[toNode] ?? 0;
+        sum += (currentActivations[fromNode] ?? 0) * weight;
+      }
+
+      // Add bias
+      sum += layerBiases[toNode] ?? 0;
+
+      // Apply activation function
+      if (isOutputLayer) {
+        // Sigmoid for output layer (probability-like values 0-1)
+        nextActivations.push(sigmoid(sum));
+      } else {
+        // ReLU for hidden layers
+        nextActivations.push(relu(sum));
+      }
+    }
+
+    currentActivations = nextActivations;
+  }
+
+  return currentActivations;
+};
+
+/**
+ * Mutates a flexible neural network by randomly adjusting weights.
+ *
+ * @param network - The network to mutate
+ * @param rate - Probability of mutating each weight (0-1)
+ * @returns A new mutated network (original is not modified)
+ */
+export const mutateFlexible = (
+  network: FlexibleNeuralNetworkData,
+  rate: number
+): FlexibleNeuralNetworkData => {
+  const mutateValue = (val: number): number => {
+    if (Math.random() < rate) {
+      // 10% chance of "big mutation" for exploration
+      if (Math.random() < 0.1) {
+        return val + (Math.random() * 4.0 - 2.0);
+      }
+      // Normal mutation: scale by rate
+      const magnitude = 0.5 + (rate * 0.5);
+      return val + (Math.random() * 2 * magnitude - magnitude);
+    }
+    return val;
+  };
+
+  const newLayerWeights = network.layerWeights.map(layer =>
+    layer.map(row => row.map(mutateValue))
+  );
+
+  const newBiases = network.biases.map(layer =>
+    layer.map(mutateValue)
+  );
+
+  return {
+    architecture: { ...network.architecture },
+    layerWeights: newLayerWeights,
+    biases: newBiases
+  };
+};
+
+/**
+ * Combines two parent networks to create a child network (Crossover).
+ *
+ * IMPORTANT: Both parents must have the same architecture.
+ * If architectures differ, parent A is returned unchanged.
+ *
+ * Uses uniform crossover: for each weight, randomly pick from parent A or B.
+ *
+ * @param a - Parent A network
+ * @param b - Parent B network
+ * @returns A new child network with mixed weights
+ */
+export const crossoverFlexible = (
+  a: FlexibleNeuralNetworkData,
+  b: FlexibleNeuralNetworkData
+): FlexibleNeuralNetworkData => {
+  // Verify architectures match
+  const aLayers = a.architecture.hiddenLayers;
+  const bLayers = b.architecture.hiddenLayers;
+
+  if (aLayers.length !== bLayers.length ||
+    !aLayers.every((size, i) => size === bLayers[i])) {
+    console.warn('Crossover attempted with incompatible architectures, returning parent A');
+    return { ...a, layerWeights: a.layerWeights.map(l => l.map(r => [...r])), biases: a.biases.map(b => [...b]) };
+  }
+
+  const mix = (w1: number, w2: number) => Math.random() > 0.5 ? w1 : w2;
+
+  const newLayerWeights = a.layerWeights.map((layer, layerIdx) =>
+    layer.map((row, rowIdx) =>
+      row.map((val, colIdx) => mix(val, b.layerWeights[layerIdx]?.[rowIdx]?.[colIdx] ?? val))
+    )
+  );
+
+  const newBiases = a.biases.map((layer, layerIdx) =>
+    layer.map((val, nodeIdx) => mix(val, b.biases[layerIdx]?.[nodeIdx] ?? val))
+  );
+
+  return {
+    architecture: { ...a.architecture },
+    layerWeights: newLayerWeights,
+    biases: newBiases
+  };
+};
+
+/**
+ * Converts a FlexibleNeuralNetworkData to legacy NeuralNetworkData format.
+ *
+ * Only works for 2-hidden-layer architectures.
+ * Throws error if architecture has != 2 hidden layers.
+ *
+ * @param flexible - The flexible network to convert
+ * @returns Legacy NeuralNetworkData
+ */
+export const flexibleToLegacy = (flexible: FlexibleNeuralNetworkData): NeuralNetworkData => {
+  if (flexible.architecture.hiddenLayers.length !== 2) {
+    throw new Error('Cannot convert to legacy format: architecture must have exactly 2 hidden layers');
+  }
+
+  // Non-null assertions are safe here because we've validated we have exactly 2 hidden layers
+  // which means we have exactly 3 layer weight matrices (input->h1, h1->h2, h2->output)
+  return {
+    inputWeights: flexible.layerWeights[0]!,
+    hiddenWeights: flexible.layerWeights[1]!,
+    outputWeights: flexible.layerWeights[2]!,
+    biases: flexible.biases.flat()
+  };
+};
+
+/**
+ * Converts legacy NeuralNetworkData to FlexibleNeuralNetworkData format.
+ *
+ * Infers architecture from weight matrix dimensions.
+ *
+ * @param legacy - The legacy network to convert
+ * @returns FlexibleNeuralNetworkData
+ */
+export const legacyToFlexible = (legacy: NeuralNetworkData): FlexibleNeuralNetworkData => {
+  const h1Size = legacy.inputWeights[0]?.length ?? HIDDEN_NODES;
+  const h2Size = legacy.outputWeights.length ?? HIDDEN_NODES;
+
+  const architecture: NNArchitecture = {
+    inputNodes: 9,
+    hiddenLayers: [h1Size, h2Size],
+    outputNodes: 8
+  };
+
+  // Split flat biases array into per-layer arrays
+  const biases: number[][] = [
+    legacy.biases.slice(0, h1Size),
+    legacy.biases.slice(h1Size, h1Size + h2Size),
+    legacy.biases.slice(h1Size + h2Size)
+  ];
+
+  return {
+    architecture,
+    layerWeights: [legacy.inputWeights, legacy.hiddenWeights, legacy.outputWeights],
+    biases
   };
 };
 

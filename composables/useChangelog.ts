@@ -11,6 +11,31 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '3.0.0',
+        date: '2026-01-06',
+        changes: {
+            added: [
+                'Visual Neural Network Designer: Rete.js-based editor for custom AI brain architectures',
+                'Add, remove, and configure hidden layers (1-5 layers, 4-50 nodes each)',
+                'Real-time architecture visualization with interactive layer nodes',
+                'Educational Theory Glossary panel explaining NN concepts',
+                'Parameter count display showing network complexity',
+                'Architecture persistence across browser sessions'
+            ],
+            changed: [
+                'Neural network creation now respects custom architectures from the designer',
+                'Training population resets when applying new architecture',
+                'Header logo/title now opens About modal on click'
+            ],
+            fixed: [
+                'NN Editor architecture changes now correctly persist after browser refresh',
+                'Confirmation dialog displays actual edited architecture instead of stale data',
+                '"Unsaved" indicator clears after applying changes',
+                'Favicon now displays correctly in production builds'
+            ]
+        }
+    },
+    {
         version: '2.0.8',
         date: '2026-01-05',
         changes: {

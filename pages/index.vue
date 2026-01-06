@@ -70,6 +70,7 @@
             :on-export-weights="handleExportWeights"
             :on-import-weights="handleImportWeights"
             :on-script-recompile="handleScriptRecompile"
+            @architecture-change="handleArchitectureChange"
           />
 
           <!-- Fitness Chart (Arcade Mode Only - Right Column) -->
@@ -125,7 +126,8 @@ import { useEvolution, calculateEvolutionInterval } from '~/composables/useEvolu
 import { useModeSwitch } from '~/composables/useModeSwitch';
 import { InputManager } from '~/services/InputManager';
 import type { Fighter } from '~/services/GameEngine';
-import type { TrainingSettings } from '~/types';
+import type { TrainingSettings, NNArchitecture } from '~/types';
+import { saveArchitecture } from '~/services/NNArchitecturePersistence';
 
 // Disable SSR for this page since it requires browser APIs
 definePageMeta({
@@ -418,6 +420,32 @@ if (process.client) {
     }
   });
 }
+
+/**
+ * Handles architecture changes from the NN Editor.
+ * Saves the architecture and resets the population to use it.
+ */
+const handleArchitectureChange = (architecture: NNArchitecture) => {
+  // Save architecture (already done by NNEditorModal, but ensures consistency)
+  saveArchitecture(architecture);
+
+  // Reset population - this will trigger createRandomNetwork() which now
+  // reads from getCurrentArchitecture() and uses the new saved architecture
+  resetPopulation(true);
+
+  // Reset training state
+  setGameState(prev => ({
+    ...prev,
+    generation: 0,
+    bestFitness: 0,
+    matchesUntilEvolution: calculateEvolutionInterval(
+      settings.value.player1Type,
+      populationRef.value.length
+    )
+  }));
+
+  addToast('success', `Architecture applied: ${architecture.hiddenLayers.join(' → ')} hidden nodes`);
+};
 
 const handleModeChange = (mode: 'TRAINING' | 'ARCADE') => {
   // Clear any pending timeouts

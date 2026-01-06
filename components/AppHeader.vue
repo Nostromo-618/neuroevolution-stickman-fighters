@@ -33,9 +33,9 @@ function openAboutModal() {
 <template>
   <UHeader v-model:open="mobileMenuOpen">
     <template #left>
-      <NuxtLink to="/" class="flex items-center gap-3" style="cursor: pointer;">
+      <button class="flex items-center gap-3 cursor-pointer" @click="aboutModalOpen = true">
         <AppLogo class="w-auto h-6 shrink-0" />
-      </NuxtLink>
+      </button>
     </template>
 
     <!-- Desktop icons (hidden on mobile) -->

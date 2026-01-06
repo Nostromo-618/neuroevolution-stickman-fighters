@@ -34,6 +34,7 @@
           @export-weights="props.onExportWeights"
           @import-weights="props.onImportWeights"
           @reset-genome="props.onResetGenome"
+          @architecture-change="handleArchitectureChange"
         />
 
       </div>
@@ -43,7 +44,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { TrainingSettings, GameState, FitnessConfig } from '~/types';
+import type { TrainingSettings, GameState, FitnessConfig, NNArchitecture } from '~/types';
 import { saveScript } from '~/services/CustomScriptRunner';
 import { useFitnessConfig } from '~/composables/useFitnessConfig';
 import { DEFAULT_FITNESS_SCRIPT } from '~/templates/defaultFitnessScript';
@@ -63,6 +64,11 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const emit = defineEmits<{
+  'architecture-change': [architecture: NNArchitecture];
+}>();
+
 const toast = useToast();
 
 const scriptEditorOpen = ref(false);
@@ -92,6 +98,14 @@ const handleFitnessSave = (config: FitnessConfig) => {
 
 const toggleRunning = () => {
   props.setSettings(s => ({ ...s, isRunning: !s.isRunning }));
+};
+
+/**
+ * Forwards architecture-change event from TrainingParameters to parent page.
+ * The parent page will handle population reset with new architecture.
+ */
+const handleArchitectureChange = (architecture: NNArchitecture) => {
+  emit('architecture-change', architecture);
 };
 </script>
 
