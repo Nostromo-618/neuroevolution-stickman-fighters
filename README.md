@@ -20,6 +20,7 @@ A real-time neuroevolution fighting game where AI fighters learn combat through 
 
 ## 🎮 Features
 
+- **Visual NN Editor**: Design your neural network architecture with a drag-and-drop interface. Rete.js powered!
 - **Training Mode**: Watch AI fight AI. Each generation produces smarter fighters.
 - **Arcade Mode**: Fight against the best trained AI with keyboard or gamepad.
 - **Custom Script Editor**: Write your own fighter AI in JavaScript with Monaco Editor.
@@ -258,17 +259,24 @@ MIT License - feel free to use this code for learning and projects.
 
 | Audit Result | Date |
 |--------------|------|
-| ✅ No vulnerabilities found | January 4, 2026 |
+| ✅ No vulnerabilities found | January 6, 2026 |
 ```
-Total dependencies audited: 9
+ Sonabot here, beep boop beep boop, here are your Sonatype OSS Index results:
+  Total dependencies audited: 14
 
-[1/9] - pkg:npm/@monaco-editor/loader@1.7.0 - No vulnerabilities found!
-[2/9] - pkg:npm/@nuxt/ui@4.3.0 - No vulnerabilities found!
-[3/9] - pkg:npm/acorn@8.15.0 - No vulnerabilities found!
-[4/9] - pkg:npm/echarts@6.0.0 - No vulnerabilities found!
-[5/9] - pkg:npm/monaco-editor@0.55.1 - No vulnerabilities found!
-[6/9] - pkg:npm/nuxt@4.2.2 - No vulnerabilities found!
-[7/9] - pkg:npm/vue-echarts@8.0.1 - No vulnerabilities found!
-[8/9] - pkg:npm/vue@3.5.26 - No vulnerabilities found!
-[9/9] - pkg:npm/zod@4.3.5 - No vulnerabilities found!
+----------------------------------------------------------------------------------------------------------------------------------------
+[1/14] - pkg:npm/@monaco-editor/loader@1.7.0 - No vulnerabilities found!
+[2/14] - pkg:npm/@nuxt/ui@4.3.0 - No vulnerabilities found!
+[3/14] - pkg:npm/acorn@8.15.0 - No vulnerabilities found!
+[4/14] - pkg:npm/echarts@6.0.0 - No vulnerabilities found!
+[5/14] - pkg:npm/monaco-editor@0.55.1 - No vulnerabilities found!
+[6/14] - pkg:npm/nuxt@4.2.2 - No vulnerabilities found!
+[7/14] - pkg:npm/rete-area-plugin@2.1.5 - No vulnerabilities found!
+[8/14] - pkg:npm/rete-connection-plugin@2.0.5 - No vulnerabilities found!
+[9/14] - pkg:npm/rete-render-utils@2.0.3 - No vulnerabilities found!
+[10/14] - pkg:npm/rete-vue-plugin@2.1.2 - No vulnerabilities found!
+[11/14] - pkg:npm/rete@2.0.6 - No vulnerabilities found!
+[12/14] - pkg:npm/vue-echarts@8.0.1 - No vulnerabilities found!
+[13/14] - pkg:npm/vue@3.5.26 - No vulnerabilities found!
+[14/14] - pkg:npm/zod@4.3.5 - No vulnerabilities found!
 ```

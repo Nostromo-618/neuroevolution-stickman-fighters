@@ -36,6 +36,8 @@ const {
   isInitialized,
   isDirty,
   showConnections,
+  areaTransform,
+  connectionLines,
   architectureSummary,
   parameterCount,
   canAddLayer,
@@ -50,6 +52,7 @@ const {
   removeNeuronFromLayer,
   resetToDefault,
   toggleConnections,
+  refreshConnectionLines,
   resetDirty
 } = useNNEditor();
 
@@ -234,6 +237,31 @@ defineExpose({
         :style="{ background: isDarkMode ? 'radial-gradient(circle, #1f2937 1px, transparent 1px)' : 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }"
       />
 
+      <!-- Connection Lines SVG Overlay -->
+      <svg
+        v-if="showConnections && isInitialized && connectionLines.length > 0"
+        class="absolute inset-0 pointer-events-none"
+        :style="{
+          width: '100%',
+          height: '100%',
+          overflow: 'visible'
+        }"
+      >
+        <g :transform="`translate(${areaTransform.x}, ${areaTransform.y}) scale(${areaTransform.k})`">
+          <line
+            v-for="(line, idx) in connectionLines"
+            :key="idx"
+            :x1="line.x1"
+            :y1="line.y1"
+            :x2="line.x2"
+            :y2="line.y2"
+            :stroke="isDarkMode ? 'rgba(156, 163, 175, 0.15)' : 'rgba(107, 114, 128, 0.12)'"
+            stroke-width="1"
+            stroke-linecap="round"
+          />
+        </g>
+      </svg>
+
       <!-- Loading overlay -->
       <div
         v-if="!isInitialized"
@@ -280,8 +308,8 @@ defineExpose({
   cursor: grabbing;
 }
 
-/* Connection styling */
-:deep(.connection path) {
-  stroke-width: 3px;
+/* Hide default Rete.js connections - we render our own SVG connections */
+:deep(.connection) {
+  display: none !important;
 }
 </style>

@@ -118,19 +118,41 @@ function handleClose() {
 
     <!-- Body -->
     <template #body>
-      <div class="flex-1 flex overflow-hidden">
-        <!-- Canvas: 2/3 width (or full when glossary hidden) -->
+      <div class="flex-1 flex overflow-hidden h-full">
+        <!-- Canvas: expands when glossary hidden -->
         <div
-          class="flex-1 transition-all duration-300"
-          :class="glossaryVisible ? 'w-2/3' : 'w-full'"
+          class="flex-1 flex flex-col transition-all duration-300 relative"
+          :class="glossaryVisible ? '' : 'w-full'"
         >
-          <NNEditor ref="editorRef" @apply="handleEditorApply" />
+          <NNEditor ref="editorRef" class="flex-1" @apply="handleEditorApply" />
+          
+          <!-- Footer warning overlay at bottom of canvas -->
+          <div class="absolute bottom-0 left-0 right-0 p-3 bg-default/90 backdrop-blur-sm border-t border-default">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-sm text-muted">
+                <UIcon name="i-lucide-info" class="w-4 h-4" />
+                <span>Applying changes will reset your training population</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <UButton variant="ghost" @click="handleClose">
+                  Cancel
+                </UButton>
+                <UButton
+                  icon="i-lucide-check"
+                  color="primary"
+                  @click="editorRef?.handleApply()"
+                >
+                  Apply & Reset Training
+                </UButton>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Glossary: 1/3 width (collapsible) -->
+        <!-- Glossary: reduced width (collapsible) -->
         <div
           v-if="glossaryVisible"
-          class="w-1/3 min-w-[300px] transition-all duration-300"
+          class="w-1/5 min-w-[220px] max-w-[280px] transition-all duration-300"
         >
           <NNTheoryGlossary @collapse="handleGlossaryCollapse" />
         </div>
@@ -147,27 +169,9 @@ function handleClose() {
       </div>
     </template>
 
-    <!-- Footer -->
+    <!-- Empty Footer (content moved to canvas overlay) -->
     <template #footer>
-      <div class="flex items-center justify-between w-full">
-        <div class="flex items-center gap-2 text-sm text-muted">
-          <UIcon name="i-lucide-info" class="w-4 h-4" />
-          <span>Applying changes will reset your training population</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <UButton variant="ghost" @click="handleClose">
-            Cancel
-          </UButton>
-          <UButton
-            icon="i-lucide-check"
-            color="primary"
-            @click="editorRef?.handleApply()"
-          >
-            Apply & Reset Training
-          </UButton>
-        </div>
-      </div>
+      <div />
     </template>
   </UModal>
 

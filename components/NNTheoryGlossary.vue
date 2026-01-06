@@ -130,12 +130,19 @@ function toggleCollapse() {
       </p>
 
       <UAccordion
-        :items="glossaryTerms.map((item, idx) => ({
-          label: item.term,
-          icon: item.icon,
-          slot: `item-${idx}`,
-          content: item.definition
-        }))"
+        :items="[
+          ...glossaryTerms.map((item, idx) => ({
+            label: item.term,
+            icon: item.icon,
+            slot: `item-${idx}`,
+            content: item.definition
+          })),
+          {
+            label: 'Pro Tips',
+            icon: 'i-lucide-lightbulb',
+            slot: 'item-protips'
+          }
+        ]"
         variant="subtle"
       >
         <template v-for="(item, idx) in glossaryTerms" :key="item.term" #[`item-${idx}`]>
@@ -143,24 +150,15 @@ function toggleCollapse() {
             {{ item.definition }}
           </p>
         </template>
-      </UAccordion>
-
-      <!-- Tips Section -->
-      <UCard variant="subtle" class="mt-6">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-lightbulb" class="w-4 h-4 text-yellow-500" />
-            <span class="font-medium text-sm">Pro Tips</span>
-          </div>
+        <template #item-protips>
+          <ul class="text-xs text-muted space-y-2">
+            <li>• <strong>Wider layers</strong> can detect more patterns</li>
+            <li>• <strong>Deeper networks</strong> learn hierarchical features</li>
+            <li>• <strong>Too many nodes</strong> may slow training</li>
+            <li>• Start simple, add complexity if needed</li>
+          </ul>
         </template>
-
-        <ul class="text-xs text-muted space-y-2">
-          <li>• <strong>Wider layers</strong> can detect more patterns</li>
-          <li>• <strong>Deeper networks</strong> learn hierarchical features</li>
-          <li>• <strong>Too many nodes</strong> may slow training</li>
-          <li>• Start simple, add complexity if needed</li>
-        </ul>
-      </UCard>
+      </UAccordion>
     </div>
   </div>
 </template>

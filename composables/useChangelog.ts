@@ -17,6 +17,7 @@ export const changelogData: ChangelogEntry[] = [
             added: [
                 'Visual Neural Network Designer with Rete.js-powered zoomable/pannable canvas',
                 'Columnar layer design: layers as draggable nodes with neurons as numbered circles',
+                'Visual connection lines between neurons with Show/Hide toggle',
                 'Add/remove neurons with +/- buttons directly on hidden layer nodes',
                 'Clone layer button to duplicate hidden layers with same neuron count',
                 'Color-coded layers: cyan (input), purple (hidden), green (output)',

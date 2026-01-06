@@ -80,13 +80,9 @@ const neurons = computed(() => {
   return Array.from({ length: nodeData.value.nodeCount }, (_, i) => i + 1);
 });
 
-const maxVisibleNeurons = 16;
 const displayNeurons = computed(() => {
-  if (nodeData.value.nodeCount <= maxVisibleNeurons) {
-    return neurons.value;
-  }
-  // Show first few, ellipsis, and last few
-  return [...neurons.value.slice(0, 6), -1, ...neurons.value.slice(-3)];
+  // Always show all neurons - no truncation
+  return neurons.value;
 });
 
 // =============================================================================
@@ -115,7 +111,6 @@ function handleCloneLayer() {
       borderRadius: '12px',
       minWidth: '90px',
       boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      overflow: 'hidden',
       userSelect: 'none'
     }"
   >
@@ -152,9 +147,7 @@ function handleCloneLayer() {
         flexDirection: 'column',
         alignItems: 'center',
         gap: '4px',
-        padding: '10px 8px',
-        maxHeight: '280px',
-        overflowY: 'auto'
+        padding: '10px 8px'
       }"
     >
       <template v-for="(idx, i) in displayNeurons" :key="i">

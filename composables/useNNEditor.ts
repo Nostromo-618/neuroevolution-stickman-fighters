@@ -18,7 +18,7 @@
  * - Rule 9: Immutable architecture updates
  */
 
-import { ref, computed, shallowRef, markRaw } from 'vue';
+import { ref, computed, shallowRef, markRaw, watch } from 'vue';
 import { NodeEditor, ClassicPreset, type GetSchemes } from 'rete';
 import { AreaPlugin, AreaExtensions } from 'rete-area-plugin';
 import { ConnectionPlugin, Presets as ConnectionPresets } from 'rete-connection-plugin';
@@ -53,7 +53,7 @@ const layerSocket = new LayerSocket();
  */
 class LayerNode extends ClassicPreset.Node {
     width = 100;
-    height = 350;
+    // height is dynamic based on content
 
     public nodeCount: number;
     public readonly layerType: 'input' | 'hidden' | 'output';
@@ -122,6 +122,9 @@ export function useNNEditor() {
     /** Whether to show connection lines */
     const showConnections = ref(true);
 
+    /** Current canvas transform (for SVG overlay positioning) */
+    const areaTransform = ref({ k: 1, x: 0, y: 0 });
+
     // =========================================================================
     // COMPUTED
     // =========================================================================
@@ -141,6 +144,133 @@ export function useNNEditor() {
     const canRemoveLayer = computed(() =>
         architecture.value.hiddenLayers.length > NN_CONSTRAINTS.MIN_HIDDEN_LAYERS
     );
+
+    // =========================================================================
+    // CONNECTION LINES FOR SVG RENDERING
+    // =========================================================================
+
+    /** Layer node positions for rendering connections */
+    interface LayerPosition {
+        x: number;
+        y: number;
+        nodeCount: number;
+    }
+
+    /** Trigger for recalculating connections */
+    const connectionUpdateTrigger = ref(0);
+
+    /**
+     * Gets the current layer positions from the Rete.js area plugin.
+     * Returns positions in screen-space coordinates.
+     */
+    function getLayerPositions(): LayerPosition[] {
+        const editor = editorRef.value;
+        const area = areaRef.value;
+        if (!editor || !area) return [];
+
+        const positions: LayerPosition[] = [];
+        const nodes = editor.getNodes();
+
+        // Sort nodes by their x position to get left-to-right order
+        const sortedNodes = [...nodes].sort((a, b) => {
+            const viewA = area.nodeViews.get(a.id);
+            const viewB = area.nodeViews.get(b.id);
+            if (!viewA || !viewB) return 0;
+            return viewA.position.x - viewB.position.x;
+        });
+
+        for (const node of sortedNodes) {
+            const view = area.nodeViews.get(node.id);
+            if (view && 'nodeCount' in node) {
+                positions.push({
+                    x: view.position.x,
+                    y: view.position.y,
+                    nodeCount: (node as { nodeCount: number }).nodeCount
+                });
+            }
+        }
+
+        return positions;
+    }
+
+    /** Line connection between two neurons (in container coordinates) */
+    interface ConnectionLine {
+        x1: number;
+        y1: number;
+        x2: number;
+        y2: number;
+    }
+
+    /**
+     * Computed connection lines between neurons.
+     * Each line connects a neuron in one layer to a neuron in the adjacent layer.
+     */
+    const connectionLines = computed<ConnectionLine[]>(() => {
+        // Access trigger to make this reactive
+        connectionUpdateTrigger.value;
+
+        if (!showConnections.value || !isInitialized.value) return [];
+
+        const positions = getLayerPositions();
+        if (positions.length < 2) return [];
+
+        const lines: ConnectionLine[] = [];
+
+        // Node dimensions (matching CustomLayerNode.vue)
+        const nodeWidth = 90;
+        const headerHeight = 35; // Header padding
+        const neuronSize = 22;
+        const neuronGap = 4;
+        const neuronPaddingTop = 10;
+
+        // For each pair of adjacent layers
+        for (let layerIdx = 0; layerIdx < positions.length - 1; layerIdx++) {
+            const fromLayer = positions[layerIdx];
+            const toLayer = positions[layerIdx + 1];
+
+            if (!fromLayer || !toLayer) continue;
+
+            // Calculate positions of neurons in the "from" layer
+            const fromNeuronCount = fromLayer.nodeCount;
+            const toNeuronCount = toLayer.nodeCount;
+
+            // Right edge of "from" layer node, center of neurons
+            const fromX = fromLayer.x + nodeWidth;
+
+            // Left edge of "to" layer node, center of neurons
+            const toX = toLayer.x;
+
+            // For each neuron in "from" layer
+            for (let fi = 0; fi < fromNeuronCount; fi++) {
+                // Calculate Y position of this neuron
+                const fromY = fromLayer.y + headerHeight + neuronPaddingTop +
+                    fi * (neuronSize + neuronGap) + neuronSize / 2;
+
+                // Connect to each neuron in "to" layer
+                for (let ti = 0; ti < toNeuronCount; ti++) {
+                    const toY = toLayer.y + headerHeight + neuronPaddingTop +
+                        ti * (neuronSize + neuronGap) + neuronSize / 2;
+
+                    lines.push({
+                        x1: fromX,
+                        y1: fromY,
+                        x2: toX,
+                        y2: toY
+                    });
+                }
+            }
+        }
+
+        return lines;
+    });
+
+    /**
+     * Triggers a recalculation of connection lines.
+     * Call this after node positions change or architecture updates.
+     */
+    function refreshConnectionLines(): void {
+        connectionUpdateTrigger.value++;
+    }
 
     // =========================================================================
     // EDITOR INITIALIZATION
@@ -200,9 +330,19 @@ export function useNNEditor() {
             accumulating: AreaExtensions.accumulateOnCtrl()
         });
 
-        // Listen for custom events from our node component
+        // Listen for transform changes to refresh connection lines
         area.addPipe((context) => {
-            // Handle custom events emitted from CustomLayerNode
+            // Refresh connections when nodes move or canvas transforms
+            if (context.type === 'nodetranslated' ||
+                context.type === 'zoomed' ||
+                context.type === 'translated') {
+                // Update transform state for SVG overlay
+                if (area.area) {
+                    const t = area.area.transform;
+                    areaTransform.value = { k: t.k, x: t.x, y: t.y };
+                }
+                refreshConnectionLines();
+            }
             return context;
         });
 
@@ -211,6 +351,12 @@ export function useNNEditor() {
 
         // Zoom to fit all nodes
         await zoomToFit();
+
+        // Capture initial transform
+        if (area.area) {
+            const t = area.area.transform;
+            areaTransform.value = { k: t.k, x: t.x, y: t.y };
+        }
 
         isInitialized.value = true;
     }
@@ -274,6 +420,9 @@ export function useNNEditor() {
                 await area.translate(node.id, { x: startX + i * spacing, y: centerY });
             }
         }
+
+        // Refresh connection lines after building graph
+        refreshConnectionLines();
     }
 
     /**
@@ -289,6 +438,13 @@ export function useNNEditor() {
         if (nodes.length > 0) {
             await AreaExtensions.zoomAt(area, nodes);
         }
+
+        // Update transform and refresh connections after zoom
+        if (area.area) {
+            const t = area.area.transform;
+            areaTransform.value = { k: t.k, x: t.x, y: t.y };
+        }
+        refreshConnectionLines();
     }
 
     // =========================================================================
@@ -481,12 +637,14 @@ export function useNNEditor() {
         isInitialized,
         isDirty,
         showConnections,
+        areaTransform,
 
         // Computed
         architectureSummary,
         parameterCount,
         canAddLayer,
         canRemoveLayer,
+        connectionLines,
 
         // Editor lifecycle
         initEditor,
@@ -508,6 +666,7 @@ export function useNNEditor() {
         loadSavedArchitecture,
         resetDirty,
         toggleConnections,
+        refreshConnectionLines,
 
         // Constants
         NN_CONSTRAINTS

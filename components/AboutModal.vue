@@ -741,6 +741,17 @@ const renderingLayers = [
             <!-- Diagrams -->
             <div class="dark:bg-slate-950 bg-gray-50 rounded-xl p-6 border dark:border-slate-800 border-gray-200">
                <h4 class="text-sm font-bold dark:text-slate-400 text-gray-500 uppercase tracking-wider mb-6 text-center">Network Architecture</h4>
+               
+               <!-- Visual Editor Promo -->
+               <div class="mb-6 text-center">
+                 <UBadge color="purple" variant="soft" class="mb-2">New Feature</UBadge>
+                 <p class="text-sm text-default font-medium">Fully Customizable Architecture</p>
+                 <p class="text-xs text-muted mt-1">
+                   Use the <strong class="text-purple-400">Visual NN Editor</strong> to design your own brain!
+                   Add layers, change neuron counts, and experiment with deep learning structures.
+                 </p>
+               </div>
+
                <div class="flex justify-between items-center max-w-lg mx-auto relative">
                   <!-- Input Layer -->
                   <div class="flex flex-col gap-2 items-center">
@@ -765,7 +776,7 @@ const renderingLayers = [
                     <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
                     <div class="h-12 border-l border-dashed border-slate-700"></div>
                     <div class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_15px_theme(colors.purple.500)]"></div>
-                    <span class="text-xs font-mono text-purple-500 mt-2">13 × 2</span>
+                    <span class="text-xs font-mono text-purple-500 mt-2">Custom Layers</span>
                   </div>
 
                   <!-- Connections -->

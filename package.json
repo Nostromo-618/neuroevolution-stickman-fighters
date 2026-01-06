@@ -1,7 +1,7 @@
 {
   "name": "neuroevolution-stickman-fighters",
   "private": true,
-  "version": "2.0.7",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
