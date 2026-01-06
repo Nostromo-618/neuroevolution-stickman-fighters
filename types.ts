@@ -69,7 +69,7 @@ export interface NNArchitecture {
 }
 
 /**
- * Default architecture constant (matches legacy hardcoded 9→13→13→8)
+ * Default architecture constant (9→13→13→8)
  */
 export const DEFAULT_NN_ARCHITECTURE: NNArchitecture = {
   inputNodes: 9,
@@ -78,38 +78,15 @@ export const DEFAULT_NN_ARCHITECTURE: NNArchitecture = {
 } as const;
 
 /**
- * NeuralNetworkData Interface (Legacy)
+ * NeuralNetworkData Interface
  * 
- * Represents the "brain" of an AI fighter. This is a simple feedforward
- * neural network with TWO hidden layers (hardcoded 9→13→13→8 architecture):
+ * Represents the "brain" of an AI fighter. This is a feedforward neural network
+ * supporting 1-5 hidden layers with variable neuron counts per layer.
  * 
- *   INPUT (9 nodes) → HIDDEN 1 (13 nodes) → HIDDEN 2 (13 nodes) → OUTPUT (8 nodes)
- * 
- * The weights determine how signals flow through the network:
- * - inputWeights: Connections from input layer to hidden layer 1 [9x13 matrix]
- * - hiddenWeights: Connections from hidden layer 1 to hidden layer 2 [13x13 matrix]
- * - outputWeights: Connections from hidden layer 2 to output [13x8 matrix]
- * - biases: Offset values added at each neuron [13 (H1) + 13 (H2) + 8 (Output) = 34 total]
- * 
- * During evolution, these weights are mutated and crossed over to create
- * new variations, allowing the AI to "learn" through natural selection.
- * 
- * NOTE: This interface is maintained for backward compatibility.
- * New code should prefer FlexibleNeuralNetworkData for custom architectures.
- */
-export interface NeuralNetworkData {
-  inputWeights: number[][];   // 9 inputs × hiddenNodes hidden1 neurons
-  hiddenWeights: number[][];  // hiddenNodes hidden1 × hiddenNodes hidden2 neurons
-  outputWeights: number[][];  // hiddenNodes hidden2 × 8 output neurons
-  biases: number[];           // Bias values for all non-input layers
-}
-
-/**
- * FlexibleNeuralNetworkData Interface
- * 
- * Extended network data structure supporting variable-depth architectures.
- * Unlike NeuralNetworkData which assumes 2 hidden layers, this supports
- * any number of hidden layers (1-5, as limited by UI).
+ * Example architectures:
+ * - Default: 9 → 13 → 13 → 8 (2 hidden layers)
+ * - Wide:    9 → 50 → 8 (1 hidden layer)
+ * - Deep:    9 → 20 → 15 → 10 → 8 (3 hidden layers)
  * 
  * Weight structure:
  * - layerWeights[0]: input → hidden1 weights
@@ -120,8 +97,11 @@ export interface NeuralNetworkData {
  * - biases[0]: biases for hidden layer 1
  * - biases[1]: biases for hidden layer 2 (if exists)
  * - biases[N]: biases for output layer
+ * 
+ * During evolution, these weights are mutated and crossed over to create
+ * new variations, allowing the AI to "learn" through natural selection.
  */
-export interface FlexibleNeuralNetworkData {
+export interface NeuralNetworkData {
   architecture: NNArchitecture;   // The topology this network follows
   layerWeights: number[][][];     // weights[layer][fromNode][toNode]
   biases: number[][];             // biases[layer][node] (one array per layer after input)
@@ -146,16 +126,9 @@ export interface FlexibleNeuralNetworkData {
  */
 export interface Genome {
   id: string;              // Unique identifier (e.g., "gen5-3" = generation 5, individual 3)
-  network: NeuralNetworkData | FlexibleNeuralNetworkData;  // The AI's neural network (flexible or legacy format)
+  network: NeuralNetworkData;  // The AI's neural network
   fitness: number;         // Accumulated fitness score (higher = better)
   matchesWon: number;      // Number of matches won by this genome
-}
-
-/**
- * Type guard to check if a network is in flexible format.
- */
-export function isFlexibleNetwork(network: NeuralNetworkData | FlexibleNeuralNetworkData): network is FlexibleNeuralNetworkData {
-  return 'layerWeights' in network && 'architecture' in network;
 }
 
 // =============================================================================

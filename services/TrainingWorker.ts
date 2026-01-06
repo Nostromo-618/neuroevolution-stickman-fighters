@@ -42,14 +42,22 @@
 // =============================================================================
 
 /**
+ * Neural network architecture (same as types.ts)
+ */
+interface NNArchitecture {
+  readonly inputNodes: 9;
+  hiddenLayers: number[];
+  readonly outputNodes: 8;
+}
+
+/**
  * Neural network structure (same as types.ts)
- * Must be duplicated because workers can't import from main thread
+ * Supports flexible architecture with 1-5 hidden layers
  */
 interface NeuralNetwork {
-  inputWeights: number[][];
-  hiddenWeights: number[][];
-  outputWeights: number[][];
-  biases: number[];
+  architecture: NNArchitecture;
+  layerWeights: number[][][];  // weights[layer][fromNode][toNode]
+  biases: number[][];          // biases[layer][node]
 }
 
 /**
@@ -127,49 +135,50 @@ const relu = (t: number) => Math.max(0, t);
 /**
  * Forward pass through neural network
  * Identical to NeuralNetwork.predict() but local to worker
+ * Supports flexible architecture (1-5 hidden layers)
  */
 function predict(network: NeuralNetwork, inputs: number[]): number[] {
-  // Input → Hidden Layer 1
-  const hidden1Outputs: number[] = [];
-  for (let h = 0; h < HIDDEN_NODES; h++) {
-    let sum = 0;
-    for (let i = 0; i < INPUT_NODES; i++) {
-      sum += (inputs[i] ?? 0) * (network.inputWeights[i]?.[h] ?? 0);
-    }
-    sum += network.biases[h] ?? 0;
-    hidden1Outputs.push(relu(sum));
-  }
+  let currentActivations = [...inputs];
 
-  // Hidden Layer 1 → Hidden Layer 2
-  let hidden2Outputs: number[];
+  // Forward pass through each layer
+  for (let layerIdx = 0; layerIdx < network.layerWeights.length; layerIdx++) {
+    const weights = network.layerWeights[layerIdx];
+    const layerBiases = network.biases[layerIdx];
 
-  if (network.hiddenWeights) {
-    hidden2Outputs = [];
-    for (let h2 = 0; h2 < HIDDEN_NODES; h2++) {
+    // Skip if layer data is missing (shouldn't happen with valid network)
+    if (!weights || !layerBiases) continue;
+
+    const isOutputLayer = layerIdx === network.layerWeights.length - 1;
+
+    const nextActivations: number[] = [];
+    const toSize = layerBiases.length;
+
+    for (let toNode = 0; toNode < toSize; toNode++) {
       let sum = 0;
-      for (let h1 = 0; h1 < HIDDEN_NODES; h1++) {
-        sum += (hidden1Outputs[h1] ?? 0) * (network.hiddenWeights[h1]?.[h2] ?? 0);
+
+      // Weighted sum of all inputs to this node
+      for (let fromNode = 0; fromNode < currentActivations.length; fromNode++) {
+        const weight = weights[fromNode]?.[toNode] ?? 0;
+        sum += (currentActivations[fromNode] ?? 0) * weight;
       }
-      sum += network.biases[HIDDEN_NODES + h2] ?? 0;
-      hidden2Outputs.push(relu(sum));
+
+      // Add bias
+      sum += layerBiases[toNode] ?? 0;
+
+      // Apply activation function
+      if (isOutputLayer) {
+        // Sigmoid for output layer (probability-like values 0-1)
+        nextActivations.push(sigmoid(sum));
+      } else {
+        // ReLU for hidden layers
+        nextActivations.push(relu(sum));
+      }
     }
-  } else {
-    // BACKWARD COMPATIBILITY for old networks without 2nd hidden layer
-    hidden2Outputs = hidden1Outputs;
+
+    currentActivations = nextActivations;
   }
 
-  // Hidden Layer 2 → Output Layer
-  const finalOutputs: number[] = [];
-  for (let o = 0; o < OUTPUT_NODES; o++) {
-    let sum = 0;
-    for (let h = 0; h < HIDDEN_NODES; h++) {
-      sum += (hidden2Outputs[h] ?? 0) * (network.outputWeights[h]?.[o] ?? 0);
-    }
-    sum += network.biases[HIDDEN_NODES * 2 + o] ?? 0;
-    finalOutputs.push(sigmoid(sum));
-  }
-
-  return finalOutputs;
+  return currentActivations;
 }
 
 // =============================================================================

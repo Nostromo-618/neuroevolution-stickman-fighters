@@ -7,8 +7,7 @@
  * Ensures user progress (settings, trained AI) is preserved across sessions.
  */
 
-import type { TrainingSettings, Genome } from '../types';
-import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
+import type { TrainingSettings, Genome, NeuralNetworkData } from '../types';
 
 const KEYS = {
     SETTINGS: 'neuroevolution_settings_v1',
@@ -23,7 +22,7 @@ interface SerializedGenome {
     id: string;
     fitness: number;
     matchesWon: number;
-    network: ReturnType<FeedForwardNetwork['toJSON']>;
+    network: NeuralNetworkData;
 }
 
 // Fitness history entry for chart persistence
@@ -64,73 +63,39 @@ export const loadSettings = (): Partial<TrainingSettings> | null => {
 // --- GENOME PERSISTENCE ---
 
 /**
- * Serializes a Genome object, ensuring the NeuralNetwork class is properly handled.
+ * Serializes a Genome object for localStorage persistence.
  */
 const serializeGenome = (genome: Genome): SerializedGenome => {
-    // Check if network has toJSON method (FeedForwardNetwork instance)
-    // Otherwise treat it as plain NeuralNetworkData
-    const networkData = typeof (genome.network as unknown as { toJSON?: () => unknown }).toJSON === 'function'
-        ? (genome.network as unknown as FeedForwardNetwork).toJSON()
-        : genome.network;
-
     return {
         id: genome.id,
         fitness: genome.fitness,
         matchesWon: genome.matchesWon,
-        network: networkData as ReturnType<FeedForwardNetwork['toJSON']>
+        network: genome.network
     };
 };
 
 /**
- * Deserializes a Genome object, converting the saved network data back to
- * a plain NeuralNetworkData object that crossoverNetworks can use.
+ * Deserializes a Genome object, converting the saved network data back to NeuralNetworkData.
  * 
- * Handles two formats:
- * 1. FeedForwardNetwork format (older): { inputWeights, outputWeights, biases }
- *    - Missing hiddenWeights, needs to be created as empty
- * 2. NeuralNetworkData format (current): { inputWeights, hiddenWeights, outputWeights, biases }
+ * Expects format: { architecture, layerWeights, biases }
+ * Legacy formats are no longer supported - users must reset genome.
  */
-const deserializeGenome = (data: SerializedGenome): Genome => {
+const deserializeGenome = (data: SerializedGenome): Genome | null => {
     const savedNetwork = data.network;
 
-    // Check if it's the old FeedForwardNetwork format (no hiddenWeights)
-    // or the new NeuralNetworkData format (has hiddenWeights)
-    const hasHiddenWeights = 'hiddenWeights' in savedNetwork &&
-        Array.isArray((savedNetwork as { hiddenWeights?: unknown }).hiddenWeights);
-
-    let network: import('../types').NeuralNetworkData;
-
-    if (hasHiddenWeights) {
-        // Already in NeuralNetworkData format
-        network = savedNetwork as unknown as import('../types').NeuralNetworkData;
-    } else {
-        // Old FeedForwardNetwork format - add empty hiddenWeights
-        // This handles legacy saved data that lacks hiddenWeights
-        const inputWeights = savedNetwork.inputWeights || [];
-        const outputWeights = savedNetwork.outputWeights || [];
-        const biases = savedNetwork.biases || [];
-
-        // Create hiddenWeights with same dimensions as output layer expects
-        // For legacy data, create identity-like hidden layer
-        const hiddenSize = inputWeights[0]?.length || 13;
-        const hiddenWeights = Array(hiddenSize).fill(0).map(() =>
-            Array(hiddenSize).fill(0).map(() => Math.random() * 0.2 - 0.1)
-        );
-
-        network = {
-            inputWeights,
-            hiddenWeights,
-            outputWeights,
-            biases
+    // Validate NeuralNetworkData format (has layerWeights and architecture)
+    if ('layerWeights' in savedNetwork && 'architecture' in savedNetwork) {
+        return {
+            id: data.id,
+            fitness: data.fitness,
+            matchesWon: data.matchesWon,
+            network: savedNetwork as unknown as NeuralNetworkData
         };
     }
 
-    return {
-        id: data.id,
-        fitness: data.fitness,
-        matchesWon: data.matchesWon,
-        network
-    };
+    // Legacy format detected - cannot deserialize
+    console.warn('Legacy genome format detected. Please reset genome to use new architecture.');
+    return null;
 };
 
 export const saveBestGenome = (genome: Genome): void => {
@@ -146,7 +111,12 @@ export const loadBestGenome = (): Genome | null => {
     try {
         const data = localStorage.getItem(KEYS.BEST_GENOME);
         if (!data) return null;
-        return deserializeGenome(JSON.parse(data));
+        const genome = deserializeGenome(JSON.parse(data));
+        if (!genome) {
+            // Clear invalid legacy data
+            localStorage.removeItem(KEYS.BEST_GENOME);
+        }
+        return genome;
     } catch (e) {
         console.warn('Failed to load best genome:', e);
         return null;
@@ -169,7 +139,17 @@ export const loadPopulation = (): Genome[] | null => {
     try {
         const data = localStorage.getItem(KEYS.POPULATION);
         if (!data) return null;
-        return JSON.parse(data).map(deserializeGenome);
+        const parsed = JSON.parse(data) as SerializedGenome[];
+        const deserialized = parsed.map(deserializeGenome).filter((g): g is Genome => g !== null);
+        
+        // If some genomes failed to deserialize (legacy format), clear and return null
+        if (deserialized.length < parsed.length) {
+            console.warn('Some genomes in legacy format - clearing population');
+            localStorage.removeItem(KEYS.POPULATION);
+            return null;
+        }
+        
+        return deserialized;
     } catch (e) {
         console.warn('Failed to load population:', e);
         return null;

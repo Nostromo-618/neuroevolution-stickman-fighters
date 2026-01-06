@@ -18,7 +18,6 @@ import { predict } from './NeuralNetwork';
 import { ScriptWorkerManager } from './CustomScriptRunner';
 import { SyncScriptExecutor } from './SyncScriptExecutor';
 import type { FighterState as CustomFighterState } from './CustomScriptRunner';
-import { FeedForwardNetwork } from '../classes/FeedForwardNetwork';
 import { applyFitnessShaping } from './FitnessShaping';
 
 // =============================================================================
@@ -349,15 +348,7 @@ export class Fighter {
 
 
     // === RUN NEURAL NETWORK ===
-    let outputs: number[];
-
-    // Check if we can use the optimized Class method (Rule #3 - No allocation)
-    if (this.genome.network instanceof FeedForwardNetwork) {
-      outputs = this.genome.network.predict(inputs);
-    } else {
-      // Fallback for legacy/worker data
-      outputs = predict(this.genome.network, inputs);
-    }
+    const outputs = predict(this.genome.network, inputs);
 
     // === INTERPRET OUTPUTS ===
     // Threshold-based activation: output > 0.5 means "do this action"

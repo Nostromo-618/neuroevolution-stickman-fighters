@@ -16,17 +16,24 @@ import { z } from 'zod/v4';
 // =============================================================================
 
 /**
- * Schema for serialized FeedForward network weights
+ * Schema for NNArchitecture
  */
-export const FeedForwardNetworkJSONSchema = z.object({
-    type: z.literal('FeedForwardNetwork'),
-    id: z.string().optional(),
-    inputWeights: z.array(z.array(z.number())),
-    outputWeights: z.array(z.array(z.number())),
-    biases: z.array(z.number())
+export const NNArchitectureSchema = z.object({
+    inputNodes: z.literal(9),
+    hiddenLayers: z.array(z.number().min(4).max(50)).min(1).max(5),
+    outputNodes: z.literal(8)
 });
 
-export type FeedForwardNetworkJSONValidated = z.infer<typeof FeedForwardNetworkJSONSchema>;
+/**
+ * Schema for NeuralNetworkData (flexible format)
+ */
+export const NeuralNetworkDataSchema = z.object({
+    architecture: NNArchitectureSchema,
+    layerWeights: z.array(z.array(z.array(z.number()))),
+    biases: z.array(z.array(z.number()))
+});
+
+export type NeuralNetworkDataValidated = z.infer<typeof NeuralNetworkDataSchema>;
 
 // =============================================================================
 // GENOME SCHEMAS
@@ -39,7 +46,7 @@ export const SerializedGenomeSchema = z.object({
     id: z.string(),
     fitness: z.number(),
     matchesWon: z.number(),
-    network: FeedForwardNetworkJSONSchema
+    network: NeuralNetworkDataSchema
 });
 
 export type SerializedGenomeValidated = z.infer<typeof SerializedGenomeSchema>;
@@ -48,23 +55,16 @@ export type SerializedGenomeValidated = z.infer<typeof SerializedGenomeSchema>;
  * Schema for exported genome file (includes metadata)
  */
 export const ExportedGenomeSchema = z.object({
-    version: z.string().optional(),
+    id: z.string(),
+    fitness: z.number(),
+    matchesWon: z.number(),
     generation: z.number().optional(),
-    architecture: z.object({
-        inputNodes: z.number(),
-        hiddenNodes: z.number(),
-        outputNodes: z.number()
-    }).optional(),
-    genome: z.object({
-        id: z.string(),
-        fitness: z.number(),
-        matchesWon: z.number(),
-        network: z.object({
-            inputWeights: z.array(z.array(z.number())),
-            outputWeights: z.array(z.array(z.number())),
-            biases: z.array(z.number())
-        })
-    })
+    network: NeuralNetworkDataSchema,
+    metadata: z.object({
+        exportedAt: z.string().optional(),
+        version: z.string().optional(),
+        architecture: NNArchitectureSchema.optional()
+    }).optional()
 });
 
 export type ExportedGenomeValidated = z.infer<typeof ExportedGenomeSchema>;

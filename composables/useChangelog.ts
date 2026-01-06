@@ -14,11 +14,23 @@ export const changelogData: ChangelogEntry[] = [
         version: '3.0.1',
         date: '2026-01-06',
         changes: {
+            changed: [
+                'Unified neural network format: all networks now use flexible architecture (1-5 hidden layers)',
+                'Genome import/export now uses v2.0 format with full architecture metadata',
+                'Cleaner codebase: ~400 lines of dead code removed'
+            ],
             fixed: [
                 'Neural Network Visualizer now dynamically renders custom architectures from NN Editor',
                 'Visualizer supports 1-5 hidden layers with variable neuron counts (was hardcoded to 2 layers)',
                 'Hidden layers now display with purple color-coding matching the NN Editor design',
+                'Custom NN architectures now properly used in training (was always creating 2-layer networks)',
                 'Reset Genome button no longer cut off in Training Parameters panel'
+            ],
+            removed: [
+                'FeedForwardNetwork class (replaced by unified NeuralNetworkData format)',
+                'NeuralNetwork abstract base class (no longer needed)',
+                'Legacy 2-layer hardcoded network functions',
+                'Backward compatibility for old genome formats'
             ]
         }
     },

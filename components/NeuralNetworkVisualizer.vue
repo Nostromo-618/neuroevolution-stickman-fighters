@@ -33,7 +33,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import type { Fighter } from '~/services/GameEngine';
 import { NN_ARCH } from '~/services/Config';
-import { legacyToFlexible } from '~/services/NeuralNetwork';
+import type { NeuralNetworkData } from '~/types';
 
 // Get color mode
 const colorMode = useColorMode();
@@ -143,10 +143,9 @@ const render = (): void => {
     return;
   }
 
-  // Convert legacy network to flexible format to get architecture info
-  const legacyNetwork = props.fighter.genome.network;
-  const flexNetwork = legacyToFlexible(legacyNetwork);
-  const arch = flexNetwork.architecture;
+  // Get the network (already in flexible format)
+  const network: NeuralNetworkData = props.fighter.genome.network;
+  const arch = network.architecture;
   
   // Build layer sizes array: [input, ...hidden, output]
   const layerSizes = [arch.inputNodes, ...arch.hiddenLayers, arch.outputNodes];
@@ -163,14 +162,14 @@ const render = (): void => {
   layerActivations.push([...inputs]); // Layer 0 = inputs
   
   // Forward pass through each layer
-  for (let layerIdx = 0; layerIdx < flexNetwork.layerWeights.length; layerIdx++) {
-    const weights = flexNetwork.layerWeights[layerIdx];
-    const layerBiases = flexNetwork.biases[layerIdx];
+  for (let layerIdx = 0; layerIdx < network.layerWeights.length; layerIdx++) {
+    const weights = network.layerWeights[layerIdx];
+    const layerBiases = network.biases[layerIdx];
     const prevActivations = layerActivations[layerIdx];
     
     if (!weights || !layerBiases || !prevActivations) continue;
     
-    const isOutputLayer = layerIdx === flexNetwork.layerWeights.length - 1;
+    const isOutputLayer = layerIdx === network.layerWeights.length - 1;
     const toSize = layerBiases.length;
     const nextActivations: number[] = [];
     
@@ -231,7 +230,7 @@ const render = (): void => {
     const fromStep = layerYSteps[layerIdx] ?? 1;
     const toStep = layerYSteps[layerIdx + 1] ?? 1;
     const fromActivations = layerActivations[layerIdx] ?? [];
-    const weights = flexNetwork.layerWeights[layerIdx];
+    const weights = network.layerWeights[layerIdx];
     
     if (!weights) continue;
     
