@@ -47,6 +47,21 @@ const tabs = [
     slot: 'controls' as const
   },
   {
+    label: 'Script Editor',
+    icon: 'i-lucide-code',
+    slot: 'scriptEditor' as const
+  },
+  {
+    label: 'NN Fitness Editor',
+    icon: 'i-lucide-calculator',
+    slot: 'fitnessEditor' as const
+  },
+  {
+    label: 'NN Designer',
+    icon: 'i-lucide-brain-circuit',
+    slot: 'nnDesigner' as const
+  },
+  {
     label: 'Privacy',
     icon: 'i-lucide-eye-off',
     slot: 'privacy' as const
@@ -93,6 +108,129 @@ const renderingLayers = [
   {
     label: 'Layer 6: UI Overlay',
     content: 'Heads-up display: Health bars, energy meters, timer, and round result text. Drawn last to appear on top.'
+  }
+]
+
+// ========================================
+// Script Editor Accordion Items
+// ========================================
+const scriptEditorFeatures = [
+  {
+    label: 'Monaco Editor',
+    content: 'Industry-standard code editor (same as VS Code) with JavaScript syntax highlighting, auto-completion, and error detection. Supports ligatures, line numbers, and automatic formatting.'
+  },
+  {
+    label: 'Dual Script Slots',
+    content: 'Create two independent fighter scripts: Script A and Script B. Use side-by-side mode to compare and edit both simultaneously, or focus on one at a time.'
+  },
+  {
+    label: 'Real-time Validation',
+    content: 'Scripts are validated as you type. Syntax errors, infinite loop detection, and security checks run automatically before your code can execute.'
+  },
+  {
+    label: 'Import / Export',
+    content: 'Save your scripts as JSON files to share or backup. Import previously exported scripts to continue development or use community-created fighters.'
+  },
+  {
+    label: 'Default Templates',
+    content: 'Start with pre-built templates demonstrating strategic (Script A) and chaotic (Script B) fighting styles. Load defaults anytime to reset your script.'
+  }
+]
+
+const scriptAPIReference = [
+  {
+    label: 'Input State (Game State)',
+    content: 'Your script receives: selfX, selfY, selfHealth, selfEnergy, enemyX, enemyY, enemyHealth, enemyEnergy, canvasWidth, canvasHeight, gravity. All positions are in pixels, health/energy are 0-100.'
+  },
+  {
+    label: 'Output Actions',
+    content: 'Return an array of action IDs: 0=IDLE, 1=LEFT, 2=RIGHT, 3=JUMP, 4=CROUCH, 5=PUNCH, 6=KICK, 7=BLOCK. Multiple actions can be active simultaneously (e.g., [2, 5] = move right + punch).'
+  },
+  {
+    label: 'Execution Context',
+    content: 'Scripts run in a sandboxed Web Worker with no access to DOM, network, or localStorage. The fighter() function is called 60 times per second during matches.'
+  }
+]
+
+// ========================================
+// NN Fitness Editor Accordion Items
+// ========================================
+const fitnessEditorFeatures = [
+  {
+    label: 'JavaScript Configuration',
+    content: 'Define your fitness function as a JavaScript object with 16+ configurable parameters. The editor validates syntax in real-time and prevents invalid configurations from being saved.'
+  },
+  {
+    label: 'Per-Frame Rewards',
+    content: 'Applied 60 times per second during simulation. Tune proximity rewards, aggression bonuses, positioning incentives, and edge/time penalties to shape moment-to-moment AI behavior.'
+  },
+  {
+    label: 'Match-End Bonuses',
+    content: 'Applied once when a match concludes. Configure damage multipliers, health preservation bonuses, KO rewards, timeout bonuses, and stalemate penalties.'
+  },
+  {
+    label: 'Import / Export',
+    content: 'Save your custom fitness configurations as JSON files to backup, share, or iterate on different training strategies.'
+  }
+]
+
+const fitnessCategories = [
+  {
+    label: 'Combat Rewards',
+    content: 'damageWeight (multiplier for damage dealt), healthWeight (multiplier for remaining health), koBonus (flat bonus for knockouts), timeoutBonus (bonus for winning by timeout).'
+  },
+  {
+    label: 'Engagement Rewards',
+    content: 'proximityReward (encourage closing distance), aggressionBonus (reward attacking), centerControl (bonus for holding center stage).'
+  },
+  {
+    label: 'Penalties',
+    content: 'edgePenalty (discourage corner camping), timePenalty (penalize passive play over time), stalematePenalty (heavy penalty if both fighters deal minimal damage).'
+  }
+]
+
+// ========================================
+// NN Designer Accordion Items
+// ========================================
+const nnDesignerFeatures = [
+  {
+    label: 'Rete.js Canvas',
+    content: 'Interactive, zoomable, pannable canvas powered by Rete.js. Scroll to zoom, drag to pan, and drag layer nodes to reposition them. The canvas adapts to any screen size.'
+  },
+  {
+    label: 'Layer Nodes',
+    content: 'Each neural network layer is represented as a vertical column node. Input (9 neurons) and Output (8 neurons) layers are fixed. Hidden layers are fully customizable.'
+  },
+  {
+    label: 'Neuron Controls',
+    content: 'Use +/- buttons on each hidden layer to add or remove neurons. Neurons are displayed as colored circles inside layer nodes. Minimum 1, maximum 32 neurons per hidden layer.'
+  },
+  {
+    label: 'Layer Management',
+    content: 'Add new hidden layers (up to 5 total), remove the last hidden layer, or clone an existing layer. Reset to defaults at any time.'
+  },
+  {
+    label: 'Connection Visualization',
+    content: 'Toggle connection lines to see how neurons are wired between layers. Lines are drawn as SVG overlays that follow the canvas zoom/pan transforms.'
+  }
+]
+
+const nnDesignerConcepts = [
+  {
+    label: 'Feed-Forward Network',
+    content: 'Data flows in one direction: Input → Hidden Layers → Output. Each neuron in a layer connects to all neurons in the next layer (fully connected).'
+  },
+  {
+    label: 'Parameters',
+    content: 'The total number of trainable weights and biases. More parameters = more expressive power but longer training. Formula: Σ(neurons[i] × neurons[i+1]) + Σ(neurons[i]) for biases.'
+  },
+  {
+    label: 'Architecture Notation',
+    content: 'Displayed as "9 → 13 → 13 → 8" meaning: 9 inputs, 13 neurons in hidden layer 1, 13 in hidden layer 2, 8 outputs. Customize any hidden layer sizes.'
+  },
+  {
+    label: 'Reset Warning',
+    content: 'Changing architecture resets your training population. All evolved genomes are lost. Export your progress before making architecture changes!'
   }
 ]
 </script>
@@ -1168,6 +1306,273 @@ const renderingLayers = [
                 </p>
               </div>
             </div>
+          </div>
+        </template>
+
+        <!-- Script Editor Tab -->
+        <template #scriptEditor>
+          <div class="space-y-8 animate-fade-in pt-4">
+            <!-- Intro -->
+            <div class="prose prose-invert max-w-none">
+              <p class="text-lg text-slate-300">
+                Write custom JavaScript to control your fighter's behavior. The <strong>Script Editor</strong> uses Monaco (the same engine as VS Code) for a professional coding experience.
+              </p>
+            </div>
+
+            <!-- Key Features -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-emerald-500 pl-3">Editor Features</h3>
+              <UAccordion
+                :items="scriptEditorFeatures"
+                color="primary"
+                variant="soft"
+                size="sm"
+              >
+                <template #item="{ item }">
+                  <p class="text-sm text-muted p-2">
+                    {{ item.content }}
+                  </p>
+                </template>
+              </UAccordion>
+            </div>
+
+            <!-- API Reference -->
+            <div class="dark:bg-gradient-to-r dark:from-emerald-950/30 dark:to-slate-950 bg-gradient-to-r from-emerald-50 to-gray-50 p-6 rounded-xl border dark:border-emerald-900/50 border-emerald-200">
+              <h3 class="text-lg font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                <UIcon name="i-lucide-book-open" class="size-5" />
+                API Reference
+              </h3>
+              <UAccordion
+                :items="scriptAPIReference"
+                color="success"
+                variant="soft"
+                size="sm"
+              >
+                <template #item="{ item }">
+                  <p class="text-sm text-muted p-2">
+                    {{ item.content }}
+                  </p>
+                </template>
+              </UAccordion>
+            </div>
+
+            <!-- Quick Tips -->
+            <div class="grid md:grid-cols-2 gap-4">
+              <UCard>
+                <template #header>
+                  <div class="flex items-center gap-2">
+                    <UIcon name="i-lucide-keyboard" class="size-5 text-emerald-500" />
+                    <h4 class="font-semibold text-default">Keyboard Shortcuts</h4>
+                  </div>
+                </template>
+                <div class="text-xs text-muted space-y-1">
+                  <div class="flex justify-between"><kbd class="px-1.5 py-0.5 rounded bg-muted/20">Ctrl+S</kbd><span>Save & Close</span></div>
+                  <div class="flex justify-between"><kbd class="px-1.5 py-0.5 rounded bg-muted/20">Escape</kbd><span>Close without saving</span></div>
+                </div>
+              </UCard>
+
+              <UCard>
+                <template #header>
+                  <div class="flex items-center gap-2">
+                    <UIcon name="i-lucide-flask-conical" class="size-5 text-emerald-500" />
+                    <h4 class="font-semibold text-default">Training with Scripts</h4>
+                  </div>
+                </template>
+                <p class="text-xs text-muted">
+                  Use Live Training mode to pit AI against your custom scripts. The AI will evolve to counter your specific strategy!
+                </p>
+              </UCard>
+            </div>
+
+            <UAlert
+              color="success"
+              variant="soft"
+              icon="i-lucide-lightbulb"
+              title="Pro Tip"
+              description="Use side-by-side mode to develop two different strategies simultaneously. Then watch them battle in Arcade mode!"
+            />
+          </div>
+        </template>
+
+        <!-- NN Fitness Editor Tab -->
+        <template #fitnessEditor>
+          <div class="space-y-8 animate-fade-in pt-4">
+            <!-- Intro -->
+            <div class="prose prose-invert max-w-none">
+              <p class="text-lg text-slate-300">
+                Customize how AI fighters are rewarded during training. The <strong>Fitness Editor</strong> lets you tune 16+ parameters to shape fighter behavior and training outcomes.
+              </p>
+            </div>
+
+            <!-- Key Features -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-purple-500 pl-3">Editor Features</h3>
+              <UAccordion
+                :items="fitnessEditorFeatures"
+                color="primary"
+                variant="soft"
+                size="sm"
+              >
+                <template #item="{ item }">
+                  <p class="text-sm text-muted p-2">
+                    {{ item.content }}
+                  </p>
+                </template>
+              </UAccordion>
+            </div>
+
+            <!-- Parameter Categories -->
+            <div class="dark:bg-gradient-to-r dark:from-purple-950/30 dark:to-slate-950 bg-gradient-to-r from-purple-50 to-gray-50 p-6 rounded-xl border dark:border-purple-900/50 border-purple-200">
+              <h3 class="text-lg font-bold text-purple-400 mb-4 flex items-center gap-2">
+                <UIcon name="i-lucide-settings-2" class="size-5" />
+                Parameter Categories
+              </h3>
+              <UAccordion
+                :items="fitnessCategories"
+                color="purple"
+                variant="soft"
+                size="sm"
+              >
+                <template #item="{ item }">
+                  <p class="text-sm text-muted p-2 font-mono text-xs">
+                    {{ item.content }}
+                  </p>
+                </template>
+              </UAccordion>
+            </div>
+
+            <!-- How It Works Grid -->
+            <div class="grid md:grid-cols-2 gap-4">
+              <div class="dark:bg-slate-900 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-3 h-3 rounded-full bg-blue-500" />
+                  <h4 class="font-bold text-default text-sm">Per-Frame Application</h4>
+                </div>
+                <p class="text-xs text-muted">
+                  Shaping rewards run <strong class="text-blue-400">60 times per second</strong>. Small rewards accumulate to guide moment-to-moment decisions.
+                </p>
+              </div>
+
+              <div class="dark:bg-slate-900 bg-white p-4 rounded-lg border dark:border-slate-700 border-gray-200">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="w-3 h-3 rounded-full bg-green-500" />
+                  <h4 class="font-bold text-default text-sm">Match-End Application</h4>
+                </div>
+                <p class="text-xs text-muted">
+                  Final bonuses apply <strong class="text-green-400">once per match</strong>. These determine overall win/loss incentives.
+                </p>
+              </div>
+            </div>
+
+            <UAlert
+              color="warning"
+              variant="soft"
+              icon="i-lucide-alert-triangle"
+              title="Changes Apply Immediately"
+              description="Modified fitness settings take effect in live training right away. Background and turbo workers will use the new config on their next training start."
+            />
+          </div>
+        </template>
+
+        <!-- NN Designer Tab -->
+        <template #nnDesigner>
+          <div class="space-y-8 animate-fade-in pt-4">
+            <!-- Intro -->
+            <div class="prose prose-invert max-w-none">
+              <p class="text-lg text-slate-300">
+                Design your fighter's brain architecture with a visual, drag-and-drop editor. Powered by <strong>Rete.js</strong>, the canvas is fully zoomable and pannable.
+              </p>
+            </div>
+
+            <!-- Visual Features -->
+            <div class="dark:bg-slate-950 bg-gray-50 p-6 rounded-xl border dark:border-slate-800 border-gray-200">
+              <h3 class="text-lg font-bold text-highlighted mb-4 border-l-4 border-teal-500 pl-3">Visual Editor Features</h3>
+              <UAccordion
+                :items="nnDesignerFeatures"
+                color="primary"
+                variant="soft"
+                size="sm"
+              >
+                <template #item="{ item }">
+                  <p class="text-sm text-muted p-2">
+                    {{ item.content }}
+                  </p>
+                </template>
+              </UAccordion>
+            </div>
+
+            <!-- NN Concepts -->
+            <div class="dark:bg-gradient-to-r dark:from-teal-950/30 dark:to-slate-950 bg-gradient-to-r from-teal-50 to-gray-50 p-6 rounded-xl border dark:border-teal-900/50 border-teal-200">
+              <h3 class="text-lg font-bold text-teal-400 mb-4 flex items-center gap-2">
+                <UIcon name="i-lucide-graduation-cap" class="size-5" />
+                Neural Network Concepts
+              </h3>
+              <UAccordion
+                :items="nnDesignerConcepts"
+                color="teal"
+                variant="soft"
+                size="sm"
+              >
+                <template #item="{ item }">
+                  <p class="text-sm text-muted p-2">
+                    {{ item.content }}
+                  </p>
+                </template>
+              </UAccordion>
+            </div>
+
+            <!-- Controls Summary -->
+            <div class="grid md:grid-cols-3 gap-4">
+              <UCard>
+                <template #header>
+                  <div class="flex items-center gap-2">
+                    <UIcon name="i-lucide-mouse-pointer-click" class="size-5 text-teal-500" />
+                    <h4 class="font-semibold text-default">Canvas Controls</h4>
+                  </div>
+                </template>
+                <div class="text-xs text-muted space-y-1">
+                  <div>🖱️ Scroll to zoom</div>
+                  <div>✋ Drag to pan</div>
+                  <div>📦 Drag nodes to move</div>
+                </div>
+              </UCard>
+
+              <UCard>
+                <template #header>
+                  <div class="flex items-center gap-2">
+                    <UIcon name="i-lucide-layers" class="size-5 text-teal-500" />
+                    <h4 class="font-semibold text-default">Layer Actions</h4>
+                  </div>
+                </template>
+                <div class="text-xs text-muted space-y-1">
+                  <div>➕ Add hidden layer</div>
+                  <div>🗑️ Remove last layer</div>
+                  <div>📋 Clone layer</div>
+                </div>
+              </UCard>
+
+              <UCard>
+                <template #header>
+                  <div class="flex items-center gap-2">
+                    <UIcon name="i-lucide-circle-dot" class="size-5 text-teal-500" />
+                    <h4 class="font-semibold text-default">Neuron Actions</h4>
+                  </div>
+                </template>
+                <div class="text-xs text-muted space-y-1">
+                  <div>➕ Add neuron to layer</div>
+                  <div>➖ Remove from layer</div>
+                  <div>Range: 1–32 per layer</div>
+                </div>
+              </UCard>
+            </div>
+
+            <UAlert
+              color="error"
+              variant="soft"
+              icon="i-lucide-alert-circle"
+              title="Architecture Changes Reset Training"
+              description="Applying a new architecture will reset your entire training population. Export your genomes first if you want to preserve your progress!"
+            />
           </div>
         </template>
 

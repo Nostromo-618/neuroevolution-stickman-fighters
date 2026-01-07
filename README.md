@@ -229,6 +229,7 @@ Over generations, networks that produce winning behaviors are preserved and refi
 - **Web Workers** - Parallel training and secure script execution
 - **Monaco Editor** - VS Code-based code editor for custom scripts
 - **ECharts** - Fitness visualization graphs
+- **Rete.js** - Visual node-based neural network architecture editor
 
 ---
 
