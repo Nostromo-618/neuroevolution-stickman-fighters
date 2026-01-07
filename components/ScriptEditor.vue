@@ -1,5 +1,11 @@
 <template>
-  <UModal v-model:open="isOpen" fullscreen :ui="{ content: 'w-[98vw] h-[95vh] max-w-[98vw] max-h-[95vh]' }">
+  <UModal
+    v-model:open="isOpen"
+    fullscreen
+    title="Custom Fighter Script Editor"
+    description="Write JavaScript to control your fighter's behavior"
+    :ui="{ content: 'w-[98vw] h-[95vh] max-w-[98vw] max-h-[95vh]' }"
+  >
     <template #default>
       <!-- Modal is controlled programmatically -->
     </template>

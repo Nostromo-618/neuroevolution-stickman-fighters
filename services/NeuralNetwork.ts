@@ -382,6 +382,7 @@ export type ImportResult = {
     matchesWon: number;
   };
   generation: number;
+  importedArchitecture: NNArchitecture;
 } | {
   success: false;
   error: string;
@@ -436,7 +437,8 @@ export const importGenome = (jsonString: string): ImportResult => {
           fitness: data.fitness || 0,
           matchesWon: data.matchesWon || 0
         },
-        generation: data.generation || 1
+        generation: data.generation || 1,
+        importedArchitecture: arch as NNArchitecture
       };
     }
 

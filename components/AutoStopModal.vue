@@ -1,5 +1,10 @@
 <template>
-  <UModal v-model:open="isOpen" :ui="{ width: 'max-w-md' }">
+  <UModal
+    v-model:open="isOpen"
+    title="Training Paused"
+    description="Background training has reached its generation limit"
+    :ui="{ width: 'max-w-md' }"
+  >
     <template #default>
       <!-- Modal is controlled programmatically -->
     </template>

@@ -4,24 +4,35 @@
  * =============================================================================
  * 
  * Handles exporting and importing AI genome weights (neural network parameters).
- * Manages the import confirmation modal state.
+ * Manages the import confirmation modal state and architecture mismatch detection.
  */
 
 import { ref, type Ref } from 'vue';
-import type { Genome, GameState } from '~/types';
+import type { Genome, GameState, NNArchitecture } from '~/types';
 import { exportGenome, importGenome } from '~/services/NeuralNetwork';
+import { getCurrentArchitecture, architecturesMatch, saveArchitecture } from '~/services/NNArchitecturePersistence';
 
 interface PendingImport {
   genome: Genome;
   generation: number;
 }
 
+interface ArchitectureMismatch {
+  imported: NNArchitecture;
+  current: NNArchitecture;
+  pendingGenome: Genome;
+  pendingGeneration: number;
+}
+
 interface UseGenomeImportExportReturn {
   pendingImport: Ref<PendingImport | null>;
+  architectureMismatch: Ref<ArchitectureMismatch | null>;
   handleExportWeights: () => void;
   handleImportWeights: () => void;
   handleImportChoice: () => void;
+  handleUseImportedArchitecture: () => void;
   setPendingImport: (value: PendingImport | null) => void;
+  clearArchitectureMismatch: () => void;
 }
 
 interface UseGenomeImportExportParams {
@@ -32,6 +43,7 @@ interface UseGenomeImportExportParams {
   setGameState: (updater: GameState | ((prev: GameState) => GameState)) => void;
   gameStateRef: Ref<GameState>;
   addToast: (type: 'success' | 'error' | 'info', message: string) => void;
+  onArchitectureChange?: (arch: NNArchitecture) => void;
 }
 
 export const useGenomeImportExport = ({
@@ -41,9 +53,11 @@ export const useGenomeImportExport = ({
   populationRef,
   setGameState,
   gameStateRef,
-  addToast
+  addToast,
+  onArchitectureChange
 }: UseGenomeImportExportParams): UseGenomeImportExportReturn => {
   const pendingImport = ref<PendingImport | null>(null);
+  const architectureMismatch = ref<ArchitectureMismatch | null>(null);
 
   const handleExportWeights = () => {
     const bestGenome = getBestGenome();
@@ -83,6 +97,23 @@ export const useGenomeImportExport = ({
           return;
         }
 
+        const currentArch = getCurrentArchitecture();
+        const importedArch = result.importedArchitecture;
+
+        // Check if architectures match
+        if (!architecturesMatch(currentArch, importedArch)) {
+          // Show mismatch modal instead of normal import modal
+          architectureMismatch.value = {
+            imported: importedArch,
+            current: currentArch,
+            pendingGenome: result.genome,
+            pendingGeneration: result.generation
+          };
+          addToast('info', 'Architecture mismatch detected - review options');
+          return;
+        }
+
+        // Architectures match - proceed with normal import flow
         pendingImport.value = { genome: result.genome, generation: result.generation };
         addToast('info', `Loaded: Gen ${result.generation}, Fitness ${result.genome.fitness.toFixed(0)}`);
       };
@@ -119,11 +150,61 @@ export const useGenomeImportExport = ({
     pendingImport.value = null;
   };
 
+  /**
+   * Handler for "Use Imported Architecture" button in mismatch modal.
+   * Saves the imported architecture to localStorage and proceeds with import.
+   */
+  const handleUseImportedArchitecture = () => {
+    if (!architectureMismatch.value) return;
+
+    const { imported, pendingGenome, pendingGeneration } = architectureMismatch.value;
+
+    // Save the imported architecture to localStorage
+    saveArchitecture(imported);
+
+    // If callback provided, notify parent to reset population with new architecture
+    if (onArchitectureChange) {
+      onArchitectureChange(imported);
+    }
+
+    // Set as best trained genome
+    const arcadeGenome = { ...pendingGenome, id: `imported-${Date.now()}` };
+    bestTrainedGenomeRef.value = arcadeGenome;
+
+    // Seed population with imported genome
+    const pop = populationRef.value;
+    if (pop.length > 0) {
+      const seedCount = Math.max(2, Math.floor(pop.length / 4));
+      for (let i = 0; i < seedCount && i < pop.length; i++) {
+        pop[i] = {
+          ...pendingGenome,
+          fitness: 0,
+          matchesWon: 0,
+          id: `imported-${Date.now()}-${i}`
+        };
+      }
+    }
+
+    // Update generation
+    setGameState(prev => ({ ...prev, generation: pendingGeneration }));
+    gameStateRef.value.generation = pendingGeneration;
+
+    addToast('success', `Imported with architecture ${imported.hiddenLayers.join('→')}!`);
+    architectureMismatch.value = null;
+  };
+
+  const clearArchitectureMismatch = () => {
+    architectureMismatch.value = null;
+  };
+
   return {
     pendingImport,
+    architectureMismatch,
     handleExportWeights,
     handleImportWeights,
     handleImportChoice,
-    setPendingImport: (value: PendingImport | null) => { pendingImport.value = value; }
+    handleUseImportedArchitecture,
+    setPendingImport: (value: PendingImport | null) => { pendingImport.value = value; },
+    clearArchitectureMismatch
   };
 };

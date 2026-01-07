@@ -88,6 +88,12 @@
             :on-cancel="() => setPendingImport(null)"
           />
 
+          <ArchitectureMismatchModal
+            :mismatch-data="architectureMismatch"
+            :on-use-imported="handleUseImportedArchitecture"
+            :on-cancel="clearArchitectureMismatch"
+          />
+
           <AutoStopModal 
             v-model="showAutoStopModal"
             :current-gen="gameState.generation"
@@ -179,10 +185,13 @@ const {
 
 const {
   pendingImport,
+  architectureMismatch,
   handleExportWeights,
   handleImportWeights,
   handleImportChoice,
-  setPendingImport
+  handleUseImportedArchitecture,
+  setPendingImport,
+  clearArchitectureMismatch
 } = useGenomeImportExport({
   getBestGenome,
   gameState,

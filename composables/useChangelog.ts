@@ -11,6 +11,21 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '3.0.2',
+        date: '2026-01-07',
+        changes: {
+            added: [
+                'Architecture Mismatch Guards: Warning modal when importing weights trained on different NN architecture',
+                '"Use Imported Architecture" option to adopt imported architecture and apply weights',
+                'Architecture comparison utility for detecting topology differences'
+            ],
+            fixed: [
+                'Modal accessibility warnings: All UModal components now have proper DialogTitle and DialogDescription',
+                'Screen reader compatibility improved across all modal dialogs'
+            ]
+        }
+    },
+    {
         version: '3.0.1',
         date: '2026-01-06',
         changes: {

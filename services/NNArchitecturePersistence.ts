@@ -55,6 +55,30 @@ export function isValidArchitecture(arch: NNArchitecture): boolean {
 }
 
 /**
+ * Compares two architectures for topological compatibility.
+ * Returns true if they have identical structure (same number of layers,
+ * same number of nodes per layer).
+ *
+ * @param a - First architecture to compare
+ * @param b - Second architecture to compare
+ * @returns true if architectures are identical, false otherwise
+ */
+export function architecturesMatch(a: NNArchitecture, b: NNArchitecture): boolean {
+    // Input/output nodes are fixed but check anyway for safety
+    if (a.inputNodes !== b.inputNodes || a.outputNodes !== b.outputNodes) {
+        return false;
+    }
+
+    // Check hidden layer count
+    if (a.hiddenLayers.length !== b.hiddenLayers.length) {
+        return false;
+    }
+
+    // Check each hidden layer has the same node count
+    return a.hiddenLayers.every((size, i) => size === b.hiddenLayers[i]);
+}
+
+/**
  * Saves a custom architecture to localStorage.
  * Validates the architecture before saving.
  *

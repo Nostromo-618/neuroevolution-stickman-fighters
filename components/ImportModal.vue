@@ -1,5 +1,10 @@
 <template>
-  <UModal v-model:open="isOpen" :ui="{ width: 'max-w-md' }">
+  <UModal
+    v-model:open="isOpen"
+    title="Import Weights"
+    description="Load trained neural network weights from a file"
+    :ui="{ width: 'max-w-md' }"
+  >
     <template #default>
       <!-- Modal is controlled programmatically -->
     </template>
