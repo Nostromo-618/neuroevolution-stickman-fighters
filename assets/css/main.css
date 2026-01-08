@@ -98,6 +98,16 @@
     z-index: 10 !important;
     box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
   }
+
+  /* Hide scrollbar utility - used for tabs with arrow navigation */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari, Opera */
+  }
 }
 
 

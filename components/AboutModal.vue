@@ -84,6 +84,85 @@ const tabs = [
 
 ]
 
+// ========================================
+// Scrollable Tabs Navigation
+// ========================================
+const tabsContainerRef = ref<HTMLElement | null>(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+
+/** Update arrow visibility based on scroll position */
+function updateScrollState(): void {
+  const container = tabsContainerRef.value
+  if (!container) return
+  
+  const { scrollLeft, scrollWidth, clientWidth } = container
+  canScrollLeft.value = scrollLeft > 1
+  canScrollRight.value = scrollLeft < scrollWidth - clientWidth - 1
+}
+
+/** Smooth scroll tabs left */
+function scrollTabsLeft(): void {
+  const container = tabsContainerRef.value
+  if (!container) return
+  container.scrollBy({ left: -200, behavior: 'smooth' })
+}
+
+/** Smooth scroll tabs right */
+function scrollTabsRight(): void {
+  const container = tabsContainerRef.value
+  if (!container) return
+  container.scrollBy({ left: 200, behavior: 'smooth' })
+}
+
+// Rule 7: Explicit cleanup of scroll listener
+let scrollCleanup: (() => void) | null = null
+
+function initScrollListeners(): void {
+  // Clean up any existing listeners first
+  scrollCleanup?.()
+  scrollCleanup = null
+  
+  // Wait for DOM to settle
+  nextTick(() => {
+    const wrapper = document.querySelector('[data-tabs-scroll-container]')
+    if (!wrapper) return
+    
+    const listEl = wrapper.querySelector('[role="tablist"]') as HTMLElement | null
+    if (!listEl) return
+    
+    tabsContainerRef.value = listEl
+    updateScrollState()
+    
+    listEl.addEventListener('scroll', updateScrollState, { passive: true })
+    
+    const resizeObserver = new ResizeObserver(updateScrollState)
+    resizeObserver.observe(listEl)
+    
+    scrollCleanup = () => {
+      listEl.removeEventListener('scroll', updateScrollState)
+      resizeObserver.disconnect()
+    }
+  })
+}
+
+// Watch modal open state to initialize scroll listeners when modal is opened
+watch(open, (isOpen) => {
+  if (isOpen) {
+    initScrollListeners()
+  } else {
+    scrollCleanup?.()
+    scrollCleanup = null
+    tabsContainerRef.value = null
+    canScrollLeft.value = false
+    canScrollRight.value = false
+  }
+})
+
+onUnmounted(() => {
+  scrollCleanup?.()
+})
+
 const renderingLayers = [
   {
     label: 'Layer 1: Clear Canvas',
@@ -287,16 +366,54 @@ const nnDesignerConcepts = [
     </template>
 
     <template #body>
-      <UTabs
-        :items="tabs"
-        variant="link"
-        color="primary"
-        :ui="{
-          list: 'overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0',
-          trigger: 'flex-shrink-0 whitespace-nowrap'
-        }"
-        class="w-full"
-      >
+      <!-- Tabs with Arrow Navigation -->
+      <div class="relative" data-tabs-scroll-container>
+        <!-- Left arrow button - positioned at tabs row height -->
+        <UButton
+          v-if="canScrollLeft"
+          icon="i-lucide-chevron-left"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="absolute left-0 top-3.5 z-20"
+          aria-label="Scroll tabs left"
+          @click="scrollTabsLeft"
+        />
+        
+        <!-- Left fade gradient -->
+        <div
+          v-if="canScrollLeft"
+          class="absolute left-0 top-0 h-10 w-8 bg-gradient-to-r from-[var(--ui-bg)] to-transparent z-10 pointer-events-none"
+        />
+        
+        <!-- Right arrow button - positioned at tabs row height -->
+        <UButton
+          v-if="canScrollRight"
+          icon="i-lucide-chevron-right"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="absolute right-0 top-3.5 z-20"
+          aria-label="Scroll tabs right"
+          @click="scrollTabsRight"
+        />
+        
+        <!-- Right fade gradient -->
+        <div
+          v-if="canScrollRight"
+          class="absolute right-0 top-0 h-10 w-8 bg-gradient-to-l from-[var(--ui-bg)] to-transparent z-10 pointer-events-none"
+        />
+        
+        <UTabs
+          :items="tabs"
+          variant="link"
+          color="primary"
+          :ui="{
+            list: 'overflow-x-auto scrollbar-hide px-8',
+            trigger: 'flex-shrink-0 whitespace-nowrap'
+          }"
+          class="w-full"
+        >
         <!-- Features Tab -->
         <template #features>
           <div class="space-y-3 pt-4">
@@ -1941,6 +2058,7 @@ const nnDesignerConcepts = [
           </div>
         </template>
       </UTabs>
+      </div>
     </template>
 
     <template #footer>
