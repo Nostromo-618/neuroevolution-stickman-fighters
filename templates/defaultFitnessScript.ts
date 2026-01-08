@@ -46,24 +46,24 @@ export const DEFAULT_FITNESS_SCRIPT = `/**
  */
 
 return {
-  // Per-frame shaping (60 times per second)
-  proximityReward400: 0.005,   // Small reward for approach
-  proximityReward200: 0.02,    // Medium reward for engagement range
-  proximityReward80: 0.08,     // Large reward for close combat
-  facingReward: 0.01,          // Reward proper positioning
-  aggressionReward: 0.15,      // Reward attacking in range
-  timePenalty: -0.005,         // Slight penalty to discourage stalling
-  edgePenalty: -0.03,          // Penalty for being cornered
-  centerBonus: 0.02,           // Reward map control
-  edgeThreshold: 60,           // Pixels from edge (0-400)
-  centerThreshold: 150,        // Pixels from center (0-400)
+  // Per-frame shaping (60 times per second) - AGGRESSIVE PROFILE
+  proximityReward400: 0.003,   // Reduced long-range incentive
+  proximityReward200: 0.015,   // Slight reduction
+  proximityReward80: 0.12,     // Increased close combat reward
+  facingReward: 0.05,          // 5x increase - fixes "corner staring"
+  aggressionReward: 0.25,      // Increased attacking reward
+  timePenalty: -0.008,         // Increased time pressure
+  edgePenalty: -0.05,          // Increased edge punishment
+  centerBonus: 0.03,           // Slight increase for map control
+  edgeThreshold: 80,           // Wider edge zone
+  centerThreshold: 120,        // Tighter center zone
 
-  // Match-end bonuses (once per match)
-  damageMultiplier: 2.0,       // Damage dealt weight
-  healthMultiplier: 2.5,       // Remaining health weight
-  koWinBonus: 300,             // Knockout victory bonus
-  timeoutWinBonus: 150,        // Timeout victory bonus
-  stalematePenalty: -100,      // Penalty for passive play
-  stalemateThreshold: 30       // Min damage to avoid penalty
+  // Match-end bonuses (once per match) - DAMAGE FOCUSED
+  damageMultiplier: 3.0,       // Prioritize dealing damage
+  healthMultiplier: 2.0,       // Less defensive focus
+  koWinBonus: 400,             // Increased KO incentive
+  timeoutWinBonus: 100,        // Decreased timeout value
+  stalematePenalty: -150,      // Increased passive penalty
+  stalemateThreshold: 40       // Higher minimum damage requirement
 };
 `;

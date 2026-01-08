@@ -11,6 +11,22 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '3.0.3',
+        date: '2026-01-08',
+        changes: {
+            added: [
+                'Scrollable tabs with arrow navigation: < > buttons replace scrollbar in About modal',
+                'Fade gradients at tab edges for visual polish'
+            ],
+            changed: [
+                'Aggressive fitness defaults: 5x increased facingReward to fix "corner staring" behavior',
+                'Damage-focused training: damageMultiplier increased from 2.0 to 3.0',
+                'Stronger aggression incentives: aggressionReward 0.15 → 0.25, koWinBonus 300 → 400',
+                'Increased penalties: edgePenalty -0.03 → -0.05, stalematePenalty -100 → -150'
+            ]
+        }
+    },
+    {
         version: '3.0.2',
         date: '2026-01-07',
         changes: {

@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
 const open = defineModel<boolean>('open', { default: false })
 const { changelog } = useChangelog()
 
-const version = '3.0.2'
+const version = '3.0.3'
 
 // Get all changelog entries for display
 const recentChangelog = computed(() => changelog)
@@ -1217,13 +1217,7 @@ const nnDesignerConcepts = [
                 color="primary"
                 variant="soft"
                 size="sm"
-              >
-                <template #item="{ item }">
-                  <p class="text-sm text-muted p-2">
-                    {{ item.content }}
-                  </p>
-                </template>
-              </UAccordion>
+              />
             </div>
 
             <!-- Frame Budget -->
@@ -1444,13 +1438,7 @@ const nnDesignerConcepts = [
                 color="primary"
                 variant="soft"
                 size="sm"
-              >
-                <template #item="{ item }">
-                  <p class="text-sm text-muted p-2">
-                    {{ item.content }}
-                  </p>
-                </template>
-              </UAccordion>
+              />
             </div>
 
             <!-- API Reference -->
@@ -1464,13 +1452,7 @@ const nnDesignerConcepts = [
                 color="success"
                 variant="soft"
                 size="sm"
-              >
-                <template #item="{ item }">
-                  <p class="text-sm text-muted p-2">
-                    {{ item.content }}
-                  </p>
-                </template>
-              </UAccordion>
+              />
             </div>
 
             <!-- Quick Tips -->
@@ -1529,13 +1511,7 @@ const nnDesignerConcepts = [
                 color="primary"
                 variant="soft"
                 size="sm"
-              >
-                <template #item="{ item }">
-                  <p class="text-sm text-muted p-2">
-                    {{ item.content }}
-                  </p>
-                </template>
-              </UAccordion>
+              />
             </div>
 
             <!-- Parameter Categories -->
@@ -1549,13 +1525,7 @@ const nnDesignerConcepts = [
                 color="purple"
                 variant="soft"
                 size="sm"
-              >
-                <template #item="{ item }">
-                  <p class="text-sm text-muted p-2 font-mono text-xs">
-                    {{ item.content }}
-                  </p>
-                </template>
-              </UAccordion>
+              />
             </div>
 
             <!-- How It Works Grid -->
@@ -1609,13 +1579,7 @@ const nnDesignerConcepts = [
                 color="primary"
                 variant="soft"
                 size="sm"
-              >
-                <template #item="{ item }">
-                  <p class="text-sm text-muted p-2">
-                    {{ item.content }}
-                  </p>
-                </template>
-              </UAccordion>
+              />
             </div>
 
             <!-- NN Concepts -->
@@ -1629,13 +1593,7 @@ const nnDesignerConcepts = [
                 color="teal"
                 variant="soft"
                 size="sm"
-              >
-                <template #item="{ item }">
-                  <p class="text-sm text-muted p-2">
-                    {{ item.content }}
-                  </p>
-                </template>
-              </UAccordion>
+              />
             </div>
 
             <!-- Controls Summary -->

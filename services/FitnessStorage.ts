@@ -13,29 +13,28 @@ const LOCALSTORAGE_FITNESS_KEY = 'neuroevolution_fitness_config';
 
 /**
  * Returns the default fitness configuration.
- * These values match the hardcoded values currently in FitnessShaping.ts
- * and TrainingWorker.ts/useMatchUpdate.ts
+ * AGGRESSIVE PROFILE: Optimized for offensive play and proper facing.
  */
 export function getDefaultFitnessConfig(): FitnessConfig {
   return {
-    // Per-frame shaping
-    proximityReward400: 0.005,
-    proximityReward200: 0.02,
-    proximityReward80: 0.08,
-    facingReward: 0.01,
-    aggressionReward: 0.15,
-    timePenalty: -0.005,
-    edgePenalty: -0.03,
-    centerBonus: 0.02,
-    edgeThreshold: 60,
-    centerThreshold: 150,
-    // Match-end bonuses
-    damageMultiplier: 2.0,
-    healthMultiplier: 2.5,
-    koWinBonus: 300,
-    timeoutWinBonus: 150,
-    stalematePenalty: -100,
-    stalemateThreshold: 30
+    // Per-frame shaping - AGGRESSIVE PROFILE
+    proximityReward400: 0.003,
+    proximityReward200: 0.015,
+    proximityReward80: 0.12,
+    facingReward: 0.05,          // 5x increase - fixes "corner staring"
+    aggressionReward: 0.25,
+    timePenalty: -0.008,
+    edgePenalty: -0.05,
+    centerBonus: 0.03,
+    edgeThreshold: 80,
+    centerThreshold: 120,
+    // Match-end bonuses - DAMAGE FOCUSED
+    damageMultiplier: 3.0,
+    healthMultiplier: 2.0,
+    koWinBonus: 400,
+    timeoutWinBonus: 100,
+    stalematePenalty: -150,
+    stalemateThreshold: 40
   };
 }
 
