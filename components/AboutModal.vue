@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
 const open = defineModel<boolean>('open', { default: false })
 const { changelog } = useChangelog()
 
-const version = '3.0.3'
+const version = '3.0.4'
 
 // Get all changelog entries for display
 const recentChangelog = computed(() => changelog)
@@ -278,7 +278,7 @@ const nnDesignerFeatures = [
   },
   {
     label: 'Layer Nodes',
-    content: 'Each neural network layer is represented as a vertical column node. Input (9 neurons) and Output (8 neurons) layers are fixed. Hidden layers are fully customizable.'
+    content: 'Each neural network layer is represented as a vertical column node. Input (12 neurons) and Output (8 neurons) layers are fixed. Hidden layers are fully customizable.'
   },
   {
     label: 'Neuron Controls',
@@ -305,7 +305,7 @@ const nnDesignerConcepts = [
   },
   {
     label: 'Architecture Notation',
-    content: 'Displayed as "9 → 13 → 13 → 8" meaning: 9 inputs, 13 neurons in hidden layer 1, 13 in hidden layer 2, 8 outputs. Customize any hidden layer sizes.'
+    content: 'Displayed as "12 → 16 → 16 → 8" meaning: 12 inputs, 16 neurons in hidden layer 1, 16 in hidden layer 2, 8 outputs. Customize any hidden layer sizes.'
   },
   {
     label: 'Reset Warning',
@@ -416,79 +416,200 @@ const nnDesignerConcepts = [
         >
         <!-- Features Tab -->
         <template #features>
-          <div class="space-y-3 pt-4">
-            <div class="flex items-start gap-3">
-              <UIcon
-                name="i-lucide-dna"
-                class="size-5 text-primary shrink-0 mt-0.5"
-              />
-              <div>
-                <p class="text-sm font-medium text-default">
-                  Genetic Algorithm
-                </p>
-                <p class="text-xs text-muted">
-                  AI fighters evolve through mutation and selection over generations
-                </p>
+          <div class="space-y-6 pt-4">
+            <!-- Core Features -->
+            <div>
+              <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Core Features</h3>
+              <div class="grid md:grid-cols-2 gap-3">
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-dna" class="size-5 text-teal-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Neuroevolution</p>
+                    <p class="text-xs text-muted">AI evolves through genetic algorithms - mutation, crossover, and selection</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-brain" class="size-5 text-purple-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Neural Networks</p>
+                    <p class="text-xs text-muted">12-input feedforward networks with configurable hidden layers (default 16x16)</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-activity" class="size-5 text-cyan-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Temporal Inputs</p>
+                    <p class="text-xs text-muted">Delta signals for velocity, hit detection, and action changes</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-gauge" class="size-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Fitness Shaping</p>
+                    <p class="text-xs text-muted">Customizable reward function with 16 tunable parameters</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="flex items-start gap-3">
-              <UIcon
-                name="i-lucide-network"
-                class="size-5 text-primary shrink-0 mt-0.5"
-              />
-              <div>
-                <p class="text-sm font-medium text-default">
-                  Neural Network
-                </p>
-                <p class="text-xs text-muted">
-                  Each fighter has a neural network brain with 13 neurons per hidden layer (26 total across 2 layers)
-                </p>
+            <!-- Game Modes -->
+            <div>
+              <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Game Modes</h3>
+              <div class="grid md:grid-cols-2 gap-3">
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-flask-conical" class="size-5 text-green-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Training Mode</p>
+                    <p class="text-xs text-muted">Watch AI evolve with real-time fitness charts and generation tracking</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-swords" class="size-5 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Arcade Mode</p>
+                    <p class="text-xs text-muted">Fight AI with keyboard/gamepad or watch Script vs Script battles</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-zap" class="size-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Turbo Training</p>
+                    <p class="text-xs text-muted">Up to 99x speed via Web Workers for rapid evolution</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-loader" class="size-5 text-blue-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Background Training</p>
+                    <p class="text-xs text-muted">AI continues learning while you play in Arcade mode</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="flex items-start gap-3">
-              <UIcon
-                name="i-lucide-swords"
-                class="size-5 text-primary shrink-0 mt-0.5"
-              />
-              <div>
-                <p class="text-sm font-medium text-default">
-                  Arcade Mode
-                </p>
-                <p class="text-xs text-muted">
-                  Fight against trained AI or watch Script vs Script battles
-                </p>
+            <!-- Editors & Tools -->
+            <div>
+              <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Editors & Tools</h3>
+              <div class="grid md:grid-cols-2 gap-3">
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-brain-circuit" class="size-5 text-purple-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Visual NN Designer</p>
+                    <p class="text-xs text-muted">Drag-and-drop network topology editor with Rete.js canvas</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-code" class="size-5 text-teal-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Script Editor</p>
+                    <p class="text-xs text-muted">Monaco-powered JavaScript editor for custom fighter AI</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-calculator" class="size-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Fitness Editor</p>
+                    <p class="text-xs text-muted">Tune reward parameters to shape AI behavior and strategy</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-network" class="size-5 text-cyan-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">NN Visualizer</p>
+                    <p class="text-xs text-muted">Real-time neural network activation display during matches</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="flex items-start gap-3">
-              <UIcon
-                name="i-lucide-flask-conical"
-                class="size-5 text-primary shrink-0 mt-0.5"
-              />
-              <div>
-                <p class="text-sm font-medium text-default">
-                  Training Mode
-                </p>
-                <p class="text-xs text-muted">
-                  Watch AI evolve through generations with real-time fitness tracking
-                </p>
+            <!-- Input & Controls -->
+            <div>
+              <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Input & Controls</h3>
+              <div class="grid md:grid-cols-2 gap-3">
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-keyboard" class="size-5 text-gray-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Keyboard Support</p>
+                    <p class="text-xs text-muted">Arrow keys + WASD with J/K/L for punch/kick/block</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-gamepad-2" class="size-5 text-green-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Xbox Gamepad</p>
+                    <p class="text-xs text-muted">Bluetooth gamepad support via browser Gamepad API</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="flex items-start gap-3">
-              <UIcon
-                name="i-lucide-code"
-                class="size-5 text-primary shrink-0 mt-0.5"
-              />
-              <div>
-                <p class="text-sm font-medium text-default">
-                  Custom Scripts
-                </p>
-                <p class="text-xs text-muted">
-                  Write JavaScript to control fighters with Script A and Script B
-                </p>
+            <!-- Data & Persistence -->
+            <div>
+              <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Data & Persistence</h3>
+              <div class="grid md:grid-cols-2 gap-3">
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-download" class="size-5 text-teal-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Export/Import</p>
+                    <p class="text-xs text-muted">Save and share trained AI weights as JSON files</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-hard-drive" class="size-5 text-blue-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Auto-Save</p>
+                    <p class="text-xs text-muted">Training progress persists across browser sessions</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-git-merge" class="size-5 text-purple-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Auto-Migration</p>
+                    <p class="text-xs text-muted">Old genome formats automatically upgraded on import</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-chart-line" class="size-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Fitness Charts</p>
+                    <p class="text-xs text-muted">ECharts-powered graphs tracking evolution progress</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Technical -->
+            <div>
+              <h3 class="text-sm font-semibold text-muted uppercase tracking-wide mb-3">Technical</h3>
+              <div class="grid md:grid-cols-2 gap-3">
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-cpu" class="size-5 text-blue-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Web Workers</p>
+                    <p class="text-xs text-muted">Parallel training across multiple CPU cores</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-shield-check" class="size-5 text-green-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Sandboxed Scripts</p>
+                    <p class="text-xs text-muted">Custom scripts run in isolated workers with loop detection</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-moon" class="size-5 text-indigo-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Dark/Light Mode</p>
+                    <p class="text-xs text-muted">Theme follows system preference with manual toggle</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50">
+                  <UIcon name="i-lucide-smartphone" class="size-5 text-pink-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p class="text-sm font-medium text-default">Responsive UI</p>
+                    <p class="text-xs text-muted">Works on desktop and mobile with adaptive layouts</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1110,6 +1231,9 @@ const nnDesignerConcepts = [
                     <tr><td class="p-3 font-mono text-blue-500">facing</td><td class="p-3 text-muted">Direction facing (L/R)</td><td class="p-3 font-mono text-muted">-1 or 1</td></tr>
                     <tr><td class="p-3 font-mono text-blue-500">oppCooldown</td><td class="p-3 text-muted">Opponent attack cooldown</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
                     <tr><td class="p-3 font-mono text-blue-500">oppEnergy</td><td class="p-3 text-muted">Opponent energy level</td><td class="p-3 font-mono text-muted">0 to 1</td></tr>
+                    <tr class="bg-teal-500/10"><td class="p-3 font-mono text-teal-500">distDelta</td><td class="p-3 text-muted">Approach/retreat velocity</td><td class="p-3 font-mono text-muted">-1 to 1</td></tr>
+                    <tr class="bg-teal-500/10"><td class="p-3 font-mono text-teal-500">oppHealthDelta</td><td class="p-3 text-muted">Enemy health change (hit detection)</td><td class="p-3 font-mono text-muted">-1 to 0</td></tr>
+                    <tr class="bg-teal-500/10"><td class="p-3 font-mono text-teal-500">oppActionDelta</td><td class="p-3 text-muted">Enemy action changed flag</td><td class="p-3 font-mono text-muted">0 or 1</td></tr>
                   </tbody>
                 </table>
               </div>

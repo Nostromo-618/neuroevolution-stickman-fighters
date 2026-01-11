@@ -260,12 +260,12 @@ MIT License - feel free to use this code for learning and projects.
 
 | Audit Result | Date |
 |--------------|------|
-| ✅ No vulnerabilities found | January 8, 2026 |
+| ✅ No vulnerabilities found | January 11, 2026 |
 ```
- Sonabot here, beep boop beep boop, here are your Sonatype OSS Index results:
+Sonabot here, beep boop beep boop, here are your Sonatype OSS Index results:
   Total dependencies audited: 14
 
-----------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------
 [1/14] - pkg:npm/@monaco-editor/loader@1.7.0 - No vulnerabilities found!
 [2/14] - pkg:npm/@nuxt/ui@4.3.0 - No vulnerabilities found!
 [3/14] - pkg:npm/acorn@8.15.0 - No vulnerabilities found!

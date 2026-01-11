@@ -45,7 +45,7 @@
  * Neural network architecture (same as types.ts)
  */
 interface NNArchitecture {
-  readonly inputNodes: 9;
+  readonly inputNodes: 12;
   hiddenLayers: number[];
   readonly outputNodes: 8;
 }
@@ -104,7 +104,7 @@ const CANVAS_HEIGHT = 450;
 const GRAVITY = 0.8;
 const FRICTION = 0.85;
 const GROUND_Y = 415;
-const INPUT_NODES = 9;
+const INPUT_NODES = 12;
 const HIDDEN_NODES = 13;  // Adjusted to 13 for balanced performance
 const OUTPUT_NODES = 8;
 
@@ -209,6 +209,11 @@ class WorkerFighter {
 
   hitbox: { x: number, y: number, w: number, h: number } | null = null;
   cooldown: number = 0;
+
+  // Temporal tracking (for delta inputs)
+  private prevDist: number = 0;
+  private prevOppHealth: number = 1;
+  private prevOppAction: number = 0;
 
   /**
    * Accumulated fitness during this match
@@ -332,15 +337,15 @@ class WorkerFighter {
     this.hitbox = null;
 
     if (this.cooldown === 0) {
-      if (activeInput.action1 && this.energy > 10) {
+      if (activeInput.action1 && this.energy >= 10) {
         this.state = PUNCH;
         this.vx *= 0.2;
-        this.cooldown = 30;
+        this.cooldown = 20;
         this.energy -= 10;
-      } else if (activeInput.action2 && this.energy > 15) {
+      } else if (activeInput.action2 && this.energy >= 15) {
         this.state = KICK;
         this.vx *= 0.2;
-        this.cooldown = 20;   // Speed matched to punch (20 frames)
+        this.cooldown = 20;
         this.energy -= 15;
       }
     }
@@ -392,7 +397,18 @@ class WorkerFighter {
     const oppCooldown = opponent.cooldown / 40;
     const oppEnergy = opponent.energy / 100;
 
-    const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy];
+    // Delta inputs (temporal signals)
+    const distDelta = dist - this.prevDist;
+    const oppHealthDelta = oppH - this.prevOppHealth;
+    const oppActionDelta = oppAction !== this.prevOppAction ? 1 : 0;
+
+    // Store current values for next frame
+    this.prevDist = dist;
+    this.prevOppHealth = oppH;
+    this.prevOppAction = oppAction;
+
+    const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy,
+                    distDelta, oppHealthDelta, oppActionDelta];
     const outputs = predict(this.genome.network, inputs);
 
     return {

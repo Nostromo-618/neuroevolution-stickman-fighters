@@ -53,17 +53,20 @@ import { getCurrentArchitecture } from './NNArchitecturePersistence';
 
 /**
  * INPUT_NODES: Number of input neurons
- * 
- * The 9 inputs represent the fighter's perception of the game state:
- * 1. distanceX     - Horizontal distance to opponent (normalized -1 to 1)
- * 2. distanceY     - Vertical distance to opponent (normalized)
- * 3. selfHealth    - Own health (0 to 1)
- * 4. enemyHealth   - Opponent's health (0 to 1)
- * 5. enemyAction   - Opponent's current action (normalized 0 to 1)
- * 6. selfEnergy    - Own energy level (0 to 1)
+ *
+ * The 12 inputs represent the fighter's perception of the game state:
+ * 1. distanceX       - Horizontal distance to opponent (normalized -1 to 1)
+ * 2. distanceY       - Vertical distance to opponent (normalized)
+ * 3. selfHealth      - Own health (0 to 1)
+ * 4. enemyHealth     - Opponent's health (0 to 1)
+ * 5. enemyAction     - Opponent's current action (normalized 0 to 1)
+ * 6. selfEnergy      - Own energy level (0 to 1)
  * 7. facingDirection - Which way we're facing (-1 or 1)
- * 8. oppCooldown   - Opponent's action cooldown (normalized)
- * 9. oppEnergy     - Opponent's energy level (0 to 1)
+ * 8. oppCooldown     - Opponent's action cooldown (normalized)
+ * 9. oppEnergy       - Opponent's energy level (0 to 1)
+ * 10. distDelta      - Change in distance since last frame (positive = approaching)
+ * 11. oppHealthDelta - Change in opponent health (negative = we hit them)
+ * 12. oppActionDelta - Whether opponent changed action (0 or 1)
  */
 export const INPUT_NODES = NN_ARCH.INPUT_NODES;
 
@@ -410,6 +413,28 @@ export const importGenome = (jsonString: string): ImportResult => {
     if (data.network.architecture && data.network.layerWeights && data.network.biases) {
       // Validate architecture
       const arch = data.network.architecture;
+
+      // Auto-migrate from 9 inputs to 12 inputs
+      if (arch.inputNodes === 9 && INPUT_NODES === 12) {
+        // Expand first layer weights to add 3 new input connections
+        const firstLayerWeights = data.network.layerWeights[0];
+        if (Array.isArray(firstLayerWeights)) {
+          for (const nodeWeights of firstLayerWeights) {
+            if (Array.isArray(nodeWeights)) {
+              // Add 3 new weights with small random values
+              nodeWeights.push(
+                (Math.random() - 0.5) * 0.2,
+                (Math.random() - 0.5) * 0.2,
+                (Math.random() - 0.5) * 0.2
+              );
+            }
+          }
+        }
+        // Update architecture to reflect migration
+        arch.inputNodes = 12;
+        console.log('Auto-migrated genome from 9 inputs to 12 inputs');
+      }
+
       if (arch.inputNodes !== INPUT_NODES) {
         return {
           success: false,

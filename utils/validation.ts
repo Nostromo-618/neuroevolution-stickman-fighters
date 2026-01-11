@@ -19,7 +19,7 @@ import { z } from 'zod/v4';
  * Schema for NNArchitecture
  */
 export const NNArchitectureSchema = z.object({
-    inputNodes: z.literal(9),
+    inputNodes: z.literal(12),
     hiddenLayers: z.array(z.number().min(4).max(50)).min(1).max(5),
     outputNodes: z.literal(8)
 });

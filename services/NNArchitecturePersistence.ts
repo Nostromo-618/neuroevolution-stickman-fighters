@@ -47,7 +47,7 @@ export function isValidArchitecture(arch: NNArchitecture): boolean {
     }
 
     // Check fixed layers
-    if (arch.inputNodes !== 9 || arch.outputNodes !== 8) {
+    if (arch.inputNodes !== 12 || arch.outputNodes !== 8) {
         return false;
     }
 

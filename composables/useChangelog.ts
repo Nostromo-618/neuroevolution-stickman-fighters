@@ -11,6 +11,23 @@ export interface ChangelogEntry {
 
 export const changelogData: ChangelogEntry[] = [
     {
+        version: '3.0.4',
+        date: '2026-01-11',
+        changes: {
+            added: [
+                'Frame Delta Inputs: Neural network now has 12 inputs (was 9) with 3 new temporal signals',
+                'distDelta: Approach/retreat velocity - positive when closing distance',
+                'oppHealthDelta: Detects when attacks land (negative = hit connected)',
+                'oppActionDelta: Binary flag when opponent changes action',
+                'Auto-migration: Old 9-input genomes automatically upgraded to 12 inputs on import'
+            ],
+            changed: [
+                'Default neural network architecture updated from 9→13→13→8 to 12→16→16→8',
+                'NN Visualizer now displays labels for all 12 inputs including delta signals'
+            ]
+        }
+    },
+    {
         version: '3.0.3',
         date: '2026-01-08',
         changes: {

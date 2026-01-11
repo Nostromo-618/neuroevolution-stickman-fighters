@@ -102,6 +102,11 @@ export class Fighter {
   private pendingAiInput: InputState | null = null;
   private currentAiInput: InputState | null = null;
 
+  // --- Temporal Tracking (for delta inputs) ---
+  private prevDist: number = 0;         // Previous frame horizontal distance
+  private prevOppHealth: number = 1;    // Previous frame opponent health (normalized)
+  private prevOppAction: number = 0;    // Previous frame opponent action (normalized)
+
   /**
    * Creates a new Fighter
    * 
@@ -341,8 +346,19 @@ export class Fighter {
     const oppCooldown = opponent.cooldown / 40;              // Opponent cooldown (0 to 1)
     const oppEnergy = opponent.energy / ENERGY.MAX;          // Opponent energy (0 to 1)
 
-    // 9 inputs total
-    const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy];
+    // === DELTA INPUTS (temporal signals) ===
+    const distDelta = dist - this.prevDist;                  // Positive = approaching
+    const oppHealthDelta = oppH - this.prevOppHealth;        // Negative = we hit them
+    const oppActionDelta = oppAction !== this.prevOppAction ? 1 : 0;  // Action changed
+
+    // Store current values for next frame
+    this.prevDist = dist;
+    this.prevOppHealth = oppH;
+    this.prevOppAction = oppAction;
+
+    // 12 inputs total
+    const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy,
+                    distDelta, oppHealthDelta, oppActionDelta];
     this.lastInputs = inputs; // Store inputs for visualization
 
 
@@ -380,8 +396,19 @@ export class Fighter {
     const oppCooldown = opponent.cooldown / 40;              // Opponent cooldown (0 to 1)
     const oppEnergy = opponent.energy / ENERGY.MAX;          // Opponent energy (0 to 1)
 
-    // 9 inputs total
-    const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy];
+    // === DELTA INPUTS (temporal signals) ===
+    const distDelta = dist - this.prevDist;                  // Positive = approaching
+    const oppHealthDelta = oppH - this.prevOppHealth;        // Negative = we hit them
+    const oppActionDelta = oppAction !== this.prevOppAction ? 1 : 0;  // Action changed
+
+    // Store current values for next frame
+    this.prevDist = dist;
+    this.prevOppHealth = oppH;
+    this.prevOppAction = oppAction;
+
+    // 12 inputs total
+    const inputs = [dist, distY, selfH, oppH, oppAction, selfE, facing, oppCooldown, oppEnergy,
+                    distDelta, oppHealthDelta, oppActionDelta];
     this.lastInputs = inputs; // Store inputs for visualization
     return inputs;
   }

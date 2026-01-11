@@ -63,17 +63,17 @@ export enum FighterAction {
  * - Nodes per layer: 4-50 nodes
  */
 export interface NNArchitecture {
-  readonly inputNodes: 9;     // Fixed: game state inputs
+  readonly inputNodes: 12;    // Fixed: game state inputs (9 base + 3 delta)
   hiddenLayers: number[];     // User-configurable: e.g., [13, 13] or [20, 15, 10]
   readonly outputNodes: 8;    // Fixed: fighter action outputs
 }
 
 /**
- * Default architecture constant (9→13→13→8)
+ * Default architecture constant (12→16→16→8)
  */
 export const DEFAULT_NN_ARCHITECTURE: NNArchitecture = {
-  inputNodes: 9,
-  hiddenLayers: [13, 13],
+  inputNodes: 12,
+  hiddenLayers: [16, 16],
   outputNodes: 8
 } as const;
 

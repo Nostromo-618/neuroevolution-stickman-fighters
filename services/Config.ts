@@ -28,11 +28,11 @@ export const FEATURE_FLAGS = {
 // =============================================================================
 
 /**
- * Standard Simple AI architecture (13 hidden nodes)
+ * Standard Simple AI architecture (16 hidden nodes)
  */
 export const NN_ARCH = {
-    INPUT_NODES: 9,
-    HIDDEN_NODES: 13,
+    INPUT_NODES: 12,
+    HIDDEN_NODES: 16,
     OUTPUT_NODES: 8,
 } as const;
 
